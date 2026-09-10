@@ -109,28 +109,6 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     }
 
     /*
-     * Relationships
-     */
-    public function loans()
-    {
-        return $this->hasMany(Loan::class);
-    }
-
-    /*
-     * Relationships
-     */
-
-    /*
      * Custom functions
      */
-
-    /**
-     * Route notifications for the Vonage channel.
-     *
-     * @return string
-     */
-    public function routeNotificationForVonage()
-    {
-        return $this->phone;
-    }
 }
