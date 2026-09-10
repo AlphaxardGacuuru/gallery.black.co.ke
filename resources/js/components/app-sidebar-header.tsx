@@ -1,5 +1,4 @@
 import { useConnectionStatus } from "@laravel/echo-react"
-import { useRouterState } from "@tanstack/react-router"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useSidebar } from "@/components/ui/sidebar"
@@ -7,7 +6,6 @@ import VerifiedBadge from "@/components/verified-badge"
 import { useApp } from "@/contexts/AppContext"
 import { useInitials } from "@/hooks/use-initials"
 import { cn } from "@/lib/utils"
-import { useConversation } from "@/queries/chat"
 import type { BreadcrumbItem as BreadcrumbItemType } from "@/types"
 
 function connectionLabel(status: string): string {
@@ -28,30 +26,6 @@ export function AppSidebarHeader({
 	breadcrumbs?: BreadcrumbItemType[]
 	variant?: "default" | "floating"
 }) {
-	const pathname = useRouterState({
-		select: (state) => state.location.pathname,
-	})
-	const conversationId = pathname.match(/^\/chats\/([^/]+)\/show/)?.[1]
-	const { data } = useConversation(conversationId ?? null)
-	const chatBreadcrumbs: BreadcrumbItemType[] | null = conversationId
-		? [
-				{ title: "Chats", href: "/chats" },
-				{ title: data?.conversation.otherUser?.name ?? "Chat", href: pathname },
-			]
-		: pathname === "/chats/new"
-			? [
-					{ title: "Chats", href: "/chats" },
-					{ title: "New chat", href: pathname },
-				]
-			: pathname === "/chats/archived"
-				? [
-						// { title: "Chats", href: "/chats" },
-						{ title: "Archived", href: pathname },
-					]
-				: pathname === "/chats" || pathname === "/chats/"
-					? [{ title: "Chats", href: pathname }]
-					: null
-	const displayedBreadcrumbs = chatBreadcrumbs ?? breadcrumbs
 	const connectionStatus = useConnectionStatus()
 	const { auth } = useApp()
 	const { toggleSidebar } = useSidebar()
@@ -67,7 +41,7 @@ export function AppSidebarHeader({
 					"mx-2 mt-2 rounded-xl border border-white/40 bg-white/34 px-4 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/12 dark:bg-slate-950/20"
 			)}>
 			<div className="min-w-0 flex-1">
-				<Breadcrumbs breadcrumbs={displayedBreadcrumbs} />
+				<Breadcrumbs breadcrumbs={breadcrumbs} />
 			</div>
 
 			<span

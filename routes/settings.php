@@ -4,7 +4,7 @@ use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Support\Facades\Route;
 
-// Page shells only — same posture as /chats and friends (see routes/web.php's
+// Page shells only — same posture as /compete and friends (see routes/web.php's
 // fallback route): no server-side auth guard, since this app authenticates
 // via a bearer token in localStorage that a plain browser navigation can't
 // carry. The client-side router's requireAuth() guard protects these once

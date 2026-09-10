@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 export function AppBottomNav() {
 	const { currentUrl } = useCurrentUrl()
 
-	if (shouldHideBottomNav(currentUrl)) {
+	if (shouldHideBottomNav()) {
 		return null
 	}
 

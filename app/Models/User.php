@@ -52,7 +52,6 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     protected $casts = [
         'settings' => 'object',
         'email_verified_at' => 'datetime',
-        'last_seen_at' => 'datetime',
         'verified' => 'boolean',
         'updated_at' => 'datetime:d M Y',
         'created_at' => 'datetime:d M Y',
@@ -70,7 +69,7 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
 
     protected static function booted(): void
     {
-        static::creating(function(User $user) {
+        static::creating(function (User $user) {
             if ($user->phone) {
                 $normalized = substr_replace($user->phone, '254', 0, -9);
                 $user->hashed_phone = hash('sha256', $normalized);
@@ -84,28 +83,28 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     protected function avatar(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => preg_match("/https/", $value) ? $value : "/storage/" . $value
+            get: fn($value) => preg_match("/https/", $value) ? $value : "/storage/" . $value
         );
     }
 
     protected function emailVerifiedAt(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $value ? Carbon::parse($value)->format('d M Y') : null,
+            get: fn($value) => $value ? Carbon::parse($value)->format('d M Y') : null,
         );
     }
 
     protected function updatedAt(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => Carbon::parse($value)->format('d M Y'),
+            get: fn($value) => Carbon::parse($value)->format('d M Y'),
         );
     }
 
     protected function createdAt(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => Carbon::parse($value)->format('d M Y'),
+            get: fn($value) => Carbon::parse($value)->format('d M Y'),
         );
     }
 
@@ -134,5 +133,4 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     {
         return $this->phone;
     }
-
 }

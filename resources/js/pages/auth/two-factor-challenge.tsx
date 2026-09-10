@@ -8,7 +8,11 @@ import InputError from "@/components/input-error"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
+import {
+	InputOTP,
+	InputOTPGroup,
+	InputOTPSlot,
+} from "@/components/ui/input-otp"
 import { OTP_MAX_LENGTH } from "@/hooks/use-two-factor-auth"
 import { store } from "@/actions/App/Http/Controllers/Auth/TwoFactorChallengeController"
 import { useApp } from "@/contexts/AppContext"
@@ -42,8 +46,7 @@ export default function TwoFactorChallenge() {
 					}
 				: {
 						title: "Authentication code",
-						description:
-							"Enter the 6-digit code from your authenticator app.",
+						description: "Enter the 6-digit code from your authenticator app.",
 						toggleText: "Use a recovery code instead",
 					},
 		[showRecovery]
@@ -75,7 +78,7 @@ export default function TwoFactorChallenge() {
 				setLocalStorage("sanctumToken", response.data.data)
 				invalidateAuth()
 				toast.success(response.data.message ?? "Logged in")
-				navigate({ to: "/chats" })
+				navigate({ to: "/compete" })
 			})
 			.catch((err: unknown) => {
 				const e = err as {

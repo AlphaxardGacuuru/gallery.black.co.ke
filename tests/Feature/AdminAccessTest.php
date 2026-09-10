@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\ChatConversation;
-use App\Models\ChatMessage;
+use App\Models\Photo;
+use App\Models\PhotoCompetition;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -29,21 +29,14 @@ class AdminAccessTest extends TestCase
     public function test_admin_can_view_dashboard_metrics(): void
     {
         $admin = User::factory()->create(['email' => config('admin.email')]);
-        $other = User::factory()->create();
 
-        $conversation = ChatConversation::create(['type' => 'direct']);
-        $conversation->participants()->attach([$admin->id, $other->id]);
-
-        ChatMessage::create([
-            'conversation_id' => $conversation->id,
-            'sender_id' => $admin->id,
-            'body' => 'Hello there',
-        ]);
+        $competition = PhotoCompetition::factory()->create();
+        Photo::factory()->create(['competition_id' => $competition->id, 'user_id' => $admin->id]);
 
         $response = $this->actingAs($admin, 'sanctum')->getJson('/api/admin/dashboard');
 
         $response->assertOk()
-            ->assertJsonPath('data.totals.totalConversations', 1)
-            ->assertJsonPath('data.totals.totalMessages', 1);
+            ->assertJsonPath('data.totals.totalCompetitions', 1)
+            ->assertJsonPath('data.totals.totalPhotos', 1);
     }
 }

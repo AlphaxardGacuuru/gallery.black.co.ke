@@ -37,10 +37,10 @@ export const mainNavItems: NavItem[] = [
 	},
 ]
 
-// Sibling routes like /chats and /chats/archived both start with "/chats",
-// so a plain prefix match would leave both nav items active on the archived
-// page. Picking the longest matching href resolves the ambiguity in favor
-// of the more specific route, and generalizes to any future nav items with
+// Sibling routes can share a path prefix (e.g. a future /discover/[id]),
+// so a plain prefix match would leave both nav items active. Picking the
+// longest matching href resolves the ambiguity in favor of the more
+// specific route, and generalizes to any future nav items with
 // overlapping prefixes.
 export function findActiveNavHref(
 	pathname: string,

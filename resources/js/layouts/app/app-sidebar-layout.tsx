@@ -1,4 +1,3 @@
-import { useLocation } from "@tanstack/react-router"
 import { AppBottomNav } from "@/components/app-bottom-nav"
 import { AppContent } from "@/components/app-content"
 import { AppShell } from "@/components/app-shell"
@@ -12,9 +11,8 @@ export default function AppSidebarLayout({
 	children,
 	breadcrumbs = [],
 }: AppLayoutProps) {
-	const { pathname } = useLocation()
-	const hideBottomNav = shouldHideBottomNav(pathname)
-	const hideSidebarHeader = isConversationShowRoute(pathname)
+	const hideBottomNav = shouldHideBottomNav()
+	const hideSidebarHeader = isConversationShowRoute()
 
 	return (
 		<AppShell variant="sidebar">

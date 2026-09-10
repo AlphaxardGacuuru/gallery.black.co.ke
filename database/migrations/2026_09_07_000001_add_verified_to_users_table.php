@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             // A manually-granted "verified" badge (admin-toggled), distinct
             // from email_verified_at which only tracks email ownership.
-            $table->boolean('verified')->default(false)->after('last_seen_at');
+            $table->boolean('verified')->default(false)->after('email_verified_at');
         });
     }
 

@@ -35,7 +35,7 @@ export default function PushNotificationSettings() {
 
 			if (enabled) {
 				toast.success("Notifications enabled", {
-					description: "You'll get a native alert when new chats arrive.",
+					description: "You'll get a native alert for new challenge activity.",
 				})
 			} else if (permission === "denied") {
 				toast.error("Notifications blocked", {
@@ -83,7 +83,7 @@ export default function PushNotificationSettings() {
 					<p className="text-sm text-muted-foreground">
 						{permission === "denied"
 							? "Notifications are blocked. Allow them for this site in your browser settings."
-							: "Get a native alert when new chats arrive."}
+							: "Get a native alert for new challenge activity."}
 					</p>
 					<p className="text-xs text-muted-foreground/70">
 						Permission: {permission} · Subscribed: {isSubscribed ? "yes" : "no"}
@@ -108,7 +108,7 @@ export default function PushNotificationSettings() {
 						<DialogTitle>Enable push notifications?</DialogTitle>
 						<DialogDescription>
 							Your browser will ask you to allow notifications for this site.
-							Allow it so we can alert you when new chats arrive.
+							Allow it so we can alert you about the weekly challenge.
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>

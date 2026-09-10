@@ -1,7 +1,7 @@
 {
-	"name": "Black Chat",
-	"short_name": "Black Chat",
-	"description": "A real-time chat with read receipts built in, see when every message is sent and read.",
+	"name": "Black Gallery",
+	"short_name": "Black Gallery",
+	"description": "A weekly photo challenge — submit, get liked, and win the prize.",
 	"start_url": "/",
 	"scope": "/",
 	"display": "standalone",

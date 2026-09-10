@@ -63,7 +63,7 @@ export default function Register({
 				invalidateAuth()
 
 				navigate({
-					to: tenantLogin ? "/tenant/dashboard" : "/chats",
+					to: tenantLogin ? "/tenant/dashboard" : "/compete",
 				})
 			})
 			.catch((err: unknown) => {

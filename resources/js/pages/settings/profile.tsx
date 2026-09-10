@@ -160,7 +160,7 @@ export default function Profile({
 				<Heading
 					variant="small"
 					title="Notifications"
-					description="Choose how you want to be notified about new chats."
+					description="Choose how you want to be notified about the weekly challenge."
 				/>
 				<PushNotificationSettings />
 			</div>

@@ -1,11 +1,5 @@
-import { MessageSquare, MessagesSquare, Users } from "lucide-react"
-import {
-	Bar,
-	BarChart,
-	CartesianGrid,
-	XAxis,
-	YAxis,
-} from "recharts"
+import { Images, ThumbsUp, Trophy, Users } from "lucide-react"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { Head } from "@/lib/spa"
 import AdminStatCard from "@/components/admin/AdminStatCard"
 import Heading from "@/components/heading"
@@ -19,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useAdminDashboard } from "@/queries/admin"
 
 const chartConfig: ChartConfig = {
-	sent: { label: "Messages sent", color: "hsl(var(--chart-1))" },
+	submitted: { label: "Photos submitted", color: "hsl(var(--chart-1))" },
 }
 
 export default function AdminDashboard() {
@@ -33,7 +27,7 @@ export default function AdminDashboard() {
 				<Heading
 					variant="small"
 					title="Overview"
-					description="Chat activity across the app"
+					description="Photo challenge activity across the app"
 				/>
 
 				{isLoading || !data ? (
@@ -49,27 +43,32 @@ export default function AdminDashboard() {
 					<>
 						<div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
 							<AdminStatCard
-								label="Conversations"
-								value={data.totals.totalConversations}
-								icon={MessagesSquare}
-							/>
-							<AdminStatCard
-								label="Messages sent"
-								value={data.totals.totalMessages}
-								icon={MessageSquare}
-								tone="success"
-							/>
-							<AdminStatCard
 								label="Total users"
 								value={data.totals.totalUsers}
 								icon={Users}
+							/>
+							<AdminStatCard
+								label="Competitions run"
+								value={data.totals.totalCompetitions}
+								icon={Trophy}
+							/>
+							<AdminStatCard
+								label="Photos submitted"
+								value={data.totals.totalPhotos}
+								icon={Images}
+								tone="success"
+							/>
+							<AdminStatCard
+								label="Total likes"
+								value={data.totals.totalLikes}
+								icon={ThumbsUp}
 							/>
 						</div>
 
 						<div className="rounded-lg border p-4">
 							<Heading
 								variant="small"
-								title="Send volume — last 14 days"
+								title="Submissions — last 14 days"
 							/>
 							<ChartContainer
 								config={chartConfig}
@@ -97,8 +96,8 @@ export default function AdminDashboard() {
 									/>
 									<ChartTooltip content={<ChartTooltipContent />} />
 									<Bar
-										dataKey="sent"
-										fill="var(--color-sent)"
+										dataKey="submitted"
+										fill="var(--color-submitted)"
 										radius={4}
 									/>
 								</BarChart>
