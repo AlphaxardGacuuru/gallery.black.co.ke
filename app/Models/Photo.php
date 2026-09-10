@@ -1,0 +1,83 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
+
+class Photo extends Model
+{
+    /** @use HasFactory<\Database\Factories\PhotoFactory> */
+    use HasFactory, HasUuids;
+
+    protected $fillable = [
+        'competition_id',
+        'user_id',
+        'disk',
+        'path',
+        'caption',
+        'width',
+        'height',
+        'likes_count',
+    ];
+
+    protected $casts = [
+        'width' => 'integer',
+        'height' => 'integer',
+        'likes_count' => 'integer',
+    ];
+
+    public function competition(): BelongsTo
+    {
+        return $this->belongsTo(PhotoCompetition::class, 'competition_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function likes(): HasMany
+    {
+        return $this->hasMany(PhotoLike::class);
+    }
+
+    /**
+     * Annotate each photo with whether the given user has liked it, via a
+     * correlated exists() subquery rather than N+1 relation checks.
+     */
+    public function scopeWithLikedByViewer(Builder $query, ?User $user): Builder
+    {
+        if (! $user) {
+            return $query->selectRaw('photos.*, false as is_liked_by_viewer');
+        }
+
+        return $query->addSelect([
+            'is_liked_by_viewer' => PhotoLike::query()
+                ->selectRaw('1')
+                ->whereColumn('photo_id', 'photos.id')
+                ->where('user_id', $user->id)
+                ->limit(1),
+        ]);
+    }
+
+    protected function url(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => Storage::disk($this->disk)->url($this->path),
+        );
+    }
+
+    protected function aspectRatio(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => ($this->width && $this->height) ? $this->width / $this->height : 1,
+        );
+    }
+}
