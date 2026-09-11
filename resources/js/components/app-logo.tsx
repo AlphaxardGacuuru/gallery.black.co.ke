@@ -21,7 +21,7 @@ export default function AppLogo({ variant = "lockup", className }: AppLogoProps)
 
 	return (
 		<div className="flex justify-center w-full text-sidebar-primary-foreground">
-			<AppLogoIcon className={cn(className, "text-secondary dark:text-primary")} />
+			<AppLogoIcon className={cn(className, "text-primary")} />
 		</div>
 	)
 }

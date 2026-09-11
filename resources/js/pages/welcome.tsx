@@ -1,5 +1,7 @@
-import { Camera, Compass, Heart, Timer, Trophy } from "lucide-react"
+import { Camera, Compass, Heart, Trophy } from "lucide-react"
 import AppLogo from "@/components/app-logo"
+import { BackdropLines } from "@/components/backdrop-lines"
+import { CompetitionCountdown } from "@/components/photos/CompetitionCountdown"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { GlassCard, GlassInner } from "@/components/ui/glass-card"
 import { Link } from "@/components/ui/link"
@@ -38,6 +40,8 @@ export default function Welcome() {
 
 	return (
 		<div className="relative isolate min-h-screen overflow-hidden bg-background text-foreground">
+			<BackdropLines />
+
 			<div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
 				<div className="absolute -left-40 -top-28 h-80 w-80 rounded-full bg-primary/36 blur-3xl dark:bg-primary/28" />
 				<div className="absolute -right-24 top-36 h-96 w-96 rounded-full bg-secondary/70 blur-3xl dark:bg-secondary/35" />
@@ -86,20 +90,28 @@ export default function Welcome() {
 						</div>
 
 						<div className="space-y-5">
-							<h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+							<h1 className="max-w-4xl text-5xl font-extrabold tracking-tight text-balance sm:text-6xl lg:text-7xl">
 								<span className="bg-linear-to-r from-primary via-foreground to-primary bg-clip-text text-transparent dark:via-white">
 									Snap it. Post it. Get liked. Win it.
 								</span>
 							</h1>
 							<p className="max-w-2xl text-lg leading-8 text-muted-foreground sm:text-xl">
 								Black Gallery runs a photography competition every week, Monday
-								through Friday at 8pm. The most-liked photo takes home the cash
-								prize
-								{competition
-									? ` — KES ${competition.prizeAmount} this week.`
-									: "."}
+								through Friday at 8pm. The most liked photo takes home the cash
+								prize.
 							</p>
 						</div>
+
+						{competition && (
+							<div className="flex items-baseline gap-3">
+								<p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+									This week&apos;s prize
+								</p>
+								<p className="text-4xl font-extrabold tracking-tight text-primary sm:text-5xl">
+									KES {competition.prizeAmount}
+								</p>
+							</div>
+						)}
 
 						<div className="flex flex-wrap gap-3">
 							<Link
@@ -120,12 +132,11 @@ export default function Welcome() {
 						</div>
 
 						{competition && (
-							<GlassCard className="inline-flex items-center gap-3 p-4">
-								<Timer className="size-5 text-primary" />
-								<p className="text-sm">
-									This week&apos;s challenge closes Friday at 8pm — KES{" "}
-									{competition.prizeAmount} up for grabs.
+							<GlassCard className="inline-block p-4">
+								<p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+									Time left to enter
 								</p>
+								<CompetitionCountdown endsAt={competition.endsAt} />
 							</GlassCard>
 						)}
 					</div>

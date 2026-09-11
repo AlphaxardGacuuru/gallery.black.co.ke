@@ -1,5 +1,6 @@
 import { useApp } from "@/contexts/AppContext"
 import type { ReactNode } from "react"
+import { BackdropLines } from "@/components/backdrop-lines"
 import { FloatingUserAvatar } from "@/components/floating-user-avatar"
 import PermissionsOnboardingModal from "@/components/permissions-onboarding-modal"
 import { SidebarProvider } from "@/components/ui/sidebar"
@@ -15,12 +16,7 @@ export function AppShell({ children, variant = "sidebar" }: Props) {
 
 	const shouldRenderFloatingAvatar = Boolean(auth)
 
-	const backdropLines = (
-		<div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-			<div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,color-mix(in_oklch,var(--primary)_10%,transparent)_0_1px,transparent_1px_12px)] opacity-[0.5] dark:bg-[repeating-linear-gradient(45deg,color-mix(in_oklch,var(--primary)_18%,transparent)_0_1px,transparent_1px_12px)] dark:opacity-[0.16]" />
-			<div className="absolute inset-0 bg-[repeating-linear-gradient(135deg,color-mix(in_oklch,var(--primary)_10%,transparent)_0_1px,transparent_1px_12px)] opacity-[0.5] dark:bg-[repeating-linear-gradient(135deg,color-mix(in_oklch,var(--primary)_18%,transparent)_0_1px,transparent_1px_12px)] dark:opacity-[0.16]" />
-		</div>
-	)
+	const backdropLines = <BackdropLines animated={false} />
 
 	if (variant === "header") {
 		return (

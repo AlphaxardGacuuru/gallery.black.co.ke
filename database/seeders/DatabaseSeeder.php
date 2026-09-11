@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
                 RoleSeeder::class,
                 AdminUserSeeder::class,
                 UserSeeder::class,
+                PhotoCompetitionSeeder::class,
             ]);
         }
     }

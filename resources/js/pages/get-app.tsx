@@ -30,7 +30,7 @@ export default function GetApp() {
 					</p>
 
 					{isInstalled ? (
-						<div className="mt-8 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm text-primary-foreground">
+						<div className="mt-8 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm text-primary">
 							Black Gallery is already installed on this device.
 						</div>
 					) : (

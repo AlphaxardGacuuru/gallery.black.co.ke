@@ -2,6 +2,7 @@ import { Heart } from "lucide-react"
 import type { Photo } from "@/types/photo"
 import { cn } from "@/lib/utils"
 import { useLikePhoto } from "@/queries/photos"
+import { useState } from "react"
 
 type Props = {
 	photo: Photo
@@ -12,6 +13,7 @@ type Props = {
 
 export function PhotoCard({ photo, aspect = "square" }: Props) {
 	const likePhoto = useLikePhoto()
+	const [isLiked, setIsLiked] = useState(photo.isLikedByViewer)
 
 	return (
 		<figure className="group overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -42,14 +44,17 @@ export function PhotoCard({ photo, aspect = "square" }: Props) {
 				</div>
 				<button
 					type="button"
-					aria-label={photo.isLikedByViewer ? "Unlike photo" : "Like photo"}
+					aria-label={photo.isLikedByViewer || isLiked ? "Unlike photo" : "Like photo"}
 					disabled={likePhoto.isPending}
-					onClick={() => likePhoto.mutate(photo.id)}
-					className="flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm transition-colors hover:bg-accent">
+					onClick={() => {
+						likePhoto.mutate(photo.id)
+						setIsLiked(!isLiked)
+					}}
+					className="flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm transition-colors hover:bg-accent cursor-pointer">
 					<Heart
 						className={cn(
 							"size-4",
-							photo.isLikedByViewer && "fill-red-500 text-red-500"
+							(photo.isLikedByViewer || isLiked) && "fill-red-500 text-red-500"
 						)}
 					/>
 					<span className="tabular-nums">{photo.likesCount}</span>

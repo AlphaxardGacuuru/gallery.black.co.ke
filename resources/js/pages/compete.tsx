@@ -3,30 +3,39 @@ import { Head } from "@/lib/spa"
 import { CompetitionCountdown } from "@/components/photos/CompetitionCountdown"
 import { PhotoCard } from "@/components/photos/PhotoCard"
 import { UploadPhotoDialog } from "@/components/photos/UploadPhotoDialog"
-import Heading from "@/components/heading"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useApp } from "@/contexts/AppContext"
 import { useCurrentCompetition } from "@/queries/photos"
 
 export default function Compete() {
+	const { auth } = useApp()
 	const { data: competition, isLoading } = useCurrentCompetition()
+	const hasSubmitted = competition?.photos.some(
+		(photo) => String(photo.userId) === String(auth?.id)
+	)
 
 	return (
 		<>
 			<Head title="This week's challenge" />
 
 			<div className="space-y-6">
-				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-					<Heading
-						variant="small"
-						title="This week's challenge"
-						description={
-							competition
-								? `KES ${competition.prizeAmount} to the most-liked photo`
-								: "Submissions open Monday, close Friday at 8pm"
-						}
-					/>
-					<UploadPhotoDialog />
-				</div>
+				<header className="mb-8 space-y-1">
+					<h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+						This week&apos;s challenge
+					</h2>
+					<p className="text-xl text-muted-foreground">
+						{competition ? (
+							<>
+								<span className="text-5xl font-bold text-green-600">
+									KES {competition.prizeAmount}
+								</span>{" "}
+								to the most liked photo
+							</>
+						) : (
+							"Submissions open Monday, close Friday at 8pm"
+						)}
+					</p>
+				</header>
 
 				{isLoading ? (
 					<Skeleton className="h-24 w-full max-w-md" />
@@ -35,7 +44,7 @@ export default function Compete() {
 				) : null}
 
 				{isLoading ? (
-					<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-4">
 						{Array.from({ length: 8 }).map((_, index) => (
 							<Skeleton
 								key={index}
@@ -50,7 +59,7 @@ export default function Compete() {
 						<p className="text-sm">Be the first to submit a photo this week.</p>
 					</div>
 				) : (
-					<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-4">
 						{competition.photos.map((photo) => (
 							<PhotoCard
 								key={photo.id}
@@ -60,6 +69,8 @@ export default function Compete() {
 					</div>
 				)}
 			</div>
+
+			<UploadPhotoDialog disabled={hasSubmitted} />
 		</>
 	)
 }

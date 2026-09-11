@@ -28,6 +28,8 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['competition_id', 'likes_count']);
+            // One submission per user per competition.
+            $table->unique(['competition_id', 'user_id']);
         });
     }
 

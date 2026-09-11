@@ -31,6 +31,16 @@ class PhotoController extends Controller
             ]);
         }
 
+        $alreadySubmitted = Photo::where('competition_id', $competition->id)
+            ->where('user_id', $request->user()->id)
+            ->exists();
+
+        if ($alreadySubmitted) {
+            throw ValidationException::withMessages([
+                'temporaryUploadId' => 'You\'ve already submitted a photo to this week\'s competition.',
+            ]);
+        }
+
         $temporaryUpload = TemporaryUpload::findOrFail($data['temporaryUploadId']);
 
         $path = 'photos/' . basename($temporaryUpload->path);

@@ -68,12 +68,10 @@
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    /* #FFFFFF */
-    --primary: #ffffff;
-    --primary-foreground: #000000;
-    /* #000000 */
-    --secondary: #000000;
-    --secondary-foreground: #ffffff;
+    --primary: #000000;
+    --primary-foreground: #ffffff;
+    --secondary: #ffffff;
+    --secondary-foreground: #000000;
     --muted: oklch(0.97 0 0);
     --muted-foreground: oklch(0.556 0 0);
     --accent: oklch(0.97 0 0);
@@ -228,7 +226,39 @@
     }
 }
 
+@keyframes line-pulse {
+    0% {
+        mask-position: 0 -180%;
+        -webkit-mask-position: 0 -180%;
+    }
+
+    100% {
+        mask-position: 0 100%;
+        -webkit-mask-position: 0 100%;
+    }
+}
+
 @layer utilities {
+    .backdrop-lines-pulse {
+        background-image: repeating-linear-gradient(90deg,
+                color-mix(in oklch, var(--primary) 55%, transparent) 0 1px,
+                transparent 1px 12px);
+        mask-image: linear-gradient(to bottom, transparent, white 45%, white 55%, transparent);
+        -webkit-mask-image: linear-gradient(to bottom, transparent, white 45%, white 55%, transparent);
+        mask-size: 100% 1%;
+        -webkit-mask-size: 100% 1%;
+        mask-repeat: no-repeat;
+        -webkit-mask-repeat: no-repeat;
+        animation: line-pulse 20s linear infinite;
+        will-change: mask-position;
+    }
+
+    .dark .backdrop-lines-pulse {
+        background-image: repeating-linear-gradient(90deg,
+                color-mix(in oklch, var(--primary) 70%, transparent) 0 1px,
+                transparent 1px 12px);
+    }
+
     .text-shimmer {
         color: transparent;
         background-image: linear-gradient(110deg,

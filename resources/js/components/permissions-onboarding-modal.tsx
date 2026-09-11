@@ -16,6 +16,15 @@ import { usePushNotifications } from "@/hooks/use-push-notifications"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 
+// Persisted per tab/session (not to the server) so "Not now" only silences
+// the prompt for this visit — it can still ask again next time the user
+// opens the site, unlike markComplete() which is permanent.
+const DISMISSED_KEY = "notifications-prompt-dismissed"
+
+function wasDismissedThisSession(): boolean {
+	return sessionStorage.getItem(DISMISSED_KEY) === "1"
+}
+
 export default function PermissionsOnboardingModal() {
 	const { auth } = useApp()
 	const queryClient = useQueryClient()
@@ -39,7 +48,7 @@ export default function PermissionsOnboardingModal() {
 	}
 
 	useEffect(() => {
-		if (!auth || onboardedAt) {
+		if (!auth || onboardedAt || wasDismissedThisSession()) {
 			return
 		}
 
@@ -66,7 +75,7 @@ export default function PermissionsOnboardingModal() {
 
 			if (enabled) {
 				toast.success("Notifications enabled", {
-					description: "You'll get a native alert when new messages arrive.",
+					description: "You'll get a native alert for new challenge activity.",
 				})
 				markComplete()
 				setOpen(false)
@@ -75,7 +84,8 @@ export default function PermissionsOnboardingModal() {
 
 			if (permission === "denied") {
 				toast.error("Notifications blocked", {
-					description: "Allow notifications for this site in your browser settings.",
+					description:
+						"Allow notifications for this site in your browser settings.",
 				})
 			}
 		} finally {
@@ -84,6 +94,7 @@ export default function PermissionsOnboardingModal() {
 	}
 
 	function handleSkip() {
+		sessionStorage.setItem(DISMISSED_KEY, "1")
 		setOpen(false)
 	}
 
@@ -103,8 +114,9 @@ export default function PermissionsOnboardingModal() {
 					<DialogHeader className="items-center gap-2">
 						<DialogTitle>Enable notifications</DialogTitle>
 						<DialogDescription>
-							Enable notifications to get messages the moment they arrive, even
-							when the app isn&apos;t open.
+							Enable notifications so you know the moment this week's challenge
+							starts, ends, or your photo gets a new like, even when the app
+							isn&apos;t open.
 						</DialogDescription>
 					</DialogHeader>
 				</div>

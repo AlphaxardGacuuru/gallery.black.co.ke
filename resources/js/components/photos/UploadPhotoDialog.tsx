@@ -1,4 +1,4 @@
-import { isCancel } from "axios"
+import { isAxiosError, isCancel } from "axios"
 import FilePondPluginFileValidateSize from "filepond-plugin-file-validate-size"
 import FilePondPluginFileValidateType from "filepond-plugin-file-validate-type"
 import FilePondPluginImageExifOrientation from "filepond-plugin-image-exif-orientation"
@@ -31,7 +31,7 @@ registerPlugin(
 	FilePondPluginImagePreview
 )
 
-export function UploadPhotoDialog() {
+export function UploadPhotoDialog({ disabled }: { disabled?: boolean }) {
 	const [open, setOpen] = useState(false)
 	const [temporaryUploadId, setTemporaryUploadId] = useState<number | null>(
 		null
@@ -57,8 +57,27 @@ export function UploadPhotoDialog() {
 					reset()
 					setOpen(false)
 				},
-				onError: () => toast.error("Couldn't submit your photo"),
+				onError: (error) => {
+					const message = isAxiosError<{ errors?: Record<string, string[]> }>(
+						error
+					)
+						? error.response?.data.errors?.temporaryUploadId?.[0]
+						: undefined
+
+					toast.error(message ?? "Couldn't submit your photo")
+				},
 			}
+		)
+	}
+
+	if (disabled) {
+		return (
+			<Button
+				disabled
+				className="fixed right-4 bottom-20 z-40 gap-2 rounded-full shadow-lg md:right-6 md:bottom-6">
+				<Camera className="size-4" />
+				Already submitted this week
+			</Button>
 		)
 	}
 
@@ -72,7 +91,9 @@ export function UploadPhotoDialog() {
 				}
 			}}>
 			<DialogTrigger asChild>
-				<Button className="gap-2">
+				<Button
+					size="xl"
+					className="fixed right-4 bottom-26 z-40 gap-2 rounded-full shadow-lg md:right-70 md:bottom-6">
 					<Camera className="size-4" />
 					Submit a photo
 				</Button>

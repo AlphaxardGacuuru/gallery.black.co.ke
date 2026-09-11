@@ -51,7 +51,15 @@ export function useSubmitPhoto() {
 			Axios.post<{ data: Photo }>(PhotoController.store.url(), payload).then(
 				(res) => res.data.data
 			),
-		onSuccess: () => {
+		onSuccess: (photo) => {
+			// Show the new submission immediately instead of waiting on the
+			// background refetch below to land.
+			queryClient.setQueryData<PhotoCompetition | null>(
+				["photos", "current"],
+				(current) =>
+					current ? { ...current, photos: [...current.photos, photo] } : current
+			)
+
 			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
 		},
 	})
