@@ -2,6 +2,7 @@ import { useApp } from "@/contexts/AppContext"
 import type { ReactNode } from "react"
 import { BackdropLines } from "@/components/backdrop-lines"
 import { FloatingUserAvatar } from "@/components/floating-user-avatar"
+import InstallAppOnboardingModal from "@/components/install-app-onboarding-modal"
 import PermissionsOnboardingModal from "@/components/permissions-onboarding-modal"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import type { AppVariant } from "@/types"
@@ -24,7 +25,12 @@ export function AppShell({ children, variant = "sidebar" }: Props) {
 				{backdropLines}
 				{children}
 				{shouldRenderFloatingAvatar && <FloatingUserAvatar />}
-				{auth && <PermissionsOnboardingModal />}
+				{auth && (
+					<>
+						<InstallAppOnboardingModal />
+						<PermissionsOnboardingModal />
+					</>
+				)}
 			</div>
 		)
 	}
@@ -36,7 +42,12 @@ export function AppShell({ children, variant = "sidebar" }: Props) {
 				{children}
 				{/* {shouldRenderFloatingAvatar && <FloatingUserAvatar />} */}
 			</SidebarProvider>
-			{auth && <PermissionsOnboardingModal />}
+			{auth && (
+				<>
+					<InstallAppOnboardingModal />
+					<PermissionsOnboardingModal />
+				</>
+			)}
 		</div>
 	)
 }

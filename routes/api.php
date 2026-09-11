@@ -49,6 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('push-subscriptions', [PushSubscriptionController::class, 'store']);
     Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy']);
 
+    Route::post('onboarding/install', [OnboardingController::class, 'completeInstall']);
     Route::post('onboarding/permissions', [OnboardingController::class, 'completePermissions']);
 
     Route::post('photos', [PhotoController::class, 'store']);

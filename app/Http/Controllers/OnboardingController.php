@@ -10,6 +10,17 @@ class OnboardingController extends Controller
 {
     public function __construct(protected OnboardingService $service) {}
 
+    public function completeInstall(): JsonResponse
+    {
+        [$status, $message, $user] = $this->service->completeInstallStep();
+
+        return response()->json([
+            'status' => $status,
+            'message' => $message,
+            'data' => UserResource::make($user),
+        ]);
+    }
+
     public function completePermissions(): JsonResponse
     {
         [$status, $message, $user] = $this->service->completePermissionsStep();
