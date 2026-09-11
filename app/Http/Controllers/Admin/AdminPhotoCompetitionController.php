@@ -8,6 +8,7 @@ use App\Models\PhotoCompetition;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class AdminPhotoCompetitionController extends Controller
 {
@@ -50,6 +51,7 @@ class AdminPhotoCompetitionController extends Controller
                 ] : null,
                 'totals' => $totals,
                 'prizeAmount' => (int) (Setting::query()->where('key', 'photo_prize_amount')->value('value') ?? 500),
+                'schedule' => PhotoCompetition::schedule(),
                 'recentCompetitions' => $recentCompetitions,
             ],
         ]);
@@ -70,5 +72,46 @@ class AdminPhotoCompetitionController extends Controller
         );
 
         return response()->json(['data' => ['prizeAmount' => $data['prizeAmount']]]);
+    }
+
+    /**
+     * Set the weekly start/end day and time used by the scheduler to open
+     * and close future competitions.
+     */
+    public function updateSchedule(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'startDay' => 'required|integer|min:0|max:6',
+            'startTime' => 'required|date_format:H:i',
+            'endDay' => 'required|integer|min:0|max:6',
+            'endTime' => 'required|date_format:H:i',
+        ]);
+
+        $startMinuteOfWeek = $data['startDay'] * 1440 + $this->minutesFromTime($data['startTime']);
+        $endMinuteOfWeek = $data['endDay'] * 1440 + $this->minutesFromTime($data['endTime']);
+
+        if ($endMinuteOfWeek <= $startMinuteOfWeek) {
+            throw ValidationException::withMessages([
+                'endDay' => 'The competition must end after it starts.',
+            ]);
+        }
+
+        foreach ([
+            'photo_competition_start_day' => $data['startDay'],
+            'photo_competition_start_time' => $data['startTime'],
+            'photo_competition_end_day' => $data['endDay'],
+            'photo_competition_end_time' => $data['endTime'],
+        ] as $key => $value) {
+            Setting::query()->updateOrCreate(['key' => $key], ['value' => $value]);
+        }
+
+        return response()->json(['data' => PhotoCompetition::schedule()]);
+    }
+
+    private function minutesFromTime(string $time): int
+    {
+        [$hours, $minutes] = array_map('intval', explode(':', $time));
+
+        return $hours * 60 + $minutes;
     }
 }

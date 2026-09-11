@@ -7,9 +7,105 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import toast from "@/lib/toast"
 import {
+	type PhotoCompetitionSchedule,
 	useAdminPhotoCompetitions,
+	useUpdatePhotoCompetitionSchedule,
 	useUpdatePrizeAmount,
 } from "@/queries/admin"
+
+const WEEKDAYS = [
+	"Sunday",
+	"Monday",
+	"Tuesday",
+	"Wednesday",
+	"Thursday",
+	"Friday",
+	"Saturday",
+]
+
+function ScheduleSettings({ schedule }: { schedule: PhotoCompetitionSchedule }) {
+	const updateSchedule = useUpdatePhotoCompetitionSchedule()
+	const [startDay, setStartDay] = useState(schedule.startDay)
+	const [startTime, setStartTime] = useState(schedule.startTime)
+	const [endDay, setEndDay] = useState(schedule.endDay)
+	const [endTime, setEndTime] = useState(schedule.endTime)
+
+	function handleSave() {
+		updateSchedule.mutate(
+			{ startDay, startTime, endDay, endTime },
+			{
+				onSuccess: () => toast.success("Schedule updated"),
+				onError: () =>
+					toast.error("Couldn't update the schedule", {
+						description: "Make sure the challenge ends after it starts.",
+					}),
+			}
+		)
+	}
+
+	const selectClassName = "rounded-md border bg-background px-3 py-2 text-sm"
+
+	return (
+		<div className="max-w-sm space-y-3 rounded-lg border p-4">
+			<Heading
+				variant="small"
+				title="Weekly schedule"
+				description="When future competitions automatically start and end."
+			/>
+			<div className="space-y-1">
+				<p className="text-xs font-medium text-muted-foreground">Starts</p>
+				<div className="flex gap-2">
+					<select
+						value={startDay}
+						onChange={(event) => setStartDay(Number(event.target.value))}
+						className={selectClassName}>
+						{WEEKDAYS.map((day, index) => (
+							<option
+								key={day}
+								value={index}>
+								{day}
+							</option>
+						))}
+					</select>
+					<input
+						type="time"
+						value={startTime}
+						onChange={(event) => setStartTime(event.target.value)}
+						className={selectClassName}
+					/>
+				</div>
+			</div>
+			<div className="space-y-1">
+				<p className="text-xs font-medium text-muted-foreground">Ends</p>
+				<div className="flex gap-2">
+					<select
+						value={endDay}
+						onChange={(event) => setEndDay(Number(event.target.value))}
+						className={selectClassName}>
+						{WEEKDAYS.map((day, index) => (
+							<option
+								key={day}
+								value={index}>
+								{day}
+							</option>
+						))}
+					</select>
+					<input
+						type="time"
+						value={endTime}
+						onChange={(event) => setEndTime(event.target.value)}
+						className={selectClassName}
+					/>
+				</div>
+			</div>
+			<Button
+				disabled={updateSchedule.isPending}
+				onClick={handleSave}>
+				Save
+			</Button>
+		</div>
+	)
+}
 
 export default function AdminPhotoCompetitions() {
 	const { data, isLoading } = useAdminPhotoCompetitions()
@@ -82,27 +178,31 @@ export default function AdminPhotoCompetitions() {
 							</div>
 						)}
 
-						<div className="max-w-sm space-y-2 rounded-lg border p-4">
-							<Heading
-								variant="small"
-								title="Weekly prize amount"
-								description={`Currently KES ${data.prizeAmount}. Applies to the next competition the scheduler starts.`}
-							/>
-							<div className="flex gap-2">
-								<input
-									type="number"
-									min={0}
-									placeholder={String(data.prizeAmount)}
-									value={prizeAmount}
-									onChange={(event) => setPrizeAmount(event.target.value)}
-									className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+						<div className="flex flex-wrap gap-4">
+							<div className="max-w-sm flex-1 space-y-2 rounded-lg border p-4">
+								<Heading
+									variant="small"
+									title="Weekly prize amount"
+									description={`Currently KES ${data.prizeAmount}. Applies to the next competition the scheduler starts.`}
 								/>
-								<Button
-									disabled={updatePrizeAmount.isPending || prizeAmount === ""}
-									onClick={handleSave}>
-									Save
-								</Button>
+								<div className="flex gap-2">
+									<input
+										type="number"
+										min={0}
+										placeholder={String(data.prizeAmount)}
+										value={prizeAmount}
+										onChange={(event) => setPrizeAmount(event.target.value)}
+										className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+									/>
+									<Button
+										disabled={updatePrizeAmount.isPending || prizeAmount === ""}
+										onClick={handleSave}>
+										Save
+									</Button>
+								</div>
 							</div>
+
+							<ScheduleSettings schedule={data.schedule} />
 						</div>
 
 						<div className="rounded-lg border">

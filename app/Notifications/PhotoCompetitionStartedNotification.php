@@ -29,7 +29,9 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 			->title('This week\'s photo challenge is live')
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
-			->body("Submit your best shot before Friday 8pm to win KES {$this->competition->prize_amount}.")
+			->body(
+				"Submit your best shot before {$this->competition->ends_at->format('l g:ia')} to win KES {$this->competition->prize_amount}."
+			)
 			->data(['url' => '/']);
 	}
 }

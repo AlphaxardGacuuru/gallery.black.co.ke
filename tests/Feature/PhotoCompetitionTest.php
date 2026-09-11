@@ -75,17 +75,16 @@ class PhotoCompetitionTest extends TestCase
     {
         $this->artisan('app:start-photo-competition');
         $competition = PhotoCompetition::first();
-        $author = User::factory()->create();
 
         $competition->photos()->create([
-            'user_id' => $author->id,
+            'user_id' => User::factory()->create()->id,
             'disk' => 'public',
             'path' => 'photos/losing.jpg',
             'likes_count' => 1,
         ]);
 
         $winningPhoto = $competition->photos()->create([
-            'user_id' => $author->id,
+            'user_id' => User::factory()->create()->id,
             'disk' => 'public',
             'path' => 'photos/winning.jpg',
             'likes_count' => 5,

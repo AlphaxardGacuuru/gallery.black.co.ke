@@ -56,6 +56,13 @@ export function useToggleUserVerified() {
 	})
 }
 
+export type PhotoCompetitionSchedule = {
+	startDay: number
+	startTime: string
+	endDay: number
+	endTime: string
+}
+
 export type AdminPhotoCompetitionsData = {
 	current: {
 		id: string
@@ -69,6 +76,7 @@ export type AdminPhotoCompetitionsData = {
 		totalLikes: number
 	}
 	prizeAmount: number
+	schedule: PhotoCompetitionSchedule
 	recentCompetitions: {
 		id: string
 		startsAt: string
@@ -96,6 +104,20 @@ export function useUpdatePrizeAmount() {
 	return useMutation({
 		mutationFn: (prizeAmount: number) =>
 			Axios.put("api/admin/photo-competitions/prize-amount", { prizeAmount }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "photo-competitions"],
+			})
+		},
+	})
+}
+
+export function useUpdatePhotoCompetitionSchedule() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (schedule: PhotoCompetitionSchedule) =>
+			Axios.put("api/admin/photo-competitions/schedule", schedule),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				queryKey: ["admin", "photo-competitions"],

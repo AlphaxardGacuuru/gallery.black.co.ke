@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\DeleteStaleTemporaryUploadsJob;
+use App\Models\PhotoCompetition;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +23,16 @@ Schedule::job(new DeleteStaleTemporaryUploadsJob)
     // ->everyMinute();
     ->dailyAt("01:00");
 
-// Weekly photo challenge: Monday 00:00 to Friday 20:00.
-Schedule::command('app:start-photo-competition')->weeklyOn(1, '00:00');
-Schedule::command('app:end-photo-competition')->weeklyOn(5, '20:00');
+// Weekly photo challenge: day/time are admin-configurable (see
+// AdminPhotoCompetitionController::updateSchedule and
+// PhotoCompetition::schedule()). Checked every minute via a `when()`
+// closure — evaluated only while the scheduler is actually running —
+// rather than read eagerly here, so a DB hiccup can't break every artisan
+// command that loads this file.
+Schedule::command('app:start-photo-competition')
+    ->everyMinute()
+    ->when(fn() => PhotoCompetition::matchesScheduledMoment('start'));
+
+Schedule::command('app:end-photo-competition')
+    ->everyMinute()
+    ->when(fn() => PhotoCompetition::matchesScheduledMoment('end'));

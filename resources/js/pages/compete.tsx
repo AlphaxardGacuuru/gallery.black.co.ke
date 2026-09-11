@@ -32,7 +32,7 @@ export default function Compete() {
 								to the most liked photo
 							</>
 						) : (
-							"Submissions open Monday, close Friday at 8pm"
+							"No challenge is running right now — check back soon."
 						)}
 					</p>
 				</header>
@@ -70,7 +70,10 @@ export default function Compete() {
 				)}
 			</div>
 
-			<UploadPhotoDialog disabled={hasSubmitted} />
+			<UploadPhotoDialog
+				disabled={hasSubmitted}
+				hasActiveCompetition={Boolean(competition)}
+			/>
 		</>
 	)
 }

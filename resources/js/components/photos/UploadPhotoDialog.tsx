@@ -31,7 +31,13 @@ registerPlugin(
 	FilePondPluginImagePreview
 )
 
-export function UploadPhotoDialog({ disabled }: { disabled?: boolean }) {
+export function UploadPhotoDialog({
+	disabled,
+	hasActiveCompetition = true,
+}: {
+	disabled?: boolean
+	hasActiveCompetition?: boolean
+}) {
 	const [open, setOpen] = useState(false)
 	const [temporaryUploadId, setTemporaryUploadId] = useState<number | null>(
 		null
@@ -102,82 +108,100 @@ export function UploadPhotoDialog({ disabled }: { disabled?: boolean }) {
 				<DialogHeader>
 					<DialogTitle>Submit your photo</DialogTitle>
 					<DialogDescription>
-						Entries are open until Friday 8pm. One photo can be liked by anyone
-						in the community.
+						{hasActiveCompetition
+							? "Entries are open while this week's challenge is live. One photo can be liked by anyone in the community."
+							: "There's no challenge running right now."}
 					</DialogDescription>
 				</DialogHeader>
 
-				<FilePond
-					allowMultiple={false}
-					acceptedFileTypes={["image/png", "image/jpeg", "image/webp"]}
-					maxFileSize="25MB"
-					credits={false}
-					labelIdle='<span class="filepond--label-action">Choose a photo</span> or drag and drop'
-					server={{
-						process: (
-							fieldName,
-							file,
-							_metadata,
-							load,
-							error,
-							progress,
-							abort
-						) => {
-							const controller = new AbortController()
-							const formData = new FormData()
-							formData.append(fieldName, file, file.name)
+				{!hasActiveCompetition ? (
+					<p className="rounded-lg border bg-muted px-4 py-3 text-sm text-muted-foreground">
+						You can&apos;t upload a photo until the next challenge opens. Check
+						back soon.
+					</p>
+				) : (
+					<>
+						<FilePond
+							allowMultiple={false}
+							acceptedFileTypes={["image/png", "image/jpeg", "image/webp"]}
+							maxFileSize="25MB"
+							credits={false}
+							labelIdle='<span class="filepond--label-action">Choose a photo</span> or drag and drop'
+							server={{
+								process: (
+									fieldName,
+									file,
+									_metadata,
+									load,
+									error,
+									progress,
+									abort
+								) => {
+									const controller = new AbortController()
+									const formData = new FormData()
+									formData.append(fieldName, file, file.name)
 
-							Axios.post(FilePondController.storePhoto.url(), formData, {
-								signal: controller.signal,
-								onUploadProgress: (event) => {
-									if (event.total) {
-										progress(true, event.loaded, event.total)
+									Axios.post(FilePondController.storePhoto.url(), formData, {
+										signal: controller.signal,
+										onUploadProgress: (event) => {
+											if (event.total) {
+												progress(true, event.loaded, event.total)
+											}
+										},
+									})
+										.then((response) => {
+											setTemporaryUploadId(Number(response.data))
+											load(String(response.data))
+										})
+										.catch((requestError) => {
+											if (isCancel(requestError)) {
+												return
+											}
+											error("Upload failed")
+										})
+
+									return {
+										abort: () => {
+											controller.abort()
+											abort()
+										},
 									}
 								},
-							})
-								.then((response) => {
-									setTemporaryUploadId(Number(response.data))
-									load(String(response.data))
-								})
-								.catch((requestError) => {
-									if (isCancel(requestError)) {
-										return
-									}
-									error("Upload failed")
-								})
-
-							return {
-								abort: () => {
-									controller.abort()
-									abort()
+								revert: (uniqueFileId, load, error) => {
+									Axios.delete(FilePondController.destroyPhoto.url(uniqueFileId))
+										.then(() => load())
+										.catch(() => error("Could not remove upload"))
 								},
-							}
-						},
-						revert: (uniqueFileId, load, error) => {
-							Axios.delete(FilePondController.destroyPhoto.url(uniqueFileId))
-								.then(() => load())
-								.catch(() => error("Could not remove upload"))
-						},
-					}}
-					onremovefile={() => setTemporaryUploadId(null)}
-					name="filepond-photo"
-				/>
+							}}
+							onremovefile={() => setTemporaryUploadId(null)}
+							name="filepond-photo"
+						/>
 
-				<input
-					type="text"
-					value={caption}
-					onChange={(event) => setCaption(event.target.value)}
-					maxLength={280}
-					placeholder="Add a caption (optional)"
-					className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-				/>
+						<input
+							type="text"
+							value={caption}
+							onChange={(event) => setCaption(event.target.value)}
+							maxLength={280}
+							placeholder="Add a caption (optional)"
+							className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+						/>
+					</>
+				)}
 
 				<DialogFooter>
-					<Button
-						disabled={!temporaryUploadId || submitPhoto.isPending}
-						onClick={handleSubmit}>
-						Submit entry
-					</Button>
+					{hasActiveCompetition ? (
+						<Button
+							disabled={!temporaryUploadId || submitPhoto.isPending}
+							onClick={handleSubmit}>
+							Submit entry
+						</Button>
+					) : (
+						<Button
+							variant="outline"
+							onClick={() => setOpen(false)}>
+							Close
+						</Button>
+					)}
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

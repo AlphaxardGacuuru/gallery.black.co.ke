@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Notification;
 
 #[Signature('app:start-photo-competition')]
-#[Description('Starts this week\'s photo competition (Monday 00:00 to Friday 20:00).')]
+#[Description('Starts this week\'s photo competition using the configured schedule.')]
 class StartPhotoCompetition extends Command
 {
     /**
@@ -20,8 +20,7 @@ class StartPhotoCompetition extends Command
      */
     public function handle(): void
     {
-        $startsAt = now()->startOfWeek();
-        $endsAt = $startsAt->copy()->addDays(4)->setTime(20, 0);
+        [$startsAt, $endsAt] = PhotoCompetition::scheduledWindowFor(now());
 
         if (PhotoCompetition::query()->where('starts_at', $startsAt)->exists()) {
             $this->components->warn('This week\'s competition already exists.');
