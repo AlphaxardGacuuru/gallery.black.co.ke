@@ -1,22 +1,19 @@
 import { useState } from "react"
+import type { ColumnDef } from "@tanstack/react-table"
 import Heading from "@/components/heading"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { DataTable } from "@/components/ui/data-table"
 import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table"
 import VerifiedBadge from "@/components/verified-badge"
 import { Head } from "@/lib/spa"
 import toast from "@/lib/toast"
-import { useAdminUsers, useToggleUserVerified } from "@/queries/admin"
+import {
+	type AdminUser,
+	useAdminUsers,
+	useToggleUserVerified,
+} from "@/queries/admin"
 
 function initials(name?: string | null): string {
 	return (name?.trim() || "?").slice(0, 2).toUpperCase()
@@ -25,7 +22,8 @@ function initials(name?: string | null): string {
 export default function AdminUsers() {
 	const [search, setSearch] = useState("")
 	const [page, setPage] = useState(1)
-	const { data, isLoading } = useAdminUsers(search, page)
+	const [perPage, setPerPage] = useState(20)
+	const { data, isLoading } = useAdminUsers(search, page, perPage)
 	const toggleVerified = useToggleUserVerified()
 
 	function handleToggle(userId: string, nextVerified: boolean) {
@@ -41,6 +39,58 @@ export default function AdminUsers() {
 		)
 	}
 
+	const columns: ColumnDef<AdminUser>[] = [
+		{
+			id: "user",
+			header: "User",
+			enableSorting: false,
+			cell: ({ row }) => (
+				<div className="flex items-center gap-3">
+					<Avatar className="size-9 shrink-0">
+						<AvatarImage
+							src={row.original.avatar ?? undefined}
+							alt={row.original.name}
+						/>
+						<AvatarFallback>{initials(row.original.name)}</AvatarFallback>
+					</Avatar>
+					<span className="flex min-w-0 items-center gap-1 font-medium">
+						<span className="min-w-0 truncate">{row.original.name}</span>
+						{row.original.verified && (
+							<VerifiedBadge className="size-3.5 shrink-0" />
+						)}
+					</span>
+				</div>
+			),
+		},
+		{
+			accessorKey: "email",
+			header: "Email",
+			cell: ({ row }) => (
+				<span className="text-muted-foreground">{row.original.email}</span>
+			),
+		},
+		{
+			id: "verified",
+			header: "Verified",
+			enableSorting: false,
+			meta: { className: "text-right" },
+			cell: ({ row }) => (
+				<div className="flex justify-end">
+					<Switch
+						checked={row.original.verified}
+						disabled={toggleVerified.isPending}
+						onCheckedChange={(checked) => handleToggle(row.original.id, checked)}
+						aria-label={
+							row.original.verified
+								? `Remove verified badge from ${row.original.name}`
+								: `Verify ${row.original.name}`
+						}
+					/>
+				</div>
+			),
+		},
+	]
+
 	return (
 		<>
 			<Head title="Admin users" />
@@ -52,110 +102,43 @@ export default function AdminUsers() {
 					description="Grant or revoke the verified badge shown next to a user's avatar"
 				/>
 
-				<Input
-					label="Search by name"
-					value={search}
-					onChange={(event) => {
-						setSearch(event.target.value)
-						setPage(1)
-					}}
-				/>
+				<Card>
+					<CardContent className="flex flex-wrap items-center gap-4">
+						<Input
+							label="Search by name"
+							value={search}
+							onChange={(event) => {
+								setSearch(event.target.value)
+								setPage(1)
+							}}
+						/>
+					</CardContent>
+				</Card>
 
-				<div className="rounded-lg border">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>User</TableHead>
-								<TableHead>Email</TableHead>
-								<TableHead className="text-right">Verified</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{isLoading &&
-								Array.from({ length: 5 }).map((_, index) => (
-									<TableRow key={index}>
-										<TableCell colSpan={3}>
-											<Skeleton className="h-10 w-full" />
-										</TableCell>
-									</TableRow>
-								))}
-
-							{!isLoading && (data?.data.length ?? 0) === 0 && (
-								<TableRow>
-									<TableCell
-										colSpan={3}
-										className="py-8 text-center text-muted-foreground">
-										No users found
-									</TableCell>
-								</TableRow>
-							)}
-
-							{!isLoading &&
-								data?.data.map((user) => (
-									<TableRow key={user.id}>
-										<TableCell>
-											<div className="flex items-center gap-3">
-												<Avatar className="size-9 shrink-0">
-													<AvatarImage
-														src={user.avatar ?? undefined}
-														alt={user.name}
-													/>
-													<AvatarFallback>{initials(user.name)}</AvatarFallback>
-												</Avatar>
-												<span className="flex min-w-0 items-center gap-1 font-medium">
-													<span className="min-w-0 truncate">{user.name}</span>
-													{user.verified && (
-														<VerifiedBadge className="size-3.5 shrink-0" />
-													)}
-												</span>
-											</div>
-										</TableCell>
-										<TableCell className="text-muted-foreground">
-											{user.email}
-										</TableCell>
-										<TableCell className="text-right">
-											<Switch
-												checked={user.verified}
-												disabled={toggleVerified.isPending}
-												onCheckedChange={(checked) =>
-													handleToggle(user.id, checked)
-												}
-												aria-label={
-													user.verified
-														? `Remove verified badge from ${user.name}`
-														: `Verify ${user.name}`
-												}
-											/>
-										</TableCell>
-									</TableRow>
-								))}
-						</TableBody>
-					</Table>
-				</div>
-
-				{data && data.meta.last_page > 1 && (
-					<div className="flex items-center justify-between">
-						<p className="text-sm text-muted-foreground">
-							Page {data.meta.current_page} of {data.meta.last_page}
-						</p>
-						<div className="flex gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={page <= 1}
-								onClick={() => setPage((current) => current - 1)}>
-								Previous
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={page >= data.meta.last_page}
-								onClick={() => setPage((current) => current + 1)}>
-								Next
-							</Button>
-						</div>
-					</div>
-				)}
+				<Card className="overflow-hidden">
+					<CardHeader className="pb-4">
+						<CardTitle>Users</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<DataTable
+							columns={columns}
+							data={data?.data ?? []}
+							emptyMessage={isLoading ? "Loading…" : "No users found"}
+							pagination={{
+								currentPage: data?.meta.current_page ?? 1,
+								lastPage: data?.meta.last_page ?? 1,
+								total: data?.meta.total ?? 0,
+								pageSize: perPage,
+								onPageChange: setPage,
+								onPageSizeChange: (size) => {
+									setPerPage(size)
+									setPage(1)
+								},
+							}}
+							getItemLabel={(user) => user.name}
+						/>
+					</CardContent>
+				</Card>
 			</div>
 		</>
 	)

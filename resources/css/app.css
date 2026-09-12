@@ -226,37 +226,60 @@
     }
 }
 
-@keyframes line-pulse {
+@keyframes rain-fall {
     0% {
-        mask-position: 0 -180%;
-        -webkit-mask-position: 0 -180%;
+        transform: translateY(-120%);
+        opacity: 0;
+    }
+
+    12% {
+        opacity: 1;
+    }
+
+    88% {
+        opacity: 1;
     }
 
     100% {
-        mask-position: 0 100%;
-        -webkit-mask-position: 0 100%;
+        transform: translateY(420%);
+        opacity: 0;
     }
 }
 
+/* @pqina/flip hardcodes .tick-flip-panel's colors as plain, unlayered CSS.
+   Tailwind's `@layer utilities` always loses to unlayered CSS regardless of
+   specificity, so this override has to live outside any @layer to win. */
+.tick-accent-amber .tick-flip-panel {
+    background-color: #92400e;
+    color: #fef3c7;
+}
+
 @layer utilities {
-    .backdrop-lines-pulse {
-        background-image: repeating-linear-gradient(90deg,
-                color-mix(in oklch, var(--primary) 55%, transparent) 0 1px,
-                transparent 1px 12px);
-        mask-image: linear-gradient(to bottom, transparent, white 45%, white 55%, transparent);
-        -webkit-mask-image: linear-gradient(to bottom, transparent, white 45%, white 55%, transparent);
-        mask-size: 100% 1%;
-        -webkit-mask-size: 100% 1%;
-        mask-repeat: no-repeat;
-        -webkit-mask-repeat: no-repeat;
-        animation: line-pulse 20s linear infinite;
-        will-change: mask-position;
+    .rain-drops {
+        mask-image: linear-gradient(to bottom, transparent, white 20%, white 80%, transparent);
+        -webkit-mask-image: linear-gradient(to bottom, transparent, white 20%, white 80%, transparent);
     }
 
-    .dark .backdrop-lines-pulse {
-        background-image: repeating-linear-gradient(90deg,
-                color-mix(in oklch, var(--primary) 70%, transparent) 0 1px,
-                transparent 1px 12px);
+    .rain-drop {
+        position: absolute;
+        top: 0;
+        width: 1px;
+        height: 30%;
+        background: linear-gradient(to bottom,
+                transparent,
+                color-mix(in oklch, var(--primary) 90%, transparent) 50%,
+                transparent);
+        animation-name: rain-fall;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+        will-change: transform, opacity;
+    }
+
+    .dark .rain-drop {
+        background: linear-gradient(to bottom,
+                transparent,
+                color-mix(in oklch, var(--primary) 100%, transparent) 50%,
+                transparent);
     }
 
     .text-shimmer {

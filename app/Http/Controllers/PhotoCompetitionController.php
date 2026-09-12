@@ -27,6 +27,7 @@ class PhotoCompetitionController extends Controller
 
         return response()->json([
             'data' => $competition ? new PhotoCompetitionResource($competition) : null,
+            'nextStartsAt' => $competition ? null : PhotoCompetition::nextScheduledStart()->toIso8601String(),
         ]);
     }
 

@@ -14,9 +14,13 @@ export function useCurrentCompetition() {
 	return useQuery({
 		queryKey: ["photos", "current"],
 		queryFn: () =>
-			Axios.get<{ data: PhotoCompetition | null }>(
-				PhotoCompetitionController.current.url()
-			).then((res) => res.data.data),
+			Axios.get<{
+				data: PhotoCompetition | null
+				nextStartsAt: string | null
+			}>(PhotoCompetitionController.current.url()).then((res) => ({
+				competition: res.data.data,
+				nextStartsAt: res.data.nextStartsAt,
+			})),
 		// Likes and the countdown both move without any action from this
 		// viewer, so keep the leaderboard fresh without requiring a reload.
 		refetchInterval: 20_000,

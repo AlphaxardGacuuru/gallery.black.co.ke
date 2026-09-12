@@ -2,6 +2,7 @@ import { Camera, Compass, Heart, Trophy } from "lucide-react"
 import AppLogo from "@/components/app-logo"
 import { BackdropLines } from "@/components/backdrop-lines"
 import { CompetitionCountdown } from "@/components/photos/CompetitionCountdown"
+import { NextCompetitionCountdown } from "@/components/photos/NextCompetitionCountdown"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { GlassCard, GlassInner } from "@/components/ui/glass-card"
 import { Link } from "@/components/ui/link"
@@ -32,7 +33,8 @@ const howItWorks = [
 
 export default function Welcome() {
 	const { auth } = useApp()
-	const { data: competition } = useCurrentCompetition()
+	const { data } = useCurrentCompetition()
+	const competition = data?.competition
 
 	const primaryCta = auth
 		? { href: "/compete", label: "View this week's challenge" }
@@ -137,6 +139,15 @@ export default function Welcome() {
 									Time left to enter
 								</p>
 								<CompetitionCountdown endsAt={competition.endsAt} />
+							</GlassCard>
+						)}
+
+						{!competition && data?.nextStartsAt && (
+							<GlassCard className="inline-block p-4">
+								<p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+									Next challenge starts in
+								</p>
+								<NextCompetitionCountdown startsAt={data.nextStartsAt} />
 							</GlassCard>
 						)}
 					</div>

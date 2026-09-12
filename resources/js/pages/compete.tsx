@@ -1,6 +1,7 @@
 import { Trophy } from "lucide-react"
 import { Head } from "@/lib/spa"
 import { CompetitionCountdown } from "@/components/photos/CompetitionCountdown"
+import { NextCompetitionCountdown } from "@/components/photos/NextCompetitionCountdown"
 import { PhotoCard } from "@/components/photos/PhotoCard"
 import { UploadPhotoDialog } from "@/components/photos/UploadPhotoDialog"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -9,7 +10,8 @@ import { useCurrentCompetition } from "@/queries/photos"
 
 export default function Compete() {
 	const { auth } = useApp()
-	const { data: competition, isLoading } = useCurrentCompetition()
+	const { data, isLoading } = useCurrentCompetition()
+	const competition = data?.competition
 	const hasSubmitted = competition?.photos.some(
 		(photo) => String(photo.userId) === String(auth?.id)
 	)
@@ -41,6 +43,8 @@ export default function Compete() {
 					<Skeleton className="h-24 w-full max-w-md" />
 				) : competition ? (
 					<CompetitionCountdown endsAt={competition.endsAt} />
+				) : data?.nextStartsAt ? (
+					<NextCompetitionCountdown startsAt={data.nextStartsAt} />
 				) : null}
 
 				{isLoading ? (

@@ -1,12 +1,16 @@
 import { Images, ThumbsUp, Trophy } from "lucide-react"
 import { useState } from "react"
+import type { ColumnDef } from "@tanstack/react-table"
 import { Head } from "@/lib/spa"
 import AdminStatCard from "@/components/admin/AdminStatCard"
 import Heading from "@/components/heading"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { DataTable } from "@/components/ui/data-table"
 import { Skeleton } from "@/components/ui/skeleton"
 import toast from "@/lib/toast"
 import {
+	type AdminPhotoCompetitionSummary,
 	type PhotoCompetitionSchedule,
 	useAdminPhotoCompetitions,
 	useUpdatePhotoCompetitionSchedule,
@@ -22,6 +26,49 @@ const WEEKDAYS = [
 	"Friday",
 	"Saturday",
 ]
+
+function PrizeAmountSettings({ prizeAmount }: { prizeAmount: number }) {
+	const updatePrizeAmount = useUpdatePrizeAmount()
+	const [amount, setAmount] = useState(String(prizeAmount))
+
+	function handleSave() {
+		const parsed = Number(amount)
+
+		if (!Number.isFinite(parsed) || parsed < 0) {
+			toast.error("Enter a valid amount")
+			return
+		}
+
+		updatePrizeAmount.mutate(parsed, {
+			onSuccess: () => toast.success("Prize amount updated"),
+			onError: () => toast.error("Couldn't update the prize amount"),
+		})
+	}
+
+	return (
+		<div className="max-w-sm flex-1 space-y-2 rounded-lg border p-4">
+			<Heading
+				variant="small"
+				title="Weekly prize amount"
+				description="Applies to the next competition the scheduler starts."
+			/>
+			<div className="flex gap-2">
+				<input
+					type="number"
+					min={0}
+					value={amount}
+					onChange={(event) => setAmount(event.target.value)}
+					className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+				/>
+				<Button
+					disabled={amount.trim() === "" || updatePrizeAmount.isPending}
+					onClick={handleSave}>
+					Save
+				</Button>
+			</div>
+		</div>
+	)
+}
 
 function ScheduleSettings({ schedule }: { schedule: PhotoCompetitionSchedule }) {
 	const updateSchedule = useUpdatePhotoCompetitionSchedule()
@@ -107,24 +154,41 @@ function ScheduleSettings({ schedule }: { schedule: PhotoCompetitionSchedule }) 
 	)
 }
 
+const competitionColumns: ColumnDef<AdminPhotoCompetitionSummary>[] = [
+	{
+		accessorKey: "startsAt",
+		header: "Starts at",
+		cell: ({ row }) => new Date(row.original.startsAt).toLocaleString(),
+	},
+	{
+		accessorKey: "endsAt",
+		header: "Ends at",
+		cell: ({ row }) => new Date(row.original.endsAt).toLocaleString(),
+	},
+	{
+		accessorKey: "status",
+		header: "Status",
+		cell: ({ row }) => <span className="capitalize">{row.original.status}</span>,
+	},
+	{
+		accessorKey: "photosCount",
+		header: "Entries",
+	},
+	{
+		accessorKey: "prizeAmount",
+		header: "Prize",
+		cell: ({ row }) => `KES ${row.original.prizeAmount}`,
+	},
+	{
+		id: "winner",
+		header: "Winner",
+		enableSorting: false,
+		cell: ({ row }) => row.original.winnerName ?? "—",
+	},
+]
+
 export default function AdminPhotoCompetitions() {
 	const { data, isLoading } = useAdminPhotoCompetitions()
-	const updatePrizeAmount = useUpdatePrizeAmount()
-	const [prizeAmount, setPrizeAmount] = useState<string>("")
-
-	function handleSave() {
-		const amount = Number(prizeAmount)
-
-		if (!Number.isFinite(amount) || amount < 0) {
-			toast.error("Enter a valid amount")
-			return
-		}
-
-		updatePrizeAmount.mutate(amount, {
-			onSuccess: () => toast.success("Prize amount updated"),
-			onError: () => toast.error("Couldn't update the prize amount"),
-		})
-	}
 
 	return (
 		<>
@@ -179,60 +243,22 @@ export default function AdminPhotoCompetitions() {
 						)}
 
 						<div className="flex flex-wrap gap-4">
-							<div className="max-w-sm flex-1 space-y-2 rounded-lg border p-4">
-								<Heading
-									variant="small"
-									title="Weekly prize amount"
-									description={`Currently KES ${data.prizeAmount}. Applies to the next competition the scheduler starts.`}
-								/>
-								<div className="flex gap-2">
-									<input
-										type="number"
-										min={0}
-										placeholder={String(data.prizeAmount)}
-										value={prizeAmount}
-										onChange={(event) => setPrizeAmount(event.target.value)}
-										className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-									/>
-									<Button
-										disabled={updatePrizeAmount.isPending || prizeAmount === ""}
-										onClick={handleSave}>
-										Save
-									</Button>
-								</div>
-							</div>
-
+							<PrizeAmountSettings prizeAmount={data.prizeAmount} />
 							<ScheduleSettings schedule={data.schedule} />
 						</div>
 
-						<div className="rounded-lg border">
-							<table className="w-full text-sm">
-								<thead>
-									<tr className="border-b text-left text-muted-foreground">
-										<th className="p-3 font-medium">Week of</th>
-										<th className="p-3 font-medium">Status</th>
-										<th className="p-3 font-medium">Entries</th>
-										<th className="p-3 font-medium">Prize</th>
-										<th className="p-3 font-medium">Winner</th>
-									</tr>
-								</thead>
-								<tbody>
-									{data.recentCompetitions.map((competition) => (
-										<tr
-											key={competition.id}
-											className="border-b last:border-0">
-											<td className="p-3">
-												{new Date(competition.startsAt).toLocaleDateString()}
-											</td>
-											<td className="p-3 capitalize">{competition.status}</td>
-											<td className="p-3">{competition.photosCount}</td>
-											<td className="p-3">KES {competition.prizeAmount}</td>
-											<td className="p-3">{competition.winnerName ?? "—"}</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
+						<Card className="overflow-hidden">
+							<CardHeader className="pb-4">
+								<CardTitle>Recent competitions</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<DataTable
+									columns={competitionColumns}
+									data={data.recentCompetitions}
+									emptyMessage="No competitions yet"
+								/>
+							</CardContent>
+						</Card>
 					</>
 				)}
 			</div>

@@ -92,6 +92,23 @@ class PhotoCompetition extends Model
     }
 
     /**
+     * The next moment a competition is scheduled to start, strictly after
+     * now — this week's configured start time if it hasn't happened yet,
+     * otherwise next week's.
+     */
+    public static function nextScheduledStart(): \Carbon\CarbonInterface
+    {
+        $now = now();
+        [$startsAt] = static::scheduledWindowFor($now);
+
+        if ($startsAt->lessThanOrEqualTo($now)) {
+            [$startsAt] = static::scheduledWindowFor($now->copy()->addWeek());
+        }
+
+        return $startsAt;
+    }
+
+    /**
      * Whether "now" matches the configured start or end moment — used by
      * the scheduler (routes/console.php) to decide whether to fire the
      * start/end commands this minute, without hardcoding the day/time.
