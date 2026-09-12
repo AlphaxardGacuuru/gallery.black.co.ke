@@ -87,7 +87,6 @@ export type AdminPhotoCompetitionsData = {
 	}
 	prizeAmount: number
 	schedule: PhotoCompetitionSchedule
-	recentCompetitions: AdminPhotoCompetitionSummary[]
 }
 
 export function useAdminPhotoCompetitions() {
@@ -97,6 +96,22 @@ export function useAdminPhotoCompetitions() {
 			Axios.get<{ data: AdminPhotoCompetitionsData }>(
 				"api/admin/photo-competitions"
 			).then((res) => res.data.data),
+	})
+}
+
+type AdminRecentPhotoCompetitionsResponse = {
+	data: AdminPhotoCompetitionSummary[]
+	meta: { current_page: number; last_page: number; total: number }
+}
+
+export function useAdminRecentPhotoCompetitions(page = 1, perPage = 10) {
+	return useQuery({
+		queryKey: ["admin", "photo-competitions", "recent", page, perPage],
+		queryFn: () =>
+			Axios.get<AdminRecentPhotoCompetitionsResponse>(
+				"api/admin/photo-competitions/recent",
+				{ params: { page, per_page: perPage } }
+			).then((res) => res.data),
 	})
 }
 

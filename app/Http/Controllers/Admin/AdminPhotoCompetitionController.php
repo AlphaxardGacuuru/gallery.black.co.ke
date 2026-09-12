@@ -13,7 +13,9 @@ use Illuminate\Validation\ValidationException;
 class AdminPhotoCompetitionController extends Controller
 {
     /**
-     * Stats overview plus the recent competitions and the configurable prize amount.
+     * Stats overview, the active competition, and the configurable prize
+     * amount/schedule. The full competition history is paginated separately
+     * via recent() so paging through it doesn't refetch all of this too.
      */
     public function index(): JsonResponse
     {
@@ -24,22 +26,6 @@ class AdminPhotoCompetitionController extends Controller
             'totalPhotos' => Photo::query()->count(),
             'totalLikes' => (int) Photo::query()->sum('likes_count'),
         ];
-
-        $recentCompetitions = PhotoCompetition::query()
-            ->withCount('photos')
-            ->with('winnerPhoto.user')
-            ->latest('starts_at')
-            ->limit(10)
-            ->get()
-            ->map(fn(PhotoCompetition $competition) => [
-                'id' => $competition->id,
-                'startsAt' => $competition->starts_at,
-                'endsAt' => $competition->ends_at,
-                'status' => $competition->status,
-                'prizeAmount' => $competition->prize_amount,
-                'photosCount' => $competition->photos_count,
-                'winnerName' => $competition->winnerPhoto?->user?->name,
-            ]);
 
         return response()->json([
             'data' => [
@@ -52,7 +38,35 @@ class AdminPhotoCompetitionController extends Controller
                 'totals' => $totals,
                 'prizeAmount' => (int) (Setting::query()->where('key', 'photo_prize_amount')->value('value') ?? 500),
                 'schedule' => PhotoCompetition::schedule(),
-                'recentCompetitions' => $recentCompetitions,
+            ],
+        ]);
+    }
+
+    /**
+     * Paginated competition history, most recent first.
+     */
+    public function recent(Request $request): JsonResponse
+    {
+        $competitions = PhotoCompetition::query()
+            ->withCount('photos')
+            ->with('winnerPhoto.user')
+            ->latest('starts_at')
+            ->paginate($request->integer('per_page', 10));
+
+        return response()->json([
+            'data' => $competitions->getCollection()->map(fn(PhotoCompetition $competition) => [
+                'id' => $competition->id,
+                'startsAt' => $competition->starts_at,
+                'endsAt' => $competition->ends_at,
+                'status' => $competition->status,
+                'prizeAmount' => $competition->prize_amount,
+                'photosCount' => $competition->photos_count,
+                'winnerName' => $competition->winnerPhoto?->user?->name,
+            ]),
+            'meta' => [
+                'current_page' => $competitions->currentPage(),
+                'last_page' => $competitions->lastPage(),
+                'total' => $competitions->total(),
             ],
         ]);
     }

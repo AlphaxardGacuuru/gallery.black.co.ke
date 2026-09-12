@@ -7,12 +7,15 @@ import Heading from "@/components/heading"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
+import { Input } from "@/components/ui/input"
+import { SelectField, SelectItem } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import toast from "@/lib/toast"
 import {
 	type AdminPhotoCompetitionSummary,
 	type PhotoCompetitionSchedule,
 	useAdminPhotoCompetitions,
+	useAdminRecentPhotoCompetitions,
 	useUpdatePhotoCompetitionSchedule,
 	useUpdatePrizeAmount,
 } from "@/queries/admin"
@@ -52,14 +55,16 @@ function PrizeAmountSettings({ prizeAmount }: { prizeAmount: number }) {
 				title="Weekly prize amount"
 				description="Applies to the next competition the scheduler starts."
 			/>
-			<div className="flex gap-2">
-				<input
+			<div className="flex items-start gap-2">
+				<Input
 					type="number"
 					min={0}
+					label="Prize amount (KES)"
 					value={amount}
 					onChange={(event) => setAmount(event.target.value)}
-					className="w-full rounded-md border bg-background px-3 py-2 text-sm"
 				/>
+			</div>
+			<div className="flex justify-end">
 				<Button
 					disabled={amount.trim() === "" || updatePrizeAmount.isPending}
 					onClick={handleSave}>
@@ -70,7 +75,11 @@ function PrizeAmountSettings({ prizeAmount }: { prizeAmount: number }) {
 	)
 }
 
-function ScheduleSettings({ schedule }: { schedule: PhotoCompetitionSchedule }) {
+function ScheduleSettings({
+	schedule,
+}: {
+	schedule: PhotoCompetitionSchedule
+}) {
 	const updateSchedule = useUpdatePhotoCompetitionSchedule()
 	const [startDay, setStartDay] = useState(schedule.startDay)
 	const [startTime, setStartTime] = useState(schedule.startTime)
@@ -90,8 +99,6 @@ function ScheduleSettings({ schedule }: { schedule: PhotoCompetitionSchedule }) 
 		)
 	}
 
-	const selectClassName = "rounded-md border bg-background px-3 py-2 text-sm"
-
 	return (
 		<div className="max-w-sm space-y-3 rounded-lg border p-4">
 			<Heading
@@ -99,57 +106,53 @@ function ScheduleSettings({ schedule }: { schedule: PhotoCompetitionSchedule }) 
 				title="Weekly schedule"
 				description="When future competitions automatically start and end."
 			/>
-			<div className="space-y-1">
-				<p className="text-xs font-medium text-muted-foreground">Starts</p>
-				<div className="flex gap-2">
-					<select
-						value={startDay}
-						onChange={(event) => setStartDay(Number(event.target.value))}
-						className={selectClassName}>
-						{WEEKDAYS.map((day, index) => (
-							<option
-								key={day}
-								value={index}>
-								{day}
-							</option>
-						))}
-					</select>
-					<input
-						type="time"
-						value={startTime}
-						onChange={(event) => setStartTime(event.target.value)}
-						className={selectClassName}
-					/>
-				</div>
+			<div className="flex gap-2">
+				<SelectField
+					label="Start day"
+					value={String(startDay)}
+					onValueChange={(value) => setStartDay(Number(value))}>
+					{WEEKDAYS.map((day, index) => (
+						<SelectItem
+							key={day}
+							value={String(index)}>
+							{day}
+						</SelectItem>
+					))}
+				</SelectField>
+				<Input
+					type="time"
+					label="Start time"
+					value={startTime}
+					onChange={(event) => setStartTime(event.target.value)}
+				/>
 			</div>
-			<div className="space-y-1">
-				<p className="text-xs font-medium text-muted-foreground">Ends</p>
-				<div className="flex gap-2">
-					<select
-						value={endDay}
-						onChange={(event) => setEndDay(Number(event.target.value))}
-						className={selectClassName}>
-						{WEEKDAYS.map((day, index) => (
-							<option
-								key={day}
-								value={index}>
-								{day}
-							</option>
-						))}
-					</select>
-					<input
-						type="time"
-						value={endTime}
-						onChange={(event) => setEndTime(event.target.value)}
-						className={selectClassName}
-					/>
-				</div>
+			<div className="flex gap-2">
+				<SelectField
+					label="End day"
+					value={String(endDay)}
+					onValueChange={(value) => setEndDay(Number(value))}>
+					{WEEKDAYS.map((day, index) => (
+						<SelectItem
+							key={day}
+							value={String(index)}>
+							{day}
+						</SelectItem>
+					))}
+				</SelectField>
+				<Input
+					type="time"
+					label="End time"
+					value={endTime}
+					onChange={(event) => setEndTime(event.target.value)}
+				/>
 			</div>
-			<Button
-				disabled={updateSchedule.isPending}
-				onClick={handleSave}>
-				Save
-			</Button>
+			<div className="flex justify-end">
+				<Button
+					disabled={updateSchedule.isPending}
+					onClick={handleSave}>
+					Save
+				</Button>
+			</div>
 		</div>
 	)
 }
@@ -168,7 +171,9 @@ const competitionColumns: ColumnDef<AdminPhotoCompetitionSummary>[] = [
 	{
 		accessorKey: "status",
 		header: "Status",
-		cell: ({ row }) => <span className="capitalize">{row.original.status}</span>,
+		cell: ({ row }) => (
+			<span className="capitalize">{row.original.status}</span>
+		),
 	},
 	{
 		accessorKey: "photosCount",
@@ -186,6 +191,38 @@ const competitionColumns: ColumnDef<AdminPhotoCompetitionSummary>[] = [
 		cell: ({ row }) => row.original.winnerName ?? "—",
 	},
 ]
+
+function RecentCompetitionsTable() {
+	const [page, setPage] = useState(1)
+	const [perPage, setPerPage] = useState(10)
+	const { data: recent } = useAdminRecentPhotoCompetitions(page, perPage)
+
+	return (
+		<Card className="overflow-hidden">
+			<CardHeader className="pb-4">
+				<CardTitle>Recent competitions</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<DataTable
+					columns={competitionColumns}
+					data={recent?.data ?? []}
+					emptyMessage="No competitions yet"
+					pagination={{
+						currentPage: recent?.meta.current_page ?? 1,
+						lastPage: recent?.meta.last_page ?? 1,
+						total: recent?.meta.total ?? 0,
+						pageSize: perPage,
+						onPageChange: setPage,
+						onPageSizeChange: (size) => {
+							setPerPage(size)
+							setPage(1)
+						},
+					}}
+				/>
+			</CardContent>
+		</Card>
+	)
+}
 
 export default function AdminPhotoCompetitions() {
 	const { data, isLoading } = useAdminPhotoCompetitions()
@@ -247,18 +284,7 @@ export default function AdminPhotoCompetitions() {
 							<ScheduleSettings schedule={data.schedule} />
 						</div>
 
-						<Card className="overflow-hidden">
-							<CardHeader className="pb-4">
-								<CardTitle>Recent competitions</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<DataTable
-									columns={competitionColumns}
-									data={data.recentCompetitions}
-									emptyMessage="No competitions yet"
-								/>
-							</CardContent>
-						</Card>
+						<RecentCompetitionsTable />
 					</>
 				)}
 			</div>
