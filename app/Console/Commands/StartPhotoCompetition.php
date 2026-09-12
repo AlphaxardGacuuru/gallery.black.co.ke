@@ -32,7 +32,9 @@ class StartPhotoCompetition extends Command
         // EndPhotoCompetition, but never leave two competitions active.
         PhotoCompetition::active()->update(['status' => PhotoCompetition::STATUS_ENDED]);
 
-        $prizeAmount = (int) (Setting::query()->where('key', 'photo_prize_amount')->value('value') ?? 500);
+        $prizeAmount = (int) (Setting::query()
+            ->where('key', 'photo_prize_amount')
+            ->value('value') ?? 500);
 
         $competition = PhotoCompetition::create([
             'starts_at' => $startsAt,
@@ -41,9 +43,11 @@ class StartPhotoCompetition extends Command
             'prize_amount' => $prizeAmount,
         ]);
 
-        User::query()->whereHas('pushSubscriptions')->chunkById(200, function ($users) use ($competition) {
-            Notification::send($users, new PhotoCompetitionStartedNotification($competition));
-        });
+        User::query()
+            ->whereHas('pushSubscriptions')
+            ->chunkById(200, function ($users) use ($competition) {
+                Notification::send($users, new PhotoCompetitionStartedNotification($competition));
+            });
 
         $this->components->info("Started competition #{$competition->id}, ends {$endsAt}.");
     }

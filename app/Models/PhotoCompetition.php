@@ -86,8 +86,15 @@ class PhotoCompetition extends Model
         $weekStart = $anchor->copy()->startOfWeek(Carbon::SUNDAY);
 
         return [
-            $weekStart->copy()->addDays($schedule['startDay'])->setTimeFromTimeString($schedule['startTime']),
-            $weekStart->copy()->addDays($schedule['endDay'])->setTimeFromTimeString($schedule['endTime']),
+            $weekStart
+                ->copy()
+                ->addDays($schedule['startDay'])
+                ->setTimeFromTimeString($schedule['startTime']),
+
+            $weekStart
+                ->copy()
+                ->addDays($schedule['endDay'])
+                ->setTimeFromTimeString($schedule['endTime']),
         ];
     }
 
