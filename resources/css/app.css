@@ -254,6 +254,18 @@
     color: #fef3c7;
 }
 
+/* @pqina/flip also hardcodes .tick-credits ("Powered by PQINA") as
+   right:0/bottom:0 of the full-width .tick container. The clock itself is
+   only as wide as its digits, so on wide screens that corner falls past
+   the last label with room to spare — but on narrow screens the container
+   shrinks toward the clock's own width and that corner lands right under
+   the "seconds" label. Centering it under the whole clock instead keeps it
+   clear of every label regardless of viewport width. */
+.tick .tick-credits {
+    left: 0;
+    text-align: center;
+}
+
 @layer utilities {
     .rain-drops {
         mask-image: linear-gradient(to bottom, transparent, white 20%, white 80%, transparent);
