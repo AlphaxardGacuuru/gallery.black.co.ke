@@ -80,22 +80,27 @@ export function FlipClock({ target, onComplete, className }: Props) {
 	return (
 		<div
 			ref={containerRef}
-			className={cn("tick w-full text-3xl sm:text-4xl lg:w-1/2 mx-auto", className)}>
+			// Bottom padding reserves room for Tick's "Powered by PQINA" credit
+			// link, which is absolutely positioned at the container's bottom
+			// edge and would otherwise sit on top of the seconds label.
+			className={cn("tick w-full mx-auto pb-6", className)}>
 			<div
 				data-repeat="true"
 				data-layout="horizontal center fit"
 				data-transform="preset(d, h, m, s) -> delay">
-				<div className="mx-1.5 text-center">
+				<div className="mx-[0.25em] text-center">
 					<div
 						data-key="value"
 						data-repeat="true"
 						data-transform="pad(00) -> split -> delay">
 						<span data-view="flip" />
 					</div>
+					{/* Sized in em, relative to the flip digits' own font-size, so the
+					    label reads as a caption instead of matching the digits. */}
 					<span
 						data-key="label"
 						data-view="text"
-						className="mt-1 block text-[15px] lg:text-[30px] font-medium uppercase tracking-wide text-muted-foreground"
+						className="mt-[0.35em] block text-[0.375em] font-medium uppercase tracking-wide text-muted-foreground"
 					/>
 				</div>
 			</div>

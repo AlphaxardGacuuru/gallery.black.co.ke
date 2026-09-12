@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react"
 import { FlipClock } from "@/components/photos/FlipClock"
 
-export function CompetitionCountdown({ endsAt }: { endsAt: string }) {
+export function CompetitionCountdown({
+	endsAt,
+	className,
+}: {
+	endsAt: string
+	className?: string
+}) {
 	const [ended, setEnded] = useState(false)
 
 	useEffect(() => {
@@ -20,6 +26,7 @@ export function CompetitionCountdown({ endsAt }: { endsAt: string }) {
 		<FlipClock
 			target={endsAt}
 			onComplete={() => setEnded(true)}
+			className={className}
 		/>
 	)
 }

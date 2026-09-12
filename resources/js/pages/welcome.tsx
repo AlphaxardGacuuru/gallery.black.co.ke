@@ -138,7 +138,10 @@ export default function Welcome() {
 								<p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
 									Time left to enter
 								</p>
-								<CompetitionCountdown endsAt={competition.endsAt} />
+								<CompetitionCountdown
+									endsAt={competition.endsAt}
+									className="text-4xl sm:text-5xl"
+								/>
 							</GlassCard>
 						)}
 
@@ -147,7 +150,10 @@ export default function Welcome() {
 								<p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
 									Next challenge starts in
 								</p>
-								<NextCompetitionCountdown startsAt={data.nextStartsAt} />
+								<NextCompetitionCountdown
+									startsAt={data.nextStartsAt}
+									className="text-4xl sm:text-5xl"
+								/>
 							</GlassCard>
 						)}
 					</div>

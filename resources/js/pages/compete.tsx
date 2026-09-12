@@ -34,18 +34,20 @@ export default function Compete() {
 								to the most liked photo
 							</>
 						) : (
-							"No challenge is running right now — check back soon."
+							"No challenge is running right now, check back soon."
 						)}
 					</p>
 				</header>
 
-				{isLoading ? (
-					<Skeleton className="h-24 w-full max-w-md" />
-				) : competition ? (
-					<CompetitionCountdown endsAt={competition.endsAt} />
-				) : data?.nextStartsAt ? (
-					<NextCompetitionCountdown startsAt={data.nextStartsAt} />
-				) : null}
+				<div className="mx-auto w-[80vw]">
+					{isLoading ? (
+						<Skeleton className="h-24 w-full max-w-md" />
+					) : competition ? (
+						<CompetitionCountdown endsAt={competition.endsAt} />
+					) : data?.nextStartsAt ? (
+						<NextCompetitionCountdown startsAt={data.nextStartsAt} />
+					) : null}
+				</div>
 
 				{isLoading ? (
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-4">

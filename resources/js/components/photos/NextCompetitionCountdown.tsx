@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react"
 import { FlipClock } from "@/components/photos/FlipClock"
+import { cn } from "@/lib/utils"
 
-export function NextCompetitionCountdown({ startsAt }: { startsAt: string }) {
+export function NextCompetitionCountdown({
+	startsAt,
+	className,
+}: {
+	startsAt: string
+	className?: string
+}) {
 	const [started, setStarted] = useState(false)
 
 	useEffect(() => {
@@ -20,7 +27,7 @@ export function NextCompetitionCountdown({ startsAt }: { startsAt: string }) {
 		<FlipClock
 			target={startsAt}
 			onComplete={() => setStarted(true)}
-			className="tick-accent-amber"
+			className={cn("tick-accent-amber", className)}
 		/>
 	)
 }
