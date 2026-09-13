@@ -1,6 +1,7 @@
 import {
 	ChevronRight,
 	LayoutDashboard,
+	Send,
 	ShieldCheck,
 	Trophy,
 	Users,
@@ -26,6 +27,7 @@ const ADMIN_ITEMS = [
 	{ title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
 	{ title: "Users", href: "/admin/users", icon: Users },
 	{ title: "Photo challenge", href: "/admin/photo-competitions", icon: Trophy },
+	{ title: "Payouts", href: "/admin/kopokopo-transfers", icon: Send },
 ]
 
 export function AdminNav() {

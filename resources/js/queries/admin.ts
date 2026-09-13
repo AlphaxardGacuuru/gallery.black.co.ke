@@ -156,3 +156,63 @@ export function useUpdateActiveCompetition() {
 		},
 	})
 }
+
+export type AdminKopokopoTransfer = {
+	id: string
+	user: string | null
+	kopokopoId: string | null
+	kopokopoCreatedAt: string | null
+	amount: string
+	currency: string | null
+	transferBatches: unknown
+	metadata: unknown
+	createdAt: string
+}
+
+type AdminKopokopoTransfersResponse = {
+	data: AdminKopokopoTransfer[]
+	meta: { current_page: number; last_page: number; total: number }
+}
+
+export function useAdminKopokopoTransfers(page = 1, perPage = 20) {
+	return useQuery({
+		queryKey: ["admin", "kopokopo-transfers", page, perPage],
+		queryFn: () =>
+			Axios.get<AdminKopokopoTransfersResponse>(
+				"api/admin/kopokopo-transfers",
+				{ params: { page, per_page: perPage } }
+			).then((res) => res.data),
+	})
+}
+
+export function useSendKopokopoTransfer() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		// The endpoint always responds 200, even on failure — Kopokopo/M-Pesa
+		// errors surface in the body's `status`/`message`, not the HTTP
+		// status, so a non-success body is turned into a rejected promise
+		// here to fit react-query's normal onSuccess/onError handling.
+		mutationFn: (payload: {
+			recipientName: string
+			destinationReference: string
+			amount: number
+			description?: string
+		}) =>
+			Axios.post<{ status: unknown; message: string }>(
+				"api/admin/kopokopo-transfers/initiate",
+				payload
+			).then((res) => {
+				if (res.data.status !== true) {
+					throw new Error(res.data.message)
+				}
+
+				return res.data
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "kopokopo-transfers"],
+			})
+		},
+	})
+}
