@@ -20,7 +20,7 @@ class PhotoController extends Controller
     {
         $data = $request->validate([
             'temporaryUploadId' => 'required|exists:temporary_uploads,id',
-            'caption' => 'nullable|string|max:280',
+            'caption' => 'required|string|max:280',
         ]);
 
         $competition = PhotoCompetition::active()->first();
@@ -70,7 +70,15 @@ class PhotoController extends Controller
      */
     public function destroy(Request $request, string $id): JsonResponse
     {
-        $photo = Photo::where('user_id', $request->user()->id)->findOrFail($id);
+        $photo = Photo::where('user_id', $request->user()->id)
+            ->with('competition')
+            ->findOrFail($id);
+
+        if ($photo->competition->status !== PhotoCompetition::STATUS_ACTIVE) {
+            throw ValidationException::withMessages([
+                'id' => 'You can only delete a photo while its challenge is still active.',
+            ]);
+        }
 
         Storage::disk($photo->disk)->delete($photo->path);
         $photo->delete();

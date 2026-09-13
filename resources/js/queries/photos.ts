@@ -10,6 +10,11 @@ import PhotoLikeController from "@/actions/App/Http/Controllers/PhotoLikeControl
 import Axios from "@/lib/axios"
 import type { Photo, PhotoCompetition } from "@/types/photo"
 
+type CurrentCompetitionData = {
+	competition: PhotoCompetition | null
+	nextStartsAt: string | null
+}
+
 export function useCurrentCompetition() {
 	return useQuery({
 		queryKey: ["photos", "current"],
@@ -17,14 +22,39 @@ export function useCurrentCompetition() {
 			Axios.get<{
 				data: PhotoCompetition | null
 				nextStartsAt: string | null
-			}>(PhotoCompetitionController.current.url()).then((res) => ({
-				competition: res.data.data,
-				nextStartsAt: res.data.nextStartsAt,
-			})),
+			}>(PhotoCompetitionController.current.url()).then(
+				(res): CurrentCompetitionData => ({
+					competition: res.data.data,
+					nextStartsAt: res.data.nextStartsAt,
+				})
+			),
 		// Likes and the countdown both move without any action from this
 		// viewer, so keep the leaderboard fresh without requiring a reload.
 		refetchInterval: 20_000,
 	})
+}
+
+// Both the mutation's optimistic update and its rollback need to reach into
+// the same current-competition cache entry, which since useCurrentCompetition
+// wraps the raw API response now holds { competition, nextStartsAt } rather
+// than the competition itself.
+function updateCachedPhotos(
+	queryClient: ReturnType<typeof useQueryClient>,
+	updater: (photos: Photo[]) => Photo[]
+) {
+	queryClient.setQueryData<CurrentCompetitionData>(
+		["photos", "current"],
+		(current) =>
+			current?.competition
+				? {
+						...current,
+						competition: {
+							...current.competition,
+							photos: updater(current.competition.photos),
+						},
+					}
+				: current
+	)
 }
 
 type DiscoverPage = {
@@ -51,18 +81,14 @@ export function useSubmitPhoto() {
 	const queryClient = useQueryClient()
 
 	return useMutation({
-		mutationFn: (payload: { temporaryUploadId: number; caption?: string }) =>
+		mutationFn: (payload: { temporaryUploadId: number; caption: string }) =>
 			Axios.post<{ data: Photo }>(PhotoController.store.url(), payload).then(
 				(res) => res.data.data
 			),
 		onSuccess: (photo) => {
 			// Show the new submission immediately instead of waiting on the
 			// background refetch below to land.
-			queryClient.setQueryData<PhotoCompetition | null>(
-				["photos", "current"],
-				(current) =>
-					current ? { ...current, photos: [...current.photos, photo] } : current
-			)
+			updateCachedPhotos(queryClient, (photos) => [...photos, photo])
 
 			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
 		},
@@ -80,29 +106,21 @@ export function useLikePhoto() {
 		onMutate: async (photoId) => {
 			await queryClient.cancelQueries({ queryKey: ["photos", "current"] })
 
-			const previous = queryClient.getQueryData<PhotoCompetition | null>([
+			const previous = queryClient.getQueryData<CurrentCompetitionData>([
 				"photos",
 				"current",
 			])
 
-			queryClient.setQueryData<PhotoCompetition | null>(
-				["photos", "current"],
-				(current) =>
-					current
+			updateCachedPhotos(queryClient, (photos) =>
+				photos.map((photo) =>
+					photo.id === photoId
 						? {
-								...current,
-								photos: current.photos.map((photo) =>
-									photo.id === photoId
-										? {
-												...photo,
-												isLikedByViewer: !photo.isLikedByViewer,
-												likesCount:
-													photo.likesCount + (photo.isLikedByViewer ? -1 : 1),
-											}
-										: photo
-								),
+								...photo,
+								isLikedByViewer: !photo.isLikedByViewer,
+								likesCount: photo.likesCount + (photo.isLikedByViewer ? -1 : 1),
 							}
-						: current
+						: photo
+				)
 			)
 
 			return { previous }
@@ -113,6 +131,22 @@ export function useLikePhoto() {
 			}
 		},
 		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
+		},
+	})
+}
+
+export function useDeletePhoto() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (photoId: string) =>
+			Axios.delete(PhotoController.destroy.url(photoId)),
+		onSuccess: (_response, photoId) => {
+			updateCachedPhotos(queryClient, (photos) =>
+				photos.filter((photo) => photo.id !== photoId)
+			)
+
 			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
 		},
 	})

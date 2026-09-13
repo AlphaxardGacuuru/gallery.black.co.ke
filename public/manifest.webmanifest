@@ -2,11 +2,11 @@
 	"name": "Black Gallery",
 	"short_name": "Black Gallery",
 	"description": "A weekly photo challenge — submit, get liked, and win the prize.",
-	"start_url": "/",
+	"start_url": "/compete",
 	"scope": "/",
 	"display": "standalone",
-	"background_color": "#ff0266",
-	"theme_color": "#171717",
+	"background_color": "#000000",
+	"theme_color": "#000000",
 	"icons": [
 		{
 			"src": "/android-chrome-192x192.png",

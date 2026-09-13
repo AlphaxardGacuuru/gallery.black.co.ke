@@ -23,6 +23,7 @@ import { useSubmitPhoto } from "@/queries/photos"
 
 import "filepond/dist/filepond.min.css"
 import "filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css"
+import { Input } from "../ui/input"
 
 registerPlugin(
 	FilePondPluginFileValidateSize,
@@ -51,12 +52,12 @@ export function UploadPhotoDialog({
 	}
 
 	function handleSubmit() {
-		if (!temporaryUploadId) {
+		if (!temporaryUploadId || !caption.trim()) {
 			return
 		}
 
 		submitPhoto.mutate(
-			{ temporaryUploadId, caption: caption.trim() || undefined },
+			{ temporaryUploadId, caption: caption.trim() },
 			{
 				onSuccess: () => {
 					toast.success("Photo submitted to this week's challenge")
@@ -79,8 +80,9 @@ export function UploadPhotoDialog({
 	if (disabled) {
 		return (
 			<Button
+				size="xl"
 				disabled
-				className="fixed right-4 bottom-20 z-40 gap-2 rounded-full shadow-lg md:right-6 md:bottom-6">
+				className="fixed right-4 bottom-26 z-40 gap-2 rounded-full shadow-lg md:right-70 md:bottom-6">
 				<Camera className="size-4" />
 				Already submitted this week
 			</Button>
@@ -168,7 +170,9 @@ export function UploadPhotoDialog({
 									}
 								},
 								revert: (uniqueFileId, load, error) => {
-									Axios.delete(FilePondController.destroyPhoto.url(uniqueFileId))
+									Axios.delete(
+										FilePondController.destroyPhoto.url(uniqueFileId)
+									)
 										.then(() => load())
 										.catch(() => error("Could not remove upload"))
 								},
@@ -177,13 +181,13 @@ export function UploadPhotoDialog({
 							name="filepond-photo"
 						/>
 
-						<input
+						<Input
 							type="text"
 							value={caption}
 							onChange={(event) => setCaption(event.target.value)}
 							maxLength={280}
-							placeholder="Add a caption (optional)"
-							className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+							label="Description"
+							required={true}
 						/>
 					</>
 				)}
@@ -191,7 +195,11 @@ export function UploadPhotoDialog({
 				<DialogFooter>
 					{hasActiveCompetition ? (
 						<Button
-							disabled={!temporaryUploadId || submitPhoto.isPending}
+							disabled={
+								!temporaryUploadId ||
+								!caption.trim() ||
+								submitPhoto.isPending
+							}
 							onClick={handleSubmit}>
 							Submit entry
 						</Button>

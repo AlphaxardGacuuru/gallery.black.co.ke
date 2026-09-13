@@ -17,9 +17,10 @@ import { usePushNotifications } from "@/hooks/use-push-notifications"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 
-// Persisted per tab/session (not to the server) so "Not now" only silences
-// the prompt for this visit — it can still ask again next time the user
-// opens the site, unlike markComplete() which is permanent.
+// Persisted per tab/session so "Not now" only silences the prompt for this
+// visit — the modal keeps re-asking every session until push notifications
+// are actually enabled. `markComplete()` just avoids redundant API calls; it
+// no longer permanently hides the modal.
 const DISMISSED_KEY = "notifications-prompt-dismissed"
 
 function wasDismissedThisSession(): boolean {
@@ -50,18 +51,22 @@ export default function PermissionsOnboardingModal() {
 	}
 
 	useEffect(() => {
-		if (!auth || onboardedAt || wasDismissedThisSession() || !installStepSettled) {
+		if (!auth || wasDismissedThisSession() || !installStepSettled) {
 			return
 		}
 
 		if (!isSupported) {
-			markComplete()
+			if (!onboardedAt) {
+				markComplete()
+			}
 			setOpen(false)
 			return
 		}
 
 		if (permission === "granted") {
-			markComplete()
+			if (!onboardedAt) {
+				markComplete()
+			}
 			setOpen(false)
 			return
 		}

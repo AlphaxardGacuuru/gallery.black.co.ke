@@ -19,7 +19,7 @@
     <meta name="mobile-web-app-capable"
           content="yes">
     <meta name="theme-color"
-          content="#171717">
+          content="#000000">
     <meta name="description"
           content="An email client with read receipts built in — see when every message is queued, sent, delivered, and opened.">
 

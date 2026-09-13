@@ -1,22 +1,47 @@
-import { Heart } from "lucide-react"
-import type { Photo } from "@/types/photo"
-import { cn } from "@/lib/utils"
-import { useLikePhoto } from "@/queries/photos"
+import { Heart, Trash2 } from "lucide-react"
 import { useState } from "react"
+import type { Photo } from "@/types/photo"
+import { Button } from "@/components/ui/button"
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
+import toast from "@/lib/toast"
+import { useDeletePhoto, useLikePhoto } from "@/queries/photos"
 
 type Props = {
 	photo: Photo
 	/** "square" for the uniform current-challenge grid, "auto" to keep the
 	 *  photo's natural aspect ratio for the masonry-style discover grid. */
 	aspect?: "square" | "auto"
+	/** Only the viewer's own entry in the still-active challenge can be
+	 *  deleted — pass true from compete.tsx, never from discover.tsx. */
+	canDelete?: boolean
 }
 
-export function PhotoCard({ photo, aspect = "square" }: Props) {
+export function PhotoCard({
+	photo,
+	aspect = "square",
+	canDelete = false,
+}: Props) {
 	const likePhoto = useLikePhoto()
+	const deletePhoto = useDeletePhoto()
 	const [isLiked, setIsLiked] = useState(photo.isLikedByViewer)
 
+	function handleDelete() {
+		deletePhoto.mutate(photo.id, {
+			onError: () => toast.error("Couldn't delete your photo"),
+		})
+	}
+
 	return (
-		<figure className="group overflow-hidden rounded-xl border bg-card shadow-sm">
+		<figure className="overflow-hidden rounded-xl border bg-card shadow-sm">
 			<div className="relative">
 				<img
 					src={photo.url}
@@ -42,23 +67,66 @@ export function PhotoCard({ photo, aspect = "square" }: Props) {
 						</p>
 					)}
 				</div>
-				<button
-					type="button"
-					aria-label={photo.isLikedByViewer || isLiked ? "Unlike photo" : "Like photo"}
-					disabled={likePhoto.isPending}
-					onClick={() => {
-						likePhoto.mutate(photo.id)
-						setIsLiked(!isLiked)
-					}}
-					className="flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm transition-colors hover:bg-accent cursor-pointer">
-					<Heart
-						className={cn(
-							"size-4",
-							(photo.isLikedByViewer || isLiked) && "fill-red-500 text-red-500"
-						)}
-					/>
-					<span className="tabular-nums">{photo.likesCount}</span>
-				</button>
+				{/* Actions Start */}
+				<div className="flex items-center gap-2">
+					<Button
+						variant="default"
+						size="sm"
+						aria-label={
+							photo.isLikedByViewer || isLiked ? "Unlike photo" : "Like photo"
+						}
+						disabled={likePhoto.isPending}
+						onClick={() => {
+							likePhoto.mutate(photo.id)
+							setIsLiked(!isLiked)
+						}}
+						className="flex shrink-0 items-center gap-1.5 px-2.5 text-sm transition-colors cursor-pointer">
+						<Heart
+							className={cn(
+								"size-4",
+								(photo.isLikedByViewer || isLiked) &&
+									"fill-red-500 text-red-500"
+							)}
+						/>
+						<span className="tabular-nums">{photo.likesCount}</span>
+					</Button>
+
+					{canDelete && (
+						<Dialog>
+							<DialogTrigger asChild>
+								<Button
+									type="button"
+									variant="destructive"
+									size="sm"
+									aria-label="Delete photo"
+									disabled={deletePhoto.isPending}
+									className="shrink-0">
+									<Trash2 className="size-4" />
+								</Button>
+							</DialogTrigger>
+							<DialogContent>
+								<DialogTitle>Delete this photo?</DialogTitle>
+								<DialogDescription>
+									This removes your entry from this week&apos;s challenge and
+									can&apos;t be undone.
+								</DialogDescription>
+								<DialogFooter className="gap-2">
+									<DialogClose asChild>
+										<Button variant="secondary">Cancel</Button>
+									</DialogClose>
+									<DialogClose asChild>
+										<Button
+											variant="destructive"
+											onClick={handleDelete}>
+											Delete
+										</Button>
+									</DialogClose>
+								</DialogFooter>
+							</DialogContent>
+						</Dialog>
+					)}
+				</div>
+				{/* Actions End */}
 			</figcaption>
 		</figure>
 	)

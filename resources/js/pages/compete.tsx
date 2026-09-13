@@ -28,13 +28,13 @@ export default function Compete() {
 					<p className="text-xl text-muted-foreground">
 						{competition ? (
 							<>
+							<span className="me-1">This week's most liked photo will win</span>
 								<span className="text-5xl font-bold text-green-600">
 									KES {competition.prizeAmount}
 								</span>{" "}
-								to the most liked photo
 							</>
 						) : (
-							"No challenge is running right now, check back soon."
+							"No challenge is running right now — check back soon for your next shot at the prize."
 						)}
 					</p>
 				</header>
@@ -59,7 +59,7 @@ export default function Compete() {
 						))}
 					</div>
 				) : !competition || competition.photos.length === 0 ? (
-					<div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-16 text-center text-muted-foreground">
+					<div className="flex flex-col items-center gap-2 rounded-xl border py-16 text-center text-muted-foreground">
 						<Trophy className="size-8" />
 						<p className="font-medium">No entries yet</p>
 						<p className="text-sm">Be the first to submit a photo this week.</p>
@@ -70,6 +70,7 @@ export default function Compete() {
 							<PhotoCard
 								key={photo.id}
 								photo={photo}
+								canDelete={String(photo.userId) === String(auth?.id)}
 							/>
 						))}
 					</div>

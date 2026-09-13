@@ -80,14 +80,20 @@ export function FlipClock({ target, onComplete, className }: Props) {
 	return (
 		<div
 			ref={containerRef}
-			// Bottom padding reserves room for Tick's "Powered by PQINA" credit
-			// link, which is absolutely positioned at the container's bottom
-			// edge and would otherwise sit on top of the seconds label.
-			className={cn("tick w-full mx-auto pb-6", className)}>
+			className={cn("tick w-full mx-auto", className)}>
 			<div
 				data-repeat="true"
 				data-layout="horizontal center fit"
-				data-transform="preset(d, h, m, s) -> delay">
+				data-transform="preset(d, h, m, s) -> delay"
+				// Tick.DOM.create adds its own "tick" class to this element (it
+				// becomes the actual root it manages), making it — not our outer
+				// wrapper above — the positioned ancestor ".tick-credits" (the
+				// "Powered by PQINA" link) is absolutely bottom-anchored against.
+				// That link's font-size is fixed at 11px regardless of screen
+				// size, while our digits/labels shrink on small screens, so fixed
+				// (not em-relative) padding here is what actually keeps it clear
+				// of the seconds label at every size.
+				className="pb-4">
 				<div className="mx-[0.25em] text-center">
 					<div
 						data-key="value"
@@ -97,11 +103,13 @@ export function FlipClock({ target, onComplete, className }: Props) {
 					</div>
 					{/* Sized in em, relative to the flip digits' own font-size, so the
 					    label reads as a caption instead of matching the digits. */}
+					{/* Labels Start */}
 					<span
 						data-key="label"
 						data-view="text"
 						className="mt-[0.35em] block text-[0.375em] font-medium uppercase tracking-wide text-muted-foreground"
 					/>
+					{/* Labels End */}
 				</div>
 			</div>
 		</div>
