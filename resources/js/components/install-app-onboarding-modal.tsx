@@ -16,27 +16,24 @@ import { usePwaInstall } from "@/hooks/use-pwa-install"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 
-// Persisted per tab/session (not to the server) so "Not now" only silences
-// the prompt for this visit — it can still ask again next time the user
-// opens the site, unlike markComplete() which is permanent.
+// Persisted per tab/session so "Not now" only silences the prompt for this
+// visit — the modal keeps re-asking every session until the app is actually
+// installed (or the browser stops offering an install prompt). markComplete()
+// just avoids redundant API calls; it no longer permanently hides the modal,
+// since installOnboardedAt can't detect a later uninstall.
 const DISMISSED_KEY = "install-prompt-dismissed"
 
 function wasDismissedThisSession(): boolean {
 	return sessionStorage.getItem(DISMISSED_KEY) === "1"
 }
 
-// The install step is done — for this visit, or for good — once the user
-// has installed, dismissed the prompt, or there's nothing to prompt for
-// (already installed, or the browser never offered an install prompt at
-// all). The notifications onboarding modal waits on this so it never
-// appears ahead of — or stacked on top of — the install prompt.
+// The install step is settled for this visit once the user has installed,
+// dismissed the prompt, or there's nothing to prompt for (already installed,
+// or the browser never offered an install prompt at all). The notifications
+// onboarding modal waits on this so it never appears ahead of — or stacked
+// on top of — the install prompt.
 export function useIsInstallStepSettled(): boolean {
-	const { auth } = useApp()
 	const { canInstall, isInstalled } = usePwaInstall()
-
-	if (auth?.settings?.installOnboardedAt) {
-		return true
-	}
 
 	if (isInstalled || !canInstall) {
 		return true
@@ -68,12 +65,14 @@ export default function InstallAppOnboardingModal() {
 	}
 
 	useEffect(() => {
-		if (!auth || onboardedAt || wasDismissedThisSession()) {
+		if (!auth || wasDismissedThisSession()) {
 			return
 		}
 
 		if (isInstalled || !canInstall) {
-			markComplete()
+			if (!onboardedAt) {
+				markComplete()
+			}
 			setOpen(false)
 			return
 		}
