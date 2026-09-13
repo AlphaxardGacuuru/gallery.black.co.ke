@@ -216,3 +216,77 @@ export function useSendKopokopoTransfer() {
 		},
 	})
 }
+
+export type KopokopoRecipientType =
+	| "mobile_wallet"
+	| "bank_account"
+	| "till"
+	| "paybill"
+
+export type AdminKopokopoRecipient = {
+	id: string
+	type: KopokopoRecipientType
+	firstName: string | null
+	lastName: string | null
+	email: string | null
+	phoneNumber: string | null
+	accountName: string | null
+	accountNumber: string | null
+	tillName: string | null
+	tillNumber: string | null
+	paybillName: string | null
+	paybillNumber: string | null
+	paybillAccountNumber: string | null
+	description: string | null
+}
+
+export function useAdminKopokopoRecipients() {
+	return useQuery({
+		queryKey: ["admin", "kopokopo-recipients"],
+		queryFn: () =>
+			Axios.get<{ data: AdminKopokopoRecipient[] }>(
+				"api/admin/kopokopo-recipients"
+			).then((res) => res.data.data),
+	})
+}
+
+export type AddKopokopoRecipientPayload = {
+	type: KopokopoRecipientType
+	description: string
+	firstName?: string
+	lastName?: string
+	email?: string
+	phoneNumber?: string
+	accountName?: string
+	accountNumber?: string
+	bankBranchRef?: string
+	tillName?: string
+	tillNumber?: string
+	paybillName?: string
+	paybillNumber?: string
+	paybillAccountNumber?: string
+}
+
+export function useAddKopokopoRecipient() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		// Same status-in-body convention as useSendKopokopoTransfer above.
+		mutationFn: (payload: AddKopokopoRecipientPayload) =>
+			Axios.post<{ status: unknown; message: string }>(
+				"api/admin/kopokopo-recipients",
+				payload
+			).then((res) => {
+				if (res.data.status !== true) {
+					throw new Error(res.data.message)
+				}
+
+				return res.data
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "kopokopo-recipients"],
+			})
+		},
+	})
+}

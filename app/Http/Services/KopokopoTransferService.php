@@ -89,18 +89,4 @@ class KopokopoTransferService extends Service
 
         return [false, 'Kopokopo transfer failed', $response];
     }
-
-    /**
-     * Kopokopo/M-Pesa expects "254XXXXXXXXX" (no "+", no leading 0).
-     */
-    private function normalizePhoneNumber(string $phone): string
-    {
-        $digits = preg_replace('/\D/', '', $phone);
-
-        if (str_starts_with($digits, '0') && strlen($digits) === 10) {
-            return '254'.substr($digits, 1);
-        }
-
-        return $digits;
-    }
 }

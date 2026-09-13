@@ -17,6 +17,7 @@ class KopokopoRecipientResource extends JsonResource
     public function toArray($request)
     {
         return [
+            "id" => $this->id,
             "userId" => $this->user_id,
             "destinationReference" => $this->destination_reference,
             "type" => $this->type,

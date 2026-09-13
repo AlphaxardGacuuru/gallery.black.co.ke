@@ -7,6 +7,8 @@ import { useApp } from "@/contexts/AppContext"
 import { useInitials } from "@/hooks/use-initials"
 import { cn } from "@/lib/utils"
 import type { BreadcrumbItem as BreadcrumbItemType } from "@/types"
+import { Button } from "./ui/button"
+import PhotoConnectionStatus from "./photos/PhotoConnectionStatus"
 
 function connectionLabel(status: string): string {
 	switch (status) {
@@ -44,23 +46,7 @@ export function AppSidebarHeader({
 				<Breadcrumbs breadcrumbs={breadcrumbs} />
 			</div>
 
-			<span
-				className={cn(
-					"inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-					connectionStatus === "connected"
-						? "border-primary bg-primary/10 text-primary"
-						: "border-muted-foreground/20 bg-muted text-muted-foreground"
-				)}>
-				<span
-					className={cn(
-						"size-1.5 rounded-full",
-						connectionStatus === "connected"
-							? "bg-primary"
-							: "bg-muted-foreground/50"
-					)}
-				/>
-				{connectionLabel(connectionStatus)}
-			</span>
+			<PhotoConnectionStatus />
 
 			<button
 				type="button"

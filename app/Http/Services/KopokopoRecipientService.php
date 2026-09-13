@@ -13,109 +13,99 @@ class KopokopoRecipientService extends Service
      */
     public function index()
     {
-        $kopokopoRecipients = KopokopoRecipient::all();
+        $kopokopoRecipients = KopokopoRecipient::latest('created_at')->get();
 
         return KopokopoRecipientResource::collection($kopokopoRecipients);
     }
 
     /*
-     * Get Recipient by ID
+     * Get Recipients Added By a Given User
      */
     public function show($id)
     {
-        $kopokopoRecipient = KopokopoRecipient::where("user_id", $id)
-            ->get();
+        $kopokopoRecipients = KopokopoRecipient::where('user_id', $id)->get();
 
-        return KopokopoRecipientResource::collection($kopokopoRecipient);
+        return KopokopoRecipientResource::collection($kopokopoRecipients);
     }
 
     /*
-     * Create And Store Kopokopo Recipient
+     * Register the recipient with Kopokopo, then store it locally.
      */
     public function store($request)
     {
-        $options = MPESATransactionService::options();
+        $K2 = new K2(MPESATransactionService::config());
 
-        $K2 = new K2($options);
+        $tokenResponse = $K2->TokenService()->getToken();
 
-        // Get one of the services
-        $tokens = $K2->TokenService();
-
-        // Use the service
-        $result = $tokens->getToken();
-
-        if ($result['status'] == 'success') {
-            $data = $result['data'];
-            // echo "My access token is: " . $data['accessToken'] . " It expires in: " . $data['expiresIn'] . "<br>";
+        if (($tokenResponse['status'] ?? null) !== 'success') {
+            return ['error', 'Could not authenticate with Kopokopo', $tokenResponse];
         }
 
-        // Add receipient
-        $pay = $K2->PayService();
-        // Get necessary details for creating a recipient
-        $details = $this->recipientDetails($request, $data['accessToken']);
+        $accessToken = $tokenResponse['data']['accessToken'];
 
-        $response = $pay->addPayRecipient($details);
-        // dd($response);
+        $details = $this->recipientDetails($request, $accessToken);
 
-        if ($response['status'] == 'success') {
-            // Save destination reference
-            $kopokopoRecipient = new KopokopoRecipient;
-            $kopokopoRecipient->user_id = auth("sanctum")->user()->id;
-            $kopokopoRecipient->destination_reference = "";
-            $kopokopoRecipient->type = $request->type;
-            $kopokopoRecipient->first_name = $request->firstName;
-            $kopokopoRecipient->last_name = $request->lastName;
-            $kopokopoRecipient->email = $request->email;
-            $kopokopoRecipient->phone_number = $request->phoneNumber;
-            $kopokopoRecipient->account_name = $request->accountName;
-            $kopokopoRecipient->account_number = $request->accountNumber;
-            $kopokopoRecipient->till_name = $request->tillName;
-            $kopokopoRecipient->till_number = $request->tillNumber;
-            $kopokopoRecipient->paybill_name = $request->paybillName;
-            $kopokopoRecipient->paybill_number = $request->paybillNumber;
-            $kopokopoRecipient->paybill_account_number = $request->paybillAccountNumber;
-            $kopokopoRecipient->description = $request->description;
-            $saved = $kopokopoRecipient->save();
+        $response = $K2->ExternalRecipientService()->addExternalRecipient($details);
 
-            $message = "Recipient Wallet Created";
-
-            $data = [
-                "kopokopoRecipient" => $kopokopoRecipient,
-                "kopokopo" => $response,
-            ];
-
-            return [$saved, $message, $data];
-        } else {
+        if (($response['status'] ?? null) !== 'success') {
             return [
-                $response["status"],
-                $response["data"]["errorMessage"],
+                false,
+                $response['data']['errorMessage'] ?? 'Kopokopo rejected the recipient',
                 $response,
             ];
         }
+
+        $kopokopoRecipient = new KopokopoRecipient;
+        $kopokopoRecipient->user_id = $this->id;
+        $kopokopoRecipient->destination_reference = $this->locationId($response['location'] ?? '');
+        $kopokopoRecipient->type = $request->type;
+        $kopokopoRecipient->first_name = $request->firstName;
+        $kopokopoRecipient->last_name = $request->lastName;
+        $kopokopoRecipient->email = $request->email;
+        $kopokopoRecipient->phone_number = $request->phoneNumber
+            ? $this->normalizePhoneNumber($request->phoneNumber)
+            : null;
+        $kopokopoRecipient->account_name = $request->accountName;
+        $kopokopoRecipient->account_number = $request->accountNumber;
+        $kopokopoRecipient->till_name = $request->tillName;
+        $kopokopoRecipient->till_number = $request->tillNumber;
+        $kopokopoRecipient->paybill_name = $request->paybillName;
+        $kopokopoRecipient->paybill_number = $request->paybillNumber;
+        $kopokopoRecipient->paybill_account_number = $request->paybillAccountNumber;
+        $kopokopoRecipient->description = $request->description;
+        $saved = $kopokopoRecipient->save();
+
+        return [$saved, 'Recipient added', $kopokopoRecipient];
+    }
+
+    /**
+     * The trailing segment of Kopokopo's Location header — its ID for the
+     * newly created recipient, kept for reference (it isn't reusable in a
+     * later sendMoney() call, which always needs full destination details).
+     */
+    private function locationId(string $location): ?string
+    {
+        if ($location === '') {
+            return null;
+        }
+
+        $segments = explode('/', rtrim($location, '/'));
+
+        return end($segments) ?: null;
     }
 
     /*
-     * Get relevant details for pay recipient
+     * Get relevant details for the recipient type being added
      */
     public function recipientDetails($request, $accessToken)
     {
-        switch ($request->type) {
-            case "mobile_wallet":
-                return $this->mobileWalletDetails($request, $accessToken);
-                break;
-
-            case "bank_account":
-                return $this->backAccountDetails($request, $accessToken);
-                break;
-
-            case "till":
-                return $this->tillDetails($request, $accessToken);
-                break;
-
-            default:
-                return $this->payBillDetails($request, $accessToken);
-                break;
-        }
+        return match ($request->type) {
+            'mobile_wallet' => $this->mobileWalletDetails($request, $accessToken),
+            'bank_account' => $this->bankAccountDetails($request, $accessToken),
+            'till' => $this->tillDetails($request, $accessToken),
+            'paybill' => $this->payBillDetails($request, $accessToken),
+            default => throw new \InvalidArgumentException('Invalid recipient type'),
+        };
     }
 
     /*
@@ -123,15 +113,12 @@ class KopokopoRecipientService extends Service
      */
     public function mobileWalletDetails($request, $accessToken)
     {
-        // Get phone in better format
-        $betterPhone = substr_replace($request->phoneNumber, '+254', 0, -9);
-
         return [
             'type' => 'mobile_wallet',
             'firstName' => $request->firstName,
             'lastName' => $request->lastName,
             'email' => $request->email,
-            'phoneNumber' => $betterPhone,
+            'phoneNumber' => $this->normalizePhoneNumber($request->phoneNumber),
             'network' => 'Safaricom',
             'accessToken' => $accessToken,
         ];
@@ -140,12 +127,12 @@ class KopokopoRecipientService extends Service
     /*
      * Bank Account Details
      */
-    public function backAccountDetails($request, $accessToken)
+    public function bankAccountDetails($request, $accessToken)
     {
         return [
             'type' => 'bank_account',
             'accountName' => $request->accountName,
-            'accountNumber' => $request->accountName,
+            'accountNumber' => $request->accountNumber,
             'bankBranchRef' => $request->bankBranchRef,
             'settlementMethod' => 'RTS',
             'accessToken' => $accessToken,

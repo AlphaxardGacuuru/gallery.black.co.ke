@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminPhotoCompetitionController;
 use App\Http\Controllers\FilePondController;
 use App\Http\Controllers\IntegrationController;
+use App\Http\Controllers\KopokopoRecipientController;
 use App\Http\Controllers\KopokopoTransferController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
@@ -69,6 +70,8 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::put('photo-competitions/active', [AdminPhotoCompetitionController::class, 'updateActive'])->name('photo-competitions.update-active');
     Route::get('kopokopo-transfers', [KopokopoTransferController::class, 'index'])->name('kopokopo-transfers.index');
     Route::post('kopokopo-transfers/initiate', [KopokopoTransferController::class, 'initiateTransfer'])->name('kopokopo-transfers.initiate');
+    Route::get('kopokopo-recipients', [KopokopoRecipientController::class, 'index'])->name('kopokopo-recipients.index');
+    Route::post('kopokopo-recipients', [KopokopoRecipientController::class, 'store'])->name('kopokopo-recipients.store');
 });
 
 // Kopokopo's send_money callback — hit by Kopokopo itself, not the admin UI.
