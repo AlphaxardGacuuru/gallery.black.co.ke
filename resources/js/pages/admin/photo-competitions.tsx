@@ -1,4 +1,4 @@
-import { Images, ThumbsUp, Trophy } from "lucide-react"
+import { Images, Pencil, ThumbsUp, Trophy } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Head } from "@/lib/spa"
@@ -7,6 +7,14 @@ import Heading from "@/components/heading"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { SelectField, SelectItem } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -16,6 +24,7 @@ import {
 	type PhotoCompetitionSchedule,
 	useAdminPhotoCompetitions,
 	useAdminRecentPhotoCompetitions,
+	useUpdateActiveCompetition,
 	useUpdatePhotoCompetitionSchedule,
 	useUpdatePrizeAmount,
 } from "@/queries/admin"
@@ -29,6 +38,121 @@ const WEEKDAYS = [
 	"Friday",
 	"Saturday",
 ]
+
+// <input type="datetime-local"> wants "YYYY-MM-DDTHH:mm" in the viewer's
+// local time zone, with no "Z"/offset suffix — neither Date.toISOString()
+// (always UTC) nor the raw ISO string from the API can be used directly.
+function toDatetimeLocalValue(iso: string): string {
+	const date = new Date(iso)
+	const pad = (value: number) => String(value).padStart(2, "0")
+
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+type ActiveCompetition = {
+	id: string
+	endsAt: string
+	prizeAmount: number
+	photosCount: number
+}
+
+function EditActiveCompetitionModal({
+	current,
+}: {
+	current: ActiveCompetition
+}) {
+	const updateActive = useUpdateActiveCompetition()
+	const [open, setOpen] = useState(false)
+	const [prizeAmount, setPrizeAmount] = useState(String(current.prizeAmount))
+	const [endsAt, setEndsAt] = useState(toDatetimeLocalValue(current.endsAt))
+
+	function handleSave() {
+		const parsedPrizeAmount = Number(prizeAmount)
+
+		if (!Number.isFinite(parsedPrizeAmount) || parsedPrizeAmount < 0) {
+			toast.error("Enter a valid amount")
+			return
+		}
+
+		if (!endsAt) {
+			toast.error("Pick an end date and time")
+			return
+		}
+
+		updateActive.mutate(
+			{
+				prizeAmount: parsedPrizeAmount,
+				// Sent as-is (the input's own local wall-clock value, e.g.
+				// "2026-09-20T18:30"), not converted to a UTC instant here —
+				// this app stores/interprets naive datetimes as
+				// config('app.timezone') throughout (see
+				// PhotoCompetition::scheduledWindowFor()), so converting to
+				// UTC in JS first would get reinterpreted as local again on
+				// the way back, shifting it by the timezone offset.
+				endsAt,
+			},
+			{
+				onSuccess: () => {
+					toast.success("Active competition updated")
+					setOpen(false)
+				},
+				onError: () =>
+					toast.error("Couldn't update the active competition", {
+						description: "Make sure the end time is after it started.",
+					}),
+			}
+		)
+	}
+
+	return (
+		<Dialog
+			open={open}
+			onOpenChange={(next) => {
+				setOpen(next)
+				if (next) {
+					setPrizeAmount(String(current.prizeAmount))
+					setEndsAt(toDatetimeLocalValue(current.endsAt))
+				}
+			}}>
+			<DialogTrigger asChild>
+				<Button
+					variant="outline"
+					size="sm"
+					className="gap-1.5">
+					<Pencil className="size-3.5" />
+					Edit
+				</Button>
+			</DialogTrigger>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>Edit active competition</DialogTitle>
+				</DialogHeader>
+				<div className="space-y-4">
+					<Input
+						type="number"
+						min={0}
+						label="Prize amount (KES)"
+						value={prizeAmount}
+						onChange={(event) => setPrizeAmount(event.target.value)}
+					/>
+					<Input
+						type="datetime-local"
+						label="Ends at"
+						value={endsAt}
+						onChange={(event) => setEndsAt(event.target.value)}
+					/>
+				</div>
+				<DialogFooter>
+					<Button
+						disabled={updateActive.isPending}
+						onClick={handleSave}>
+						Save
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	)
+}
 
 function PrizeAmountSettings({ prizeAmount }: { prizeAmount: number }) {
 	const updatePrizeAmount = useUpdatePrizeAmount()
@@ -269,13 +393,16 @@ export default function AdminPhotoCompetitions() {
 						</div>
 
 						{data.current && (
-							<div className="rounded-lg border p-4 text-sm">
-								<p className="font-medium">Active competition</p>
-								<p className="mt-1 text-muted-foreground">
-									{data.current.photosCount} entries so far · ends{" "}
-									{new Date(data.current.endsAt).toLocaleString()} · KES{" "}
-									{data.current.prizeAmount} prize
-								</p>
+							<div className="flex items-center justify-between gap-4 rounded-lg border p-4 text-sm">
+								<div>
+									<p className="font-medium">Active competition</p>
+									<p className="mt-1 text-muted-foreground">
+										{data.current.photosCount} entries so far · ends{" "}
+										{new Date(data.current.endsAt).toLocaleString()} · KES{" "}
+										{data.current.prizeAmount} prize
+									</p>
+								</div>
+								<EditActiveCompetitionModal current={data.current} />
 							</div>
 						)}
 

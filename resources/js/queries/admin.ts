@@ -142,3 +142,17 @@ export function useUpdatePhotoCompetitionSchedule() {
 		},
 	})
 }
+
+export function useUpdateActiveCompetition() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (payload: { prizeAmount: number; endsAt: string }) =>
+			Axios.put("api/admin/photo-competitions/active", payload),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "photo-competitions"],
+			})
+		},
+	})
+}

@@ -65,6 +65,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::get('photo-competitions/recent', [AdminPhotoCompetitionController::class, 'recent'])->name('photo-competitions.recent');
     Route::put('photo-competitions/prize-amount', [AdminPhotoCompetitionController::class, 'updatePrizeAmount'])->name('photo-competitions.prize-amount');
     Route::put('photo-competitions/schedule', [AdminPhotoCompetitionController::class, 'updateSchedule'])->name('photo-competitions.schedule');
+    Route::put('photo-competitions/active', [AdminPhotoCompetitionController::class, 'updateActive'])->name('photo-competitions.update-active');
 });
 
 /*

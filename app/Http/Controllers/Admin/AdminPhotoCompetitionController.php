@@ -122,6 +122,41 @@ class AdminPhotoCompetitionController extends Controller
         return response()->json(['data' => PhotoCompetition::schedule()]);
     }
 
+    /**
+     * Directly edit the currently active competition's prize amount and end
+     * time — for correcting mistakes or extending/shortening this week's
+     * challenge without waiting for the scheduler.
+     */
+    public function updateActive(Request $request): JsonResponse
+    {
+        $competition = PhotoCompetition::active()->withCount('photos')->first();
+
+        if (! $competition) {
+            throw ValidationException::withMessages([
+                'prizeAmount' => 'There is no active competition to edit.',
+            ]);
+        }
+
+        $data = $request->validate([
+            'prizeAmount' => 'required|integer|min:0',
+            'endsAt' => 'required|date|after:' . $competition->starts_at,
+        ]);
+
+        $competition->update([
+            'prize_amount' => $data['prizeAmount'],
+            'ends_at' => $data['endsAt'],
+        ]);
+
+        return response()->json([
+            'data' => [
+                'id' => $competition->id,
+                'endsAt' => $competition->ends_at,
+                'prizeAmount' => $competition->prize_amount,
+                'photosCount' => $competition->photos_count,
+            ],
+        ]);
+    }
+
     private function minutesFromTime(string $time): int
     {
         [$hours, $minutes] = array_map('intval', explode(':', $time));

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { useApp } from "@/contexts/AppContext"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { usePwaInstall } from "@/hooks/use-pwa-install"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
@@ -34,8 +35,9 @@ function wasDismissedThisSession(): boolean {
 // on top of — the install prompt.
 export function useIsInstallStepSettled(): boolean {
 	const { canInstall, isInstalled } = usePwaInstall()
+	const isMobile = useIsMobile()
 
-	if (isInstalled || !canInstall) {
+	if (!isMobile || isInstalled || !canInstall) {
 		return true
 	}
 
@@ -46,6 +48,7 @@ export default function InstallAppOnboardingModal() {
 	const { auth } = useApp()
 	const queryClient = useQueryClient()
 	const { canInstall, install, isInstalled } = usePwaInstall()
+	const isMobile = useIsMobile()
 
 	const [open, setOpen] = useState(false)
 	const [processing, setProcessing] = useState(false)
@@ -77,8 +80,8 @@ export default function InstallAppOnboardingModal() {
 			return
 		}
 
-		setOpen(true)
-	}, [auth, onboardedAt, isInstalled, canInstall])
+		setOpen(isMobile)
+	}, [auth, onboardedAt, isInstalled, canInstall, isMobile])
 
 	async function handleInstall() {
 		setProcessing(true)
