@@ -36,7 +36,8 @@ export function PhotoCard({
 
 	function handleDelete() {
 		deletePhoto.mutate(photo.id, {
-			onError: () => toast.error("Couldn't delete your photo"),
+			onSuccess: () => toast.success("Photo Deleted Successfully"),
+			onError: () => toast.error("Couldn't Delete Your Photo"),
 		})
 	}
 
