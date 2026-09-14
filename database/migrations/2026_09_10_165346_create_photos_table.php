@@ -21,6 +21,7 @@ return new class extends Migration
                 ->cascadeOnDelete();
             $table->string('disk')->default('public');
             $table->string('path');
+            $table->string('thumbnail_path')->nullable();
             $table->string('caption')->nullable();
             $table->unsignedInteger('width')->nullable();
             $table->unsignedInteger('height')->nullable();
@@ -28,7 +29,6 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['competition_id', 'likes_count']);
-            // One submission per user per competition.
             $table->unique(['competition_id', 'user_id']);
         });
     }

@@ -44,7 +44,7 @@ export function PhotoCard({
 		<figure className="overflow-hidden rounded-xl border bg-card shadow-sm">
 			<div className="relative">
 				<img
-					src={photo.url}
+					src={photo.thumbnailUrl}
 					alt={photo.caption ?? "Competition entry"}
 					loading="lazy"
 					style={
@@ -68,9 +68,9 @@ export function PhotoCard({
 					)}
 				</div>
 				{/* Actions Start */}
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-1">
 					<Button
-						variant="default"
+						variant="ghost"
 						size="sm"
 						aria-label={
 							photo.isLikedByViewer || isLiked ? "Unlike photo" : "Like photo"
@@ -80,7 +80,7 @@ export function PhotoCard({
 							likePhoto.mutate(photo.id)
 							setIsLiked(!isLiked)
 						}}
-						className="flex shrink-0 items-center gap-1.5 px-2.5 text-sm transition-colors cursor-pointer">
+						className="flex shrink-0 items-center gap-1 px-2.5 text-sm transition-colors cursor-pointer">
 						<Heart
 							className={cn(
 								"size-4",
@@ -88,7 +88,14 @@ export function PhotoCard({
 									"fill-red-500 text-red-500"
 							)}
 						/>
-						<span className="tabular-nums">{photo.likesCount}</span>
+						<span
+							className={cn(
+								"tabular-nums",
+								(photo.isLikedByViewer || isLiked) &&
+									"fill-red-500 text-red-500"
+							)}>
+							{photo.likesCount}
+						</span>
 					</Button>
 
 					{canDelete && (
@@ -96,12 +103,12 @@ export function PhotoCard({
 							<DialogTrigger asChild>
 								<Button
 									type="button"
-									variant="destructive"
+									variant="ghost"
 									size="sm"
 									aria-label="Delete photo"
 									disabled={deletePhoto.isPending}
 									className="shrink-0">
-									<Trash2 className="size-4" />
+									<Trash2 className="size-4 text-white/60" />
 								</Button>
 							</DialogTrigger>
 							<DialogContent>

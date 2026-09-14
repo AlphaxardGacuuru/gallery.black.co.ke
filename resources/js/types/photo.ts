@@ -5,6 +5,7 @@ export type Photo = {
 	userName: string | null
 	userAvatar: string | null
 	url: string
+	thumbnailUrl: string
 	caption: string | null
 	width: number | null
 	height: number | null

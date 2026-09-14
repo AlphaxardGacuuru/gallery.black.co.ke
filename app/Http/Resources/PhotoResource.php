@@ -16,6 +16,7 @@ class PhotoResource extends JsonResource
 			'userName' => $this->whenLoaded('user', fn() => $this->user->name),
 			'userAvatar' => $this->whenLoaded('user', fn() => $this->user->avatar),
 			'url' => $this->url,
+			'thumbnailUrl' => $this->thumbnail_url,
 			'caption' => $this->caption,
 			'width' => $this->width,
 			'height' => $this->height,

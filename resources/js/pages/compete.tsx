@@ -20,7 +20,7 @@ export default function Compete() {
 		<>
 			<Head title="This week's challenge" />
 
-			<div className="space-y-6">
+			<div className="space-y-6 pb-16 md:pb-20">
 				<header className="mb-8 space-y-1">
 					<h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
 						This week&apos;s challenge

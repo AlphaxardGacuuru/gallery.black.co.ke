@@ -14,8 +14,11 @@ class FilePondController extends Controller
     /**
      * Reusable temporary upload handler for FilePond process endpoint.
      */
-    private function uploadToTemporaryStore(Request $request, string $inputName, string $directory = 'temporary-uploads'): TemporaryUpload
-    {
+    private function uploadToTemporaryStore(
+        Request $request,
+        string $inputName,
+        string $directory = 'temporary-uploads'
+    ): TemporaryUpload {
         $file = $request->file($inputName);
 
         $path = $file->store($directory, 'public');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\PhotoResource;
+use App\Jobs\GeneratePhotoThumbnailJob;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\TemporaryUpload;
@@ -44,6 +45,7 @@ class PhotoController extends Controller
         $temporaryUpload = TemporaryUpload::findOrFail($data['temporaryUploadId']);
 
         $path = 'photos/' . basename($temporaryUpload->path);
+        
         Storage::disk('public')->move($temporaryUpload->path, $path);
 
         [$width, $height] = getimagesize(Storage::disk('public')->path($path)) ?: [null, null];
@@ -59,6 +61,8 @@ class PhotoController extends Controller
         ]);
 
         $temporaryUpload->delete();
+
+        GeneratePhotoThumbnailJob::dispatch($photo);
 
         return response()->json([
             'data' => new PhotoResource($photo->load('user')),
@@ -80,7 +84,7 @@ class PhotoController extends Controller
             ]);
         }
 
-        Storage::disk($photo->disk)->delete($photo->path);
+        Storage::disk($photo->disk)->delete(array_filter([$photo->path, $photo->thumbnail_path]));
         $photo->delete();
 
         return response()->json(['data' => null]);
