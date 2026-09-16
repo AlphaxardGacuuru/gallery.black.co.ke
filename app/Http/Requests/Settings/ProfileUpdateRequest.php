@@ -19,4 +19,11 @@ class ProfileUpdateRequest extends FormRequest
     {
         return $this->profileRules($this->user()->id);
     }
+
+    public function messages(): array
+    {
+        return [
+            'phone.regex' => 'Please enter a valid 10-digit phone number',
+        ];
+    }
 }

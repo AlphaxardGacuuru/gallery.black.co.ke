@@ -32,6 +32,12 @@ class PhotoController extends Controller
             ]);
         }
 
+        if (! $request->user()->phone) {
+            throw ValidationException::withMessages([
+                'temporaryUploadId' => 'Add your M-Pesa phone number in your profile before submitting a photo.',
+            ]);
+        }
+
         $alreadySubmitted = Photo::where('competition_id', $competition->id)
             ->where('user_id', $request->user()->id)
             ->exists();

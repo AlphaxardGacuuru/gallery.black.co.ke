@@ -1,6 +1,7 @@
 import { Head } from "@/lib/spa"
 import { LoaderCircle } from "lucide-react"
 import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useApp } from "@/contexts/AppContext"
 import ProfileController from "@/actions/App/Http/Controllers/Settings/ProfileController"
 import DeleteUser from "@/components/delete-user"
@@ -22,9 +23,11 @@ export default function Profile({
 	status?: string
 }) {
 	const { auth } = useApp()
+	const queryClient = useQueryClient()
 	const user = {
 		name: auth?.name ?? "",
 		email: auth?.email ?? "",
+		phone: auth?.phone ?? "",
 		email_verified_at: auth?.email_verified_at ?? null,
 	}
 
@@ -45,6 +48,7 @@ export default function Profile({
 		})
 			.then((response: { data: { message?: string } }) => {
 				toast.success(response.data.message ?? "Profile updated.")
+				queryClient.invalidateQueries({ queryKey: ["auth"] })
 			})
 			.catch((err: unknown) => {
 				const e = err as {
@@ -120,6 +124,27 @@ export default function Profile({
 						<InputError
 							className="mt-2"
 							message={errors.email}
+						/>
+					</div>
+
+					<div className="grid gap-2">
+						<Input
+							id="phone"
+							label="M-Pesa phone number"
+							className="mt-1 block w-full"
+							defaultValue={user.phone}
+							name="phone"
+							placeholder="0712345678"
+							autoComplete="tel"
+						/>
+						<p className="text-sm text-muted-foreground">
+							Required before you can submit a photo — this is where your
+							prize money is sent.
+						</p>
+
+						<InputError
+							className="mt-2"
+							message={errors.phone}
 						/>
 					</div>
 

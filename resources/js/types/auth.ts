@@ -8,6 +8,7 @@ export type User = {
 	id: number
 	name: string
 	email: string
+	phone: string | null
 	avatar?: string
 	verified?: boolean
 	email_verified_at: string | null

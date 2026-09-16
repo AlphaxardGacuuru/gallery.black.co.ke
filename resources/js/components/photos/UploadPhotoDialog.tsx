@@ -17,9 +17,11 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog"
+import { Link } from "@/components/ui/link"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 import { useSubmitPhoto } from "@/queries/photos"
+import { edit } from "@/routes/profile"
 
 import "filepond/dist/filepond.min.css"
 import "filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css"
@@ -35,9 +37,11 @@ registerPlugin(
 export function UploadPhotoDialog({
 	disabled,
 	hasActiveCompetition = true,
+	hasPhoneNumber = true,
 }: {
 	disabled?: boolean
 	hasActiveCompetition?: boolean
+	hasPhoneNumber?: boolean
 }) {
 	const [open, setOpen] = useState(false)
 	const [temporaryUploadId, setTemporaryUploadId] = useState<number | null>(
@@ -110,9 +114,11 @@ export function UploadPhotoDialog({
 				<DialogHeader>
 					<DialogTitle>Submit your photo</DialogTitle>
 					<DialogDescription>
-						{hasActiveCompetition
-							? "Entries are open while this week's challenge is live. One photo can be liked by anyone in the community."
-							: "There's no challenge running right now."}
+						{!hasActiveCompetition
+							? "There's no challenge running right now."
+							: !hasPhoneNumber
+								? "Add your M-Pesa phone number before entering."
+								: "Entries are open while this week's challenge is live. One photo can be liked by anyone in the community."}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -120,6 +126,18 @@ export function UploadPhotoDialog({
 					<p className="rounded-lg border bg-muted px-4 py-3 text-sm text-muted-foreground">
 						You can&apos;t upload a photo until the next challenge opens. Check
 						back soon.
+					</p>
+				) : !hasPhoneNumber ? (
+					<p className="rounded-lg border bg-muted px-4 py-3 text-sm text-muted-foreground">
+						You need to add your M-Pesa phone number in your{" "}
+						<Link
+							href={edit().url}
+							variant="text"
+							onClick={() => setOpen(false)}>
+							profile
+						</Link>{" "}
+						before you can submit a photo — that&apos;s where your prize money
+						is sent.
 					</p>
 				) : (
 					<>
@@ -193,7 +211,7 @@ export function UploadPhotoDialog({
 				)}
 
 				<DialogFooter>
-					{hasActiveCompetition ? (
+					{hasActiveCompetition && hasPhoneNumber ? (
 						<Button
 							disabled={
 								!temporaryUploadId ||

@@ -82,6 +82,7 @@ export default function Compete() {
 			<UploadPhotoDialog
 				disabled={hasSubmitted}
 				hasActiveCompetition={Boolean(competition)}
+				hasPhoneNumber={Boolean(auth?.phone)}
 			/>
 		</>
 	)

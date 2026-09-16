@@ -30,6 +30,7 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     protected $fillable = [
         'name',
         'email',
+        'phone',
         'password',
         'settings',
     ];
@@ -54,7 +55,7 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         'email_verified_at' => 'datetime',
         'verified' => 'boolean',
         'updated_at' => 'datetime:d M Y',
-        'created_at' => 'datetime:d M Y',
+        'created_at' => 'datetime:d M Y h:i:s',
     ];
 
     protected string $guard_name = 'web';
@@ -69,8 +70,8 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
 
     protected static function booted(): void
     {
-        static::creating(function (User $user) {
-            if ($user->phone) {
+        static::saving(function (User $user) {
+            if ($user->phone && $user->isDirty('phone')) {
                 $normalized = substr_replace($user->phone, '254', 0, -9);
                 $user->hashed_phone = hash('sha256', $normalized);
             }
@@ -104,7 +105,7 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     protected function createdAt(): Attribute
     {
         return Attribute::make(
-            get: fn($value) => Carbon::parse($value)->format('d M Y'),
+            get: fn($value) => Carbon::parse($value)->format('d M Y h:i:s'),
         );
     }
 
