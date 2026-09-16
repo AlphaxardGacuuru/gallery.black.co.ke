@@ -1,4 +1,3 @@
-import { useConnectionStatus } from "@laravel/echo-react"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useSidebar } from "@/components/ui/sidebar"
@@ -7,19 +6,7 @@ import { useApp } from "@/contexts/AppContext"
 import { useInitials } from "@/hooks/use-initials"
 import { cn } from "@/lib/utils"
 import type { BreadcrumbItem as BreadcrumbItemType } from "@/types"
-import { Button } from "./ui/button"
 import PhotoConnectionStatus from "./photos/PhotoConnectionStatus"
-
-function connectionLabel(status: string): string {
-	switch (status) {
-		case "connected":
-			return "Online"
-		case "connecting":
-			return "Connecting…"
-		default:
-			return "Offline"
-	}
-}
 
 export function AppSidebarHeader({
 	breadcrumbs = [],
@@ -28,7 +15,6 @@ export function AppSidebarHeader({
 	breadcrumbs?: BreadcrumbItemType[]
 	variant?: "default" | "floating"
 }) {
-	const connectionStatus = useConnectionStatus()
 	const { auth } = useApp()
 	const { toggleSidebar } = useSidebar()
 	const getInitials = useInitials()
@@ -52,8 +38,8 @@ export function AppSidebarHeader({
 				type="button"
 				onClick={toggleSidebar}
 				aria-label="Toggle sidebar"
-				className="relative -mr-1 flex size-7 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80">
-				<Avatar className="size-7">
+				className="relative -mr-1 flex size-7 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80 ms-2">
+				<Avatar className="size-10">
 					<AvatarImage
 						src={auth?.avatar}
 						alt={auth?.name}

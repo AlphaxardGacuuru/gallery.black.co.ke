@@ -17,13 +17,19 @@ const toneClasses: Record<NonNullable<Props["tone"]>, string> = {
 
 export default function AdminStatCard({ label, value, icon: Icon, tone = "default" }: Props) {
 	return (
-		<div className="flex items-center gap-4 rounded-lg border p-4">
-			<div className={cn("flex size-10 shrink-0 items-center justify-center rounded-md", toneClasses[tone])}>
-				<Icon className="size-5" />
-			</div>
+		<div className="flex justify-between items-center gap-4 rounded-lg border p-4">
 			<div className="min-w-0">
-				<p className="text-2xl font-semibold tracking-tight">{value.toLocaleString()}</p>
+				<p className="text-2xl font-semibold tracking-tight">
+					{value.toLocaleString()}
+				</p>
 				<p className="text-sm leading-tight text-muted-foreground">{label}</p>
+			</div>
+			<div
+				className={cn(
+					"flex size-12 shrink-0 items-center justify-center rounded-md",
+					toneClasses[tone]
+				)}>
+				<Icon className="size-5" />
 			</div>
 		</div>
 	)
