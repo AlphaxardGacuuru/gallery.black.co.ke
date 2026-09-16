@@ -68,6 +68,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::put('photo-competitions/prize-amount', [AdminPhotoCompetitionController::class, 'updatePrizeAmount'])->name('photo-competitions.prize-amount');
     Route::put('photo-competitions/schedule', [AdminPhotoCompetitionController::class, 'updateSchedule'])->name('photo-competitions.schedule');
     Route::put('photo-competitions/active', [AdminPhotoCompetitionController::class, 'updateActive'])->name('photo-competitions.update-active');
+    Route::post('photo-competitions/{competition}/pay-winner', [AdminPhotoCompetitionController::class, 'payWinner'])->name('photo-competitions.pay-winner');
     Route::get('kopokopo-transfers', [KopokopoTransferController::class, 'index'])->name('kopokopo-transfers.index');
     Route::post('kopokopo-transfers/initiate', [KopokopoTransferController::class, 'initiateTransfer'])->name('kopokopo-transfers.initiate');
     Route::get('kopokopo-recipients', [KopokopoRecipientController::class, 'index'])->name('kopokopo-recipients.index');

@@ -25,8 +25,11 @@ export type AdminUser = {
 	id: string
 	name: string
 	email: string
+	phone: string | null
+	gender: "male" | "female" | "other" | null
 	avatar: string | null
 	verified: boolean
+	createdAt: string
 }
 
 type AdminUsersResponse = {
@@ -71,6 +74,7 @@ export type AdminPhotoCompetitionSummary = {
 	prizeAmount: number
 	photosCount: number
 	winnerName: string | null
+	prizePaidAt: string | null
 }
 
 export type AdminPhotoCompetitionsData = {
@@ -112,6 +116,29 @@ export function useAdminRecentPhotoCompetitions(page = 1, perPage = 10) {
 				"api/admin/photo-competitions/recent",
 				{ params: { page, per_page: perPage } }
 			).then((res) => res.data),
+	})
+}
+
+export function usePayCompetitionWinner() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		// Same status-in-body convention as useSendKopokopoTransfer.
+		mutationFn: (competitionId: string) =>
+			Axios.post<{ status: unknown; message: string }>(
+				`api/admin/photo-competitions/${competitionId}/pay-winner`
+			).then((res) => {
+				if (res.data.status !== true) {
+					throw new Error(res.data.message)
+				}
+
+				return res.data
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "photo-competitions"],
+			})
+		},
 	})
 }
 

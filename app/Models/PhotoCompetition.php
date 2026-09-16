@@ -25,12 +25,14 @@ class PhotoCompetition extends Model
         'status',
         'prize_amount',
         'winner_photo_id',
+        'prize_paid_at',
     ];
 
     protected $casts = [
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
         'prize_amount' => 'integer',
+        'prize_paid_at' => 'datetime',
     ];
 
     public function photos(): HasMany

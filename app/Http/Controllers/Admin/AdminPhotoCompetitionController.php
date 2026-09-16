@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Services\KopokopoTransferService;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\Setting;
@@ -12,6 +13,11 @@ use Illuminate\Validation\ValidationException;
 
 class AdminPhotoCompetitionController extends Controller
 {
+    public function __construct(protected KopokopoTransferService $kopokopoTransferService)
+    {
+        //
+    }
+
     /**
      * Stats overview, the active competition, and the configurable prize
      * amount/schedule. The full competition history is paginated separately
@@ -62,6 +68,7 @@ class AdminPhotoCompetitionController extends Controller
                 'prizeAmount' => $competition->prize_amount,
                 'photosCount' => $competition->photos_count,
                 'winnerName' => $competition->winnerPhoto?->user?->name,
+                'prizePaidAt' => $competition->prize_paid_at,
             ]),
             'meta' => [
                 'current_page' => $competitions->currentPage(),
@@ -154,6 +161,21 @@ class AdminPhotoCompetitionController extends Controller
                 'prizeAmount' => $competition->prize_amount,
                 'photosCount' => $competition->photos_count,
             ],
+        ]);
+    }
+
+    /**
+     * Pay the prize for a past competition to its winning photo's
+     * submitter via Kopokopo M-Pesa.
+     */
+    public function payWinner(PhotoCompetition $competition): JsonResponse
+    {
+        [$status, $message, $data] = $this->kopokopoTransferService->payWinner($competition);
+
+        return response()->json([
+            'status' => $status,
+            'message' => $message,
+            'data' => $status ? ['prizePaidAt' => $competition->fresh()->prize_paid_at] : $data,
         ]);
     }
 

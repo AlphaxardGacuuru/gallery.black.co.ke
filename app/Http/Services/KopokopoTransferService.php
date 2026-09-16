@@ -4,7 +4,9 @@ namespace App\Http\Services;
 
 use App\Http\Resources\KopokopoTransferResource;
 use App\Models\KopokopoTransfer;
+use App\Models\PhotoCompetition;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Kopokopo\SDK\K2;
 
 class KopokopoTransferService extends Service
@@ -88,5 +90,43 @@ class KopokopoTransferService extends Service
         }
 
         return [false, 'Kopokopo transfer failed', $response];
+    }
+
+    /**
+     * Pay a competition's prize to its winning photo's submitter via
+     * Kopokopo, then mark the competition as paid on success.
+     *
+     * @return array{0: bool, 1: string, 2: mixed}
+     */
+    public function payWinner(PhotoCompetition $competition): array
+    {
+        if ($competition->prize_paid_at) {
+            return [false, 'This week\'s prize has already been paid', null];
+        }
+
+        $winner = $competition->winnerPhoto?->user;
+
+        if (! $winner) {
+            return [false, 'This competition has no winner yet', null];
+        }
+
+        if (! $winner->phone) {
+            return [false, $winner->name.' has no M-Pesa phone number on file', null];
+        }
+
+        $request = Request::create('/', 'POST', [
+            'destinationReference' => $winner->phone,
+            'amount' => $competition->prize_amount,
+            'recipientName' => $winner->name,
+            'description' => 'Black Gallery weekly challenge prize',
+        ]);
+
+        [$status, $message, $data] = $this->initiateTransfer($request);
+
+        if ($status === true) {
+            $competition->update(['prize_paid_at' => now()]);
+        }
+
+        return [$status === true, $message, $data];
     }
 }

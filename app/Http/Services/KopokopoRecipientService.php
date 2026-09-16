@@ -4,6 +4,8 @@ namespace App\Http\Services;
 
 use App\Http\Resources\KopokopoRecipientResource;
 use App\Models\KopokopoRecipient;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Kopokopo\SDK\K2;
 
 class KopokopoRecipientService extends Service
@@ -11,7 +13,7 @@ class KopokopoRecipientService extends Service
     /*
      * Get All Kopokopo Recipients
      */
-    public function index()
+    public function index(): AnonymousResourceCollection
     {
         $kopokopoRecipients = KopokopoRecipient::latest('created_at')->get();
 
@@ -21,24 +23,26 @@ class KopokopoRecipientService extends Service
     /*
      * Get Recipients Added By a Given User
      */
-    public function show($id)
+    public function show(int|string $id): AnonymousResourceCollection
     {
         $kopokopoRecipients = KopokopoRecipient::where('user_id', $id)->get();
 
         return KopokopoRecipientResource::collection($kopokopoRecipients);
     }
 
-    /*
+    /**
      * Register the recipient with Kopokopo, then store it locally.
+     *
+     * @return array{0: bool, 1: string, 2: mixed}
      */
-    public function store($request)
+    public function store(Request $request): array
     {
         $K2 = new K2(MPESATransactionService::config());
 
         $tokenResponse = $K2->TokenService()->getToken();
 
         if (($tokenResponse['status'] ?? null) !== 'success') {
-            return ['error', 'Could not authenticate with Kopokopo', $tokenResponse];
+            return [false, 'Could not authenticate with Kopokopo', $tokenResponse];
         }
 
         $accessToken = $tokenResponse['data']['accessToken'];
@@ -97,7 +101,7 @@ class KopokopoRecipientService extends Service
     /*
      * Get relevant details for the recipient type being added
      */
-    public function recipientDetails($request, $accessToken)
+    public function recipientDetails(Request $request, string $accessToken): array
     {
         return match ($request->type) {
             'mobile_wallet' => $this->mobileWalletDetails($request, $accessToken),
@@ -111,7 +115,7 @@ class KopokopoRecipientService extends Service
     /*
      * Mobile Wallet Details
      */
-    public function mobileWalletDetails($request, $accessToken)
+    public function mobileWalletDetails(Request $request, string $accessToken): array
     {
         return [
             'type' => 'mobile_wallet',
@@ -127,7 +131,7 @@ class KopokopoRecipientService extends Service
     /*
      * Bank Account Details
      */
-    public function bankAccountDetails($request, $accessToken)
+    public function bankAccountDetails(Request $request, string $accessToken): array
     {
         return [
             'type' => 'bank_account',
@@ -142,7 +146,7 @@ class KopokopoRecipientService extends Service
     /*
      * Till Details
      */
-    public function tillDetails($request, $accessToken)
+    public function tillDetails(Request $request, string $accessToken): array
     {
         return [
             'type' => 'till',
@@ -155,7 +159,7 @@ class KopokopoRecipientService extends Service
     /*
      * Paybill Details
      */
-    public function payBillDetails($request, $accessToken)
+    public function payBillDetails(Request $request, string $accessToken): array
     {
         return [
             'type' => 'paybill',

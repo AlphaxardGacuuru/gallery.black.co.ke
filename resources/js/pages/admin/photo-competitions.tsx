@@ -1,9 +1,10 @@
-import { Images, Pencil, ThumbsUp, Trophy } from "lucide-react"
+import { Images, Loader2, Pencil, ThumbsUp, Trophy } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Head } from "@/lib/spa"
 import AdminStatCard from "@/components/admin/AdminStatCard"
 import Heading from "@/components/heading"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
@@ -24,6 +25,7 @@ import {
 	type PhotoCompetitionSchedule,
 	useAdminPhotoCompetitions,
 	useAdminRecentPhotoCompetitions,
+	usePayCompetitionWinner,
 	useUpdateActiveCompetition,
 	useUpdatePhotoCompetitionSchedule,
 	useUpdatePrizeAmount,
@@ -224,7 +226,7 @@ function ScheduleSettings({
 	}
 
 	return (
-		<div className="max-w-sm space-y-3 rounded-lg border p-4">
+		<div className="max-w-lg space-y-3 rounded-lg border p-4">
 			<Heading
 				variant="small"
 				title="Weekly schedule"
@@ -281,6 +283,52 @@ function ScheduleSettings({
 	)
 }
 
+function PayWinnerCell({
+	competition,
+}: {
+	competition: AdminPhotoCompetitionSummary
+}) {
+	const payWinner = usePayCompetitionWinner()
+
+	if (!competition.winnerName) {
+		return <span className="text-muted-foreground">—</span>
+	}
+
+	if (competition.prizePaidAt) {
+		return (
+			<div className="flex items-center gap-2">
+				<span>{competition.winnerName}</span>
+				<Badge variant="secondary">Paid</Badge>
+			</div>
+		)
+	}
+
+	function handlePay() {
+		payWinner.mutate(competition.id, {
+			onSuccess: () =>
+				toast.success(`Prize sent to ${competition.winnerName}`),
+			onError: (error) =>
+				toast.error("Couldn't pay the winner", {
+					description: error.message,
+				}),
+		})
+	}
+
+	return (
+		<div className="flex items-center gap-2">
+			<span>{competition.winnerName}</span>
+			<Button
+				variant="outline"
+				size="sm"
+				disabled={payWinner.isPending}
+				onClick={handlePay}>
+				{payWinner.isPending && <Loader2 className="size-3.5 animate-spin" />}
+				Pay KES {competition.prizeAmount}
+			</Button>
+		</div>
+	)
+}
+
 const competitionColumns: ColumnDef<AdminPhotoCompetitionSummary>[] = [
 	{
 		accessorKey: "startsAt",
@@ -312,44 +360,15 @@ const competitionColumns: ColumnDef<AdminPhotoCompetitionSummary>[] = [
 		id: "winner",
 		header: "Winner",
 		enableSorting: false,
-		cell: ({ row }) => row.original.winnerName ?? "—",
+		cell: ({ row }) => <PayWinnerCell competition={row.original} />,
 	},
 ]
 
-function RecentCompetitionsTable() {
+export default function AdminPhotoCompetitions() {
+	const { data, isLoading } = useAdminPhotoCompetitions()
 	const [page, setPage] = useState(1)
 	const [perPage, setPerPage] = useState(10)
 	const { data: recent } = useAdminRecentPhotoCompetitions(page, perPage)
-
-	return (
-		<Card className="overflow-hidden">
-			<CardHeader className="pb-4">
-				<CardTitle>Recent competitions</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<DataTable
-					columns={competitionColumns}
-					data={recent?.data ?? []}
-					emptyMessage="No competitions yet"
-					pagination={{
-						currentPage: recent?.meta.current_page ?? 1,
-						lastPage: recent?.meta.last_page ?? 1,
-						total: recent?.meta.total ?? 0,
-						pageSize: perPage,
-						onPageChange: setPage,
-						onPageSizeChange: (size) => {
-							setPerPage(size)
-							setPage(1)
-						},
-					}}
-				/>
-			</CardContent>
-		</Card>
-	)
-}
-
-export default function AdminPhotoCompetitions() {
-	const { data, isLoading } = useAdminPhotoCompetitions()
 
 	return (
 		<>
@@ -411,7 +430,29 @@ export default function AdminPhotoCompetitions() {
 							<ScheduleSettings schedule={data.schedule} />
 						</div>
 
-						<RecentCompetitionsTable />
+						<Card className="overflow-hidden">
+							<CardHeader className="pb-4">
+								<CardTitle>Recent competitions</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<DataTable
+									columns={competitionColumns}
+									data={recent?.data ?? []}
+									emptyMessage="No competitions yet"
+									pagination={{
+										currentPage: recent?.meta.current_page ?? 1,
+										lastPage: recent?.meta.last_page ?? 1,
+										total: recent?.meta.total ?? 0,
+										pageSize: perPage,
+										onPageChange: setPage,
+										onPageSizeChange: (size) => {
+											setPerPage(size)
+											setPage(1)
+										},
+									}}
+								/>
+							</CardContent>
+						</Card>
 					</>
 				)}
 			</div>
