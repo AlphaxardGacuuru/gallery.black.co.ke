@@ -130,16 +130,15 @@ export default function Profile({
 					<div className="grid gap-2">
 						<Input
 							id="phone"
-							label="M-Pesa phone number"
+							label="M-Pesa phone number (0712345678)"
 							className="mt-1 block w-full"
 							defaultValue={user.phone}
 							name="phone"
-							placeholder="0712345678"
 							autoComplete="tel"
 						/>
 						<p className="text-sm text-muted-foreground">
-							Required before you can submit a photo — this is where your
-							prize money is sent.
+							Required before you can submit a photo — this is where your prize
+							money is sent.
 						</p>
 
 						<InputError
