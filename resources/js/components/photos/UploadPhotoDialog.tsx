@@ -136,7 +136,7 @@ export function UploadPhotoDialog({
 							onClick={() => setOpen(false)}>
 							profile
 						</Link>{" "}
-						before you can submit a photo — that&apos;s where your prize money
+						before you can submit a photo, that&apos;s where your prize money
 						is sent.
 					</p>
 				) : (

@@ -33,12 +33,18 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::get('photos/current', [PhotoCompetitionController::class, 'current']);
-Route::get('photos/discover', [PhotoCompetitionController::class, 'discover']);
-
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('auth', [UserController::class, 'auth']);
+
+    // Both routes require the auth:sanctum guard to run so $request->user()
+    // resolves (the guard switches the request's default auth guard to
+    // "sanctum" as a side effect) — without it, isLikedByViewer always came
+    // back false regardless of the viewer's real like state. Every page
+    // that calls these already requires login client-side (see PUBLIC/
+    // GUEST_ONLY in app.tsx), so this doesn't newly restrict anything.
+    Route::get('photos/current', [PhotoCompetitionController::class, 'current']);
+    Route::get('photos/discover', [PhotoCompetitionController::class, 'discover']);
 
     Route::apiResources([
         "users" => UserController::class,

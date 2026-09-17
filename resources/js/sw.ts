@@ -81,25 +81,28 @@ registerRoute(
 	})
 )
 
-// The current competition reflects the viewer's own just-submitted,
-// just-liked, or just-deleted photos, so it can't tolerate the up-to-5-
-// -minute staleness stale-while-revalidate allows below — that strategy
-// serves whatever's cached immediately, even a snapshot from moments
-// before a mutation the viewer just made, undoing an optimistic UI update
-// until the next revalidation happens to land. NetworkFirst here means a
-// refetch (whether from invalidateQueries after a mutation or the query's
-// own refetchInterval) actually gets live data, only falling back to the
-// cache if the network request fails.
+// The current-competition and discover feeds reflect the viewer's own
+// just-submitted, just-liked, or just-deleted photos, so neither can
+// tolerate the up-to-5-minute staleness stale-while-revalidate allows
+// below — that strategy serves whatever's cached immediately, even a
+// snapshot from moments before a mutation the viewer just made, undoing an
+// optimistic UI update until the next revalidation happens to land.
+// NetworkFirst here means a refetch (whether from invalidateQueries after a
+// mutation or the query's own refetchInterval) actually gets live data,
+// only falling back to the cache if the network request fails.
+const NETWORK_FIRST_PHOTO_APIS = ["/api/photos/current", "/api/photos/discover"]
+
 registerRoute(
 	({ url }) =>
-		url.origin === self.location.origin && url.pathname === "/api/photos/current",
+		url.origin === self.location.origin &&
+		NETWORK_FIRST_PHOTO_APIS.some((path) => url.pathname === path),
 	new NetworkFirst({ cacheName: "api-current-competition" })
 )
 
 // Read API routes: stale-while-revalidate so the last-fetched response
 // renders immediately — offline or not — while a fresh copy is fetched in
-// the background for next time. Auth-sensitive and current-competition
-// routes are intentionally excluded above/below.
+// the background for next time. Auth-sensitive and current-competition/
+// discover routes are intentionally excluded above/below.
 const STALE_WHILE_REVALIDATE_APIS = ["/api/notifications", "/api/photos"]
 
 registerRoute(

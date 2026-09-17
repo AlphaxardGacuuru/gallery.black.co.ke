@@ -54,6 +54,7 @@ export default function Discover() {
 									<PhotoCard
 										photo={photo}
 										aspect="auto"
+										canLike={false}
 									/>
 								</div>
 							))}

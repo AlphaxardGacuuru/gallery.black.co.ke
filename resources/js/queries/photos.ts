@@ -1,4 +1,5 @@
 import {
+	type InfiniteData,
 	useInfiniteQuery,
 	useMutation,
 	useQuery,
@@ -57,6 +58,28 @@ function updateCachedPhotos(
 	)
 }
 
+// The discover grid (an infinite query) needs the same per-photo update
+// applied to every already-fetched page, since a liked photo could be on
+// any of them.
+function updateCachedDiscoverPhotos(
+	queryClient: ReturnType<typeof useQueryClient>,
+	updater: (photos: Photo[]) => Photo[]
+) {
+	queryClient.setQueryData<InfiniteData<DiscoverPage>>(
+		["photos", "discover"],
+		(current) =>
+			current
+				? {
+						...current,
+						pages: current.pages.map((page) => ({
+							...page,
+							data: updater(page.data),
+						})),
+					}
+				: current
+	)
+}
+
 type DiscoverPage = {
 	data: Photo[]
 	meta: { current_page: number; last_page: number }
@@ -105,33 +128,46 @@ export function useLikePhoto() {
 			}>(PhotoLikeController.store.url(photoId)).then((res) => res.data.data),
 		onMutate: async (photoId) => {
 			await queryClient.cancelQueries({ queryKey: ["photos", "current"] })
+			await queryClient.cancelQueries({ queryKey: ["photos", "discover"] })
 
-			const previous = queryClient.getQueryData<CurrentCompetitionData>([
+			const previousCurrent = queryClient.getQueryData<CurrentCompetitionData>([
 				"photos",
 				"current",
 			])
+			const previousDiscover = queryClient.getQueryData<
+				InfiniteData<DiscoverPage>
+			>(["photos", "discover"])
 
-			updateCachedPhotos(queryClient, (photos) =>
+			const applyLike = (photos: Photo[]) =>
 				photos.map((photo) =>
-					photo.id === photoId
+					photo.id === photoId && !photo.isLikedByViewer
 						? {
 								...photo,
-								isLikedByViewer: !photo.isLikedByViewer,
-								likesCount: photo.likesCount + (photo.isLikedByViewer ? -1 : 1),
+								isLikedByViewer: true,
+								likesCount: photo.likesCount + 1,
 							}
 						: photo
 				)
-			)
 
-			return { previous }
+			updateCachedPhotos(queryClient, applyLike)
+			updateCachedDiscoverPhotos(queryClient, applyLike)
+
+			return { previousCurrent, previousDiscover }
 		},
 		onError: (_error, _photoId, context) => {
-			if (context?.previous !== undefined) {
-				queryClient.setQueryData(["photos", "current"], context.previous)
+			if (context?.previousCurrent !== undefined) {
+				queryClient.setQueryData(["photos", "current"], context.previousCurrent)
+			}
+			if (context?.previousDiscover !== undefined) {
+				queryClient.setQueryData(
+					["photos", "discover"],
+					context.previousDiscover
+				)
 			}
 		},
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
+			queryClient.invalidateQueries({ queryKey: ["photos", "discover"] })
 		},
 	})
 }

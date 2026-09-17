@@ -1,5 +1,4 @@
 import { Heart, Trash2 } from "lucide-react"
-import { useState } from "react"
 import type { Photo } from "@/types/photo"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,16 +22,21 @@ type Props = {
 	/** Only the viewer's own entry in the still-active challenge can be
 	 *  deleted — pass true from compete.tsx, never from discover.tsx. */
 	canDelete?: boolean
+	/** Likes freeze once a challenge ends, so discover.tsx's past entries
+	 *  keep showing exactly how many likes they had when the competition
+	 *  closed — pass false there; compete.tsx's still-active entries stay
+	 *  likeable by default. */
+	canLike?: boolean
 }
 
 export function PhotoCard({
 	photo,
 	aspect = "square",
 	canDelete = false,
+	canLike = true,
 }: Props) {
 	const likePhoto = useLikePhoto()
 	const deletePhoto = useDeletePhoto()
-	const [isLiked, setIsLiked] = useState(photo.isLikedByViewer)
 
 	function handleDelete() {
 		deletePhoto.mutate(photo.id, {
@@ -73,27 +77,20 @@ export function PhotoCard({
 					<Button
 						variant="ghost"
 						size="sm"
-						aria-label={
-							photo.isLikedByViewer || isLiked ? "Unlike photo" : "Like photo"
-						}
-						disabled={likePhoto.isPending}
-						onClick={() => {
-							likePhoto.mutate(photo.id)
-							setIsLiked(!isLiked)
-						}}
+						aria-label={photo.isLikedByViewer ? "Liked" : "Like photo"}
+						disabled={!canLike || photo.isLikedByViewer || likePhoto.isPending}
+						onClick={() => canLike && likePhoto.mutate(photo.id)}
 						className="flex shrink-0 items-center gap-1 px-2.5 text-sm transition-colors cursor-pointer">
 						<Heart
 							className={cn(
 								"size-4",
-								(photo.isLikedByViewer || isLiked) &&
-									"fill-red-500 text-red-500"
+								photo.isLikedByViewer && "fill-red-500 text-red-500"
 							)}
 						/>
 						<span
 							className={cn(
 								"tabular-nums",
-								(photo.isLikedByViewer || isLiked) &&
-									"fill-red-500 text-red-500"
+								photo.isLikedByViewer && "fill-red-500 text-red-500"
 							)}>
 							{photo.likesCount}
 						</span>
