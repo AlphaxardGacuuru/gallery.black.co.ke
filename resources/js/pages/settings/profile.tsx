@@ -130,7 +130,7 @@ export default function Profile({
 					<div className="grid gap-2">
 						<Input
 							id="phone"
-							label="M-Pesa phone number (0712345678)"
+							label="M-Pesa phone number"
 							className="mt-1 block w-full"
 							defaultValue={user.phone}
 							name="phone"

@@ -17,7 +17,17 @@ declare const self: ServiceWorkerGlobalScope
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 
-self.skipWaiting()
+// Wait for the client's explicit "Refresh" click (app.tsx's
+// wb.messageSkipWaiting()) instead of calling self.skipWaiting()
+// unconditionally here — that would let every new version claim control of
+// already-open tabs the instant it finishes installing, without ever
+// populating registration.waiting, which is what the "new version
+// available" toast in app.tsx depends on to fire at all.
+self.addEventListener("message", (event) => {
+	if (event.data?.type === "SKIP_WAITING") {
+		self.skipWaiting()
+	}
+})
 self.addEventListener("activate", () => self.clients.claim())
 
 // ─── Caching strategies ───────────────────────────────────────────────────────
