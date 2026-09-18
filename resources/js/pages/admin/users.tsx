@@ -10,6 +10,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import VerifiedBadge from "@/components/verified-badge"
+import { normalizePhoneNumber } from "@/lib/phone"
 import { Head } from "@/lib/spa"
 import toast from "@/lib/toast"
 import {
@@ -22,19 +23,6 @@ import {
 
 function initials(name?: string | null): string {
 	return (name?.trim() || "?").slice(0, 2).toUpperCase()
-}
-
-/** Mirrors Service::normalizePhoneNumber() on the backend so a user's raw
- *  phone can be matched against the already-normalized numbers Kopokopo
- *  recipients are stored with. */
-function normalizePhoneNumber(phone: string): string {
-	const digits = phone.replace(/\D/g, "")
-
-	if (digits.startsWith("0") && digits.length === 10) {
-		return `254${digits.slice(1)}`
-	}
-
-	return digits
 }
 
 function nameParts(name: string): { firstName: string; lastName?: string } {

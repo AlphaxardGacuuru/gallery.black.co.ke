@@ -68,6 +68,7 @@ class AdminPhotoCompetitionController extends Controller
                 'prizeAmount' => $competition->prize_amount,
                 'photosCount' => $competition->photos_count,
                 'winnerName' => $competition->winnerPhoto?->user?->name,
+                'winnerPhone' => $competition->winnerPhoto?->user?->phone,
                 'prizePaidAt' => $competition->prize_paid_at,
             ]),
             'meta' => [

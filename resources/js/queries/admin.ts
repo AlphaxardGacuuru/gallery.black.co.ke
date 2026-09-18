@@ -74,6 +74,7 @@ export type AdminPhotoCompetitionSummary = {
 	prizeAmount: number
 	photosCount: number
 	winnerName: string | null
+	winnerPhone: string | null
 	prizePaidAt: string | null
 }
 

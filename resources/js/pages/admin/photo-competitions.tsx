@@ -20,10 +20,12 @@ import { Input } from "@/components/ui/input"
 import { Link } from "@/components/ui/link"
 import { SelectField, SelectItem } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { normalizePhoneNumber } from "@/lib/phone"
 import toast from "@/lib/toast"
 import {
 	type AdminPhotoCompetitionSummary,
 	type PhotoCompetitionSchedule,
+	useAdminKopokopoRecipients,
 	useAdminPhotoCompetitions,
 	useAdminRecentPhotoCompetitions,
 	useUpdateActiveCompetition,
@@ -285,8 +287,10 @@ function ScheduleSettings({
 
 function PayWinnerCell({
 	competition,
+	isRecipient,
 }: {
 	competition: AdminPhotoCompetitionSummary
+	isRecipient: boolean
 }) {
 	if (!competition.winnerName) {
 		return <span className="text-muted-foreground">—</span>
@@ -304,56 +308,73 @@ function PayWinnerCell({
 	return (
 		<div className="flex items-center gap-2">
 			<span>{competition.winnerName}</span>
-			<Link
-				href="/admin/users"
-				variant="outline"
-				size="sm">
-				Create Kopokopo Recipient
-			</Link>
+			{!isRecipient && (
+				<Link
+					href="/admin/users"
+					variant="outline"
+					size="sm">
+					Create Kopokopo Recipient
+				</Link>
+			)}
 		</div>
 	)
 }
-
-const competitionColumns: ColumnDef<AdminPhotoCompetitionSummary>[] = [
-	{
-		accessorKey: "startsAt",
-		header: "Starts at",
-		cell: ({ row }) => new Date(row.original.startsAt).toLocaleString(),
-	},
-	{
-		accessorKey: "endsAt",
-		header: "Ends at",
-		cell: ({ row }) => new Date(row.original.endsAt).toLocaleString(),
-	},
-	{
-		accessorKey: "status",
-		header: "Status",
-		cell: ({ row }) => (
-			<span className="capitalize">{row.original.status}</span>
-		),
-	},
-	{
-		accessorKey: "photosCount",
-		header: "Entries",
-	},
-	{
-		accessorKey: "prizeAmount",
-		header: "Prize",
-		cell: ({ row }) => `KES ${row.original.prizeAmount}`,
-	},
-	{
-		id: "winner",
-		header: "Winner",
-		enableSorting: false,
-		cell: ({ row }) => <PayWinnerCell competition={row.original} />,
-	},
-]
 
 export default function AdminPhotoCompetitions() {
 	const { data, isLoading } = useAdminPhotoCompetitions()
 	const [page, setPage] = useState(1)
 	const [perPage, setPerPage] = useState(10)
 	const { data: recent } = useAdminRecentPhotoCompetitions(page, perPage)
+	const { data: recipients } = useAdminKopokopoRecipients()
+
+	const registeredPhones = new Set(
+		(recipients ?? [])
+			.filter((recipient) => recipient.type === "mobile_wallet" && recipient.phoneNumber)
+			.map((recipient) => recipient.phoneNumber!)
+	)
+
+	const competitionColumns: ColumnDef<AdminPhotoCompetitionSummary>[] = [
+		{
+			accessorKey: "startsAt",
+			header: "Starts at",
+			cell: ({ row }) => new Date(row.original.startsAt).toLocaleString(),
+		},
+		{
+			accessorKey: "endsAt",
+			header: "Ends at",
+			cell: ({ row }) => new Date(row.original.endsAt).toLocaleString(),
+		},
+		{
+			accessorKey: "status",
+			header: "Status",
+			cell: ({ row }) => (
+				<span className="capitalize">{row.original.status}</span>
+			),
+		},
+		{
+			accessorKey: "photosCount",
+			header: "Entries",
+		},
+		{
+			accessorKey: "prizeAmount",
+			header: "Prize",
+			cell: ({ row }) => `KES ${row.original.prizeAmount}`,
+		},
+		{
+			id: "winner",
+			header: "Winner",
+			enableSorting: false,
+			cell: ({ row }) => (
+				<PayWinnerCell
+					competition={row.original}
+					isRecipient={
+						!!row.original.winnerPhone &&
+						registeredPhones.has(normalizePhoneNumber(row.original.winnerPhone))
+					}
+				/>
+			),
+		},
+	]
 
 	return (
 		<>

@@ -13,6 +13,7 @@ use App\Http\Controllers\PhotoCompetitionController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\PhotoLikeController;
 use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\UserController;
@@ -64,6 +65,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('photos', [PhotoController::class, 'store']);
     Route::delete('photos/{id}', [PhotoController::class, 'destroy']);
     Route::post('photos/{id}/like', [PhotoLikeController::class, 'store']);
+
+    Route::get('referrals/mine', [ReferralController::class, 'mine'])->name('referrals.mine');
 });
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->group(function () {

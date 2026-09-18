@@ -14,6 +14,7 @@ Route::redirect('settings', '/settings/profile');
 Route::get('settings/profile', fn() => view('app'))->name('profile.edit');
 Route::get('settings/security', fn() => view('app'))->name('security.edit');
 Route::get('settings/appearance', fn() => view('app'))->name('appearance.edit');
+Route::get('settings/referrals', fn() => view('app'))->name('referrals.edit');
 
 // Data endpoints stay behind auth:sanctum — these are real API calls made by
 // the SPA via Axios, which does attach the bearer token, so the guard works
