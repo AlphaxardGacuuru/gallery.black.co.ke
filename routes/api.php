@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminPhotoCompetitionController;
+use App\Http\Controllers\Admin\AdminReferralController;
 use App\Http\Controllers\FilePondController;
 use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\KopokopoRecipientController;
@@ -79,6 +80,8 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::post('kopokopo-transfers/initiate', [KopokopoTransferController::class, 'initiateTransfer'])->name('kopokopo-transfers.initiate');
     Route::get('kopokopo-recipients', [KopokopoRecipientController::class, 'index'])->name('kopokopo-recipients.index');
     Route::post('kopokopo-recipients', [KopokopoRecipientController::class, 'store'])->name('kopokopo-recipients.store');
+    Route::get('referrals', [AdminReferralController::class, 'index'])->name('referrals.index');
+    Route::get('referrals/recent', [AdminReferralController::class, 'recent'])->name('referrals.recent');
 });
 
 // Kopokopo's send_money callback — hit by Kopokopo itself, not the admin UI.

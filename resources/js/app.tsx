@@ -222,6 +222,17 @@ function PageRenderer() {
 
 // ─── Mount ───────────────────────────────────────────────────────────────────
 
+// A shared link (e.g. "?ref=<userId>") can land on any page — the welcome
+// page, straight on /register, anywhere — and the visitor might browse a
+// bit before signing up, so the code is captured here on every load and
+// held in localStorage until register.tsx (or the Google OAuth redirect)
+// consumes it.
+const referralCode = new URLSearchParams(window.location.search).get("ref")
+
+if (referralCode) {
+	window.localStorage.setItem("referralCode", referralCode)
+}
+
 const container = document.getElementById("app")
 
 if (!container) {

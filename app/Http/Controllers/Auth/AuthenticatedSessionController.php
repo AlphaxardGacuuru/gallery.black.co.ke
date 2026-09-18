@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\Referral;
 use App\Models\User;
 use App\Notifications\WelcomeNotification;
 use Exception;
@@ -12,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -22,15 +24,23 @@ class AuthenticatedSessionController extends Controller
 {
     /*
      * Social Logins*/
-    public function redirectToProvider(string $website): RedirectResponse
+    public function redirectToProvider(Request $request, string $website): RedirectResponse
     {
+        // Google's redirect back to handleProviderCallback() carries no
+        // custom params of ours, so a referral code picked up on the way in
+        // is stashed in a short-lived cookie instead — it rides along
+        // automatically since the callback is a same-site top-level GET.
+        if ($request->filled('ref')) {
+            Cookie::queue('referral_ref', $request->string('ref')->toString(), 10);
+        }
+
         return Socialite::driver($website)->redirect();
     }
 
     /**
      * Obtain the user information from a social provider and issue a Sanctum token.
      */
-    public function handleProviderCallback(string $website): RedirectResponse
+    public function handleProviderCallback(Request $request, string $website): RedirectResponse
     {
         try {
             $socialUser = Socialite::driver($website)->stateless()->user();
@@ -77,6 +87,8 @@ class AuthenticatedSessionController extends Controller
             $dbUser->email_verified_at = now();
             $dbUser->password = Str::random(40);
             $dbUser->save();
+
+            Referral::record($request->cookie('referral_ref'), $dbUser);
 
             $dbUser->notify(new WelcomeNotification);
             event(new Registered($dbUser));

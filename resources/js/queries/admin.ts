@@ -317,3 +317,48 @@ export function useAddKopokopoRecipient() {
 		},
 	})
 }
+
+export type AdminReferralLeaderboardEntry = {
+	userId: string
+	name: string
+	avatar: string | null
+	referralsCount: number
+}
+
+export type AdminReferralsData = {
+	totalReferrals: number
+	totalReferrers: number
+	leaderboard: AdminReferralLeaderboardEntry[]
+}
+
+export function useAdminReferrals() {
+	return useQuery({
+		queryKey: ["admin", "referrals"],
+		queryFn: () =>
+			Axios.get<{ data: AdminReferralsData }>("api/admin/referrals").then(
+				(res) => res.data.data
+			),
+	})
+}
+
+export type AdminReferral = {
+	id: string
+	referrerName: string | null
+	referredName: string | null
+	createdAt: string
+}
+
+type AdminRecentReferralsResponse = {
+	data: AdminReferral[]
+	meta: { current_page: number; last_page: number; total: number }
+}
+
+export function useAdminRecentReferrals(page = 1, perPage = 20) {
+	return useQuery({
+		queryKey: ["admin", "referrals", "recent", page, perPage],
+		queryFn: () =>
+			Axios.get<AdminRecentReferralsResponse>("api/admin/referrals/recent", {
+				params: { page, per_page: perPage },
+			}).then((res) => res.data),
+	})
+}

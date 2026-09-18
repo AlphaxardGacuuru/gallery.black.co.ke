@@ -13,6 +13,7 @@ export type User = {
 	verified?: boolean
 	email_verified_at: string | null
 	twoFactorEnabled?: boolean
+	referralsCount?: number
 	settings?: UserSettings | null
 	created_at: string
 	updated_at: string

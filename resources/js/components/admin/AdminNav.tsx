@@ -4,6 +4,7 @@ import {
 	Send,
 	ShieldCheck,
 	Trophy,
+	UserPlus,
 	Users,
 } from "lucide-react"
 import { Link } from "@/components/ui/link"
@@ -28,6 +29,7 @@ const ADMIN_ITEMS = [
 	{ title: "Users", href: "/admin/users", icon: Users },
 	{ title: "Photo challenge", href: "/admin/photo-competitions", icon: Trophy },
 	{ title: "Payouts", href: "/admin/kopokopo-transfers", icon: Send },
+	{ title: "Referrals", href: "/admin/referrals", icon: UserPlus },
 ]
 
 export function AdminNav() {

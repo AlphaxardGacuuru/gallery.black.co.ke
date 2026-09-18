@@ -8,6 +8,7 @@ import DeleteUser from "@/components/delete-user"
 import Heading from "@/components/heading"
 import InputError from "@/components/input-error"
 import PushNotificationSettings from "@/components/push-notification-settings"
+import ReferFriends from "@/components/refer-friends"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Axios from "@/lib/axios"
@@ -179,6 +180,8 @@ export default function Profile({
 					</div>
 				</form>
 			</div>
+
+			<ReferFriends />
 
 			<div className="space-y-6">
 				<Heading

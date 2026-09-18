@@ -79,6 +79,7 @@ export default function SocialiteCallback() {
 
 			if (token) {
 				setLocalStorage("sanctumToken", token)
+				window.localStorage.removeItem("referralCode")
 				invalidateAuth()
 				toast.success(message ?? "Logged in")
 				navigate({ to: "/compete" })

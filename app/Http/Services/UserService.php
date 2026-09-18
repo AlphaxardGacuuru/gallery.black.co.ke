@@ -29,6 +29,7 @@ class UserService extends Service
 		}
 
 		return $query
+			->withCount('referralsMade')
 			->orderBy('id', 'DESC')
 			->paginate($request->integer('per_page', 15));
 	}

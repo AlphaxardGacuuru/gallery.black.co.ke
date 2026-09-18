@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Events\UserCreatedEvent;
 use App\Http\Controllers\Controller;
+use App\Models\Referral;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,6 +38,8 @@ class RegisteredUserController extends Controller
             'invoiceReminderNotification' => true,
         ];
         $user->save();
+
+        Referral::record($request->input('referrerId'), $user);
 
         Auth::login($user);
 

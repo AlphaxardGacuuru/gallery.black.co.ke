@@ -26,6 +26,7 @@ export default function Register({
 	const navigate = useNavigate()
 
 	const tenantLogin = new URLSearchParams(window.location.search).has("tenant")
+	const referralCode = window.localStorage.getItem("referralCode")
 
 	const [name, setName] = useState("")
 	const [email, setEmail] = useState("")
@@ -54,12 +55,14 @@ export default function Register({
 					password,
 					password_confirmation: passwordConfirmation,
 					device_name: "web",
+					referrerId: referralCode || undefined,
 				},
 			})
 			.then((response) => {
 				toast.success(response.data.message)
 
 				props.setLocalStorage("sanctumToken", response.data.data)
+				window.localStorage.removeItem("referralCode")
 				invalidateAuth()
 
 				navigate({
@@ -116,7 +119,11 @@ export default function Register({
 								disabled={googleLoading || processing}
 								asChild>
 								<a
-									href={googleLoginUrl}
+									href={
+										referralCode
+											? `${googleLoginUrl}?ref=${encodeURIComponent(referralCode)}`
+											: googleLoginUrl
+									}
 									onClick={(event) => {
 										if (googleLoading || processing) {
 											event.preventDefault()

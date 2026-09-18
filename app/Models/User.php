@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laragear\TwoFactor\TwoFactorAuthentication;
@@ -107,6 +108,14 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         return Attribute::make(
             get: fn($value) => Carbon::parse($value)->format('d M Y h:i:s'),
         );
+    }
+
+    /**
+     * Other users this user referred, who signed up via their referral link.
+     */
+    public function referralsMade(): HasMany
+    {
+        return $this->hasMany(Referral::class, 'referrer_id');
     }
 
     /*
