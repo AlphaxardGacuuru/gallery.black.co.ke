@@ -7,6 +7,7 @@ use App\Models\KopokopoRecipient;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Kopokopo\SDK\K2;
+use Illuminate\Support\Facades\Log;
 
 class KopokopoRecipientService extends Service
 {
@@ -52,9 +53,12 @@ class KopokopoRecipientService extends Service
         $response = $K2->ExternalRecipientService()->addExternalRecipient($details);
 
         if (($response['status'] ?? null) !== 'success') {
+
+            Log::error('Kopokopo recipient registration failed', $response);
+
             return [
                 false,
-                $response['data']['errorMessage'] ?? 'Kopokopo rejected the recipient',
+                $response['data']['errorMessage'] ?? 'Kopokopo Rejected the Recipient',
                 $response,
             ];
         }

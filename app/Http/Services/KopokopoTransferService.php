@@ -8,6 +8,7 @@ use App\Models\PhotoCompetition;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Kopokopo\SDK\K2;
+use Illuminate\Support\Facades\Log;
 
 class KopokopoTransferService extends Service
 {
@@ -86,8 +87,10 @@ class KopokopoTransferService extends Service
         ]);
 
         if (($response['status'] ?? null) === 'success') {
-            return [true, 'Transfer initiated', $response];
+            return [true, 'Transfer Initiated', $response];
         }
+
+        Log::error('Kopokopo transfer failed', $response);
 
         return [false, 'Kopokopo transfer failed', $response];
     }

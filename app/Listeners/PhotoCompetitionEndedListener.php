@@ -23,7 +23,9 @@ class PhotoCompetitionEndedListener
         $winner = $event->competition->winnerPhoto;
 
         if ($winner) {
-            $winner->user->notify(new PhotoCompetitionWonNotification($event->competition));
+            $winner
+                ->user
+                ->notify(new PhotoCompetitionWonNotification($event->competition));
         }
     }
 }
