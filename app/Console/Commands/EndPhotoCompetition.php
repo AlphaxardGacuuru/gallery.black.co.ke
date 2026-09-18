@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Events\PhotoCompetitionEnded;
 use App\Models\PhotoCompetition;
-use App\Notifications\PhotoCompetitionWonNotification;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -36,11 +35,9 @@ class EndPhotoCompetition extends Command
             'winner_photo_id' => $winner?->id,
         ]);
 
-        if ($winner) {
-            $winner->user->notify(new PhotoCompetitionWonNotification($competition));
-        }
-
-        broadcast(new PhotoCompetitionEnded($competition));
+        // PhotoCompetitionEndedListener notifies the winner — dispatching
+        // still broadcasts too, since the event implements ShouldBroadcast.
+        PhotoCompetitionEnded::dispatch($competition);
 
         $this->components->info("Ended competition #{$competition->id}. Winner: " . ($winner?->id ?? 'none'));
     }

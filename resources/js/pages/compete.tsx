@@ -36,7 +36,7 @@ export default function Compete() {
 								</span>{" "}
 							</>
 						) : (
-							"No challenge is running right now — check back soon for your next shot at the prize."
+							"No challenge is running right now, check back soon for your next shot at the prize."
 						)}
 					</p>
 				</header>
@@ -45,9 +45,19 @@ export default function Compete() {
 					{isLoading ? (
 						<Skeleton className="h-24 w-full max-w-md" />
 					) : competition ? (
-						<CompetitionCountdown endsAt={competition.endsAt} />
+						<>
+							<p className="mb-2 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
+								Competition Ends in
+							</p>
+							<CompetitionCountdown endsAt={competition.endsAt} />
+						</>
 					) : data?.nextStartsAt ? (
-						<NextCompetitionCountdown startsAt={data.nextStartsAt} />
+						<>
+							<p className="mb-2 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
+								Competition starts in
+							</p>
+							<NextCompetitionCountdown startsAt={data.nextStartsAt} />
+						</>
 					) : null}
 				</div>
 

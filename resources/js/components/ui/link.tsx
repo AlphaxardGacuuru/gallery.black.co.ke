@@ -15,7 +15,7 @@ const linkVariants = cva(
 				solid:
 					"bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
 				outline:
-					"border border-primary text-primary shadow-xs hover:bg-accent hover:bg-primary hover:text-white",
+					"border border-primary text-primary shadow-xs hover:bg-primary hover:text-primary-foreground",
 				ghost: "text-foreground hover:bg-accent hover:text-accent-foreground",
 				muted:
 					"text-muted-foreground hover:text-foreground hover:underline underline-offset-4",

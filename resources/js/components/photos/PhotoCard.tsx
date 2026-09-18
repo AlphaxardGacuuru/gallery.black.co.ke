@@ -1,4 +1,5 @@
 import { Heart, Trash2 } from "lucide-react"
+import { useState } from "react"
 import type { Photo } from "@/types/photo"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,6 +14,7 @@ import {
 import { cn } from "@/lib/utils"
 import toast from "@/lib/toast"
 import { useDeletePhoto, useLikePhoto } from "@/queries/photos"
+import { PhotoLightbox } from "./PhotoLightbox"
 
 type Props = {
 	photo: Photo
@@ -37,6 +39,7 @@ export function PhotoCard({
 }: Props) {
 	const likePhoto = useLikePhoto()
 	const deletePhoto = useDeletePhoto()
+	const [lightboxOpen, setLightboxOpen] = useState(false)
 
 	function handleDelete() {
 		deletePhoto.mutate(photo.id, {
@@ -47,7 +50,11 @@ export function PhotoCard({
 
 	return (
 		<figure className="overflow-hidden rounded-xl border bg-card shadow-sm">
-			<div className="relative">
+			<button
+				type="button"
+				aria-label="View full photo"
+				onClick={() => setLightboxOpen(true)}
+				className="relative block w-full cursor-pointer">
 				<img
 					src={photo.thumbnailUrl}
 					alt={photo.caption ?? "Competition entry"}
@@ -62,7 +69,14 @@ export function PhotoCard({
 						aspect === "square" && "aspect-square"
 					)}
 				/>
-			</div>
+			</button>
+			<PhotoLightbox
+				photo={photo}
+				open={lightboxOpen}
+				onOpenChange={setLightboxOpen}
+				canDelete={canDelete}
+				canLike={canLike}
+			/>
 			<figcaption className="flex items-center justify-between gap-2 p-3">
 				<div className="min-w-0">
 					<p className="truncate text-sm font-medium">{photo.userName}</p>

@@ -1,4 +1,4 @@
-import { Images, Loader2, Pencil, ThumbsUp, Trophy } from "lucide-react"
+import { Images, Pencil, ThumbsUp, Trophy } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Head } from "@/lib/spa"
@@ -17,6 +17,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Link } from "@/components/ui/link"
 import { SelectField, SelectItem } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import toast from "@/lib/toast"
@@ -25,7 +26,6 @@ import {
 	type PhotoCompetitionSchedule,
 	useAdminPhotoCompetitions,
 	useAdminRecentPhotoCompetitions,
-	usePayCompetitionWinner,
 	useUpdateActiveCompetition,
 	useUpdatePhotoCompetitionSchedule,
 	useUpdatePrizeAmount,
@@ -288,8 +288,6 @@ function PayWinnerCell({
 }: {
 	competition: AdminPhotoCompetitionSummary
 }) {
-	const payWinner = usePayCompetitionWinner()
-
 	if (!competition.winnerName) {
 		return <span className="text-muted-foreground">—</span>
 	}
@@ -303,28 +301,15 @@ function PayWinnerCell({
 		)
 	}
 
-	function handlePay() {
-		payWinner.mutate(competition.id, {
-			onSuccess: () =>
-				toast.success(`Prize sent to ${competition.winnerName}`),
-			onError: (error) =>
-				toast.error("Couldn't pay the winner", {
-					description: error.message,
-				}),
-		})
-	}
-
 	return (
 		<div className="flex items-center gap-2">
 			<span>{competition.winnerName}</span>
-			<Button
+			<Link
+				href="/admin/users"
 				variant="outline"
-				size="sm"
-				disabled={payWinner.isPending}
-				onClick={handlePay}>
-				{payWinner.isPending && <Loader2 className="size-3.5 animate-spin" />}
-				Pay KES {competition.prizeAmount}
-			</Button>
+				size="sm">
+				Create Kopokopo Recipient
+			</Link>
 		</div>
 	)
 }
