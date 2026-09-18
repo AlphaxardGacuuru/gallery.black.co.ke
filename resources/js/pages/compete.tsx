@@ -46,16 +46,16 @@ export default function Compete() {
 						<Skeleton className="h-24 w-full max-w-md" />
 					) : competition ? (
 						<>
-							<p className="mb-2 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
+							<h2 className="mb-4 text-center font-medium uppercase tracking-wide text-muted-foreground">
 								Competition Ends in
-							</p>
+							</h2>
 							<CompetitionCountdown endsAt={competition.endsAt} />
 						</>
 					) : data?.nextStartsAt ? (
 						<>
-							<p className="mb-2 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
-								Competition starts in
-							</p>
+							<h2 className="mb-4 text-center font-medium uppercase tracking-wide text-muted-foreground">
+								Next Competition starts in
+							</h2>
 							<NextCompetitionCountdown startsAt={data.nextStartsAt} />
 						</>
 					) : null}
