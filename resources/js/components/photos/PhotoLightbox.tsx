@@ -1,4 +1,4 @@
-import { Heart, Trash2, X } from "lucide-react"
+import { Heart, Trash2, Trophy, X } from "lucide-react"
 import type { Photo } from "@/types/photo"
 import { Button } from "@/components/ui/button"
 import {
@@ -57,7 +57,15 @@ export function PhotoLightbox({
 				</DialogDescription>
 
 				<header className="flex shrink-0 items-center justify-between gap-2 p-3 text-white">
-					<p className="truncate text-sm font-medium">{photo.userName}</p>
+					<div className="flex min-w-0 items-center gap-2">
+						<p className="truncate text-sm font-medium">{photo.userName}</p>
+						{photo.isWinner && (
+							<span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-400 px-2 py-1 text-xs font-semibold text-amber-950">
+								<Trophy className="size-3.5" />
+								Winner
+							</span>
+						)}
+					</div>
 					<DialogClose asChild>
 						<Button
 							variant="ghost"

@@ -68,6 +68,21 @@ class Photo extends Model
         ]);
     }
 
+    /**
+     * Annotate each photo with whether it's its competition's winner, via a
+     * correlated exists() subquery rather than eager-loading the competition.
+     */
+    public function scopeWithIsWinner(Builder $query): Builder
+    {
+        return $query->addSelect([
+            'is_winner' => PhotoCompetition::query()
+                ->selectRaw('1')
+                ->whereColumn('id', 'photos.competition_id')
+                ->whereColumn('winner_photo_id', 'photos.id')
+                ->limit(1),
+        ]);
+    }
+
     protected function url(): Attribute
     {
         return Attribute::make(

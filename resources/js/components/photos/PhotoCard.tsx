@@ -1,4 +1,4 @@
-import { Heart, Trash2 } from "lucide-react"
+import { Heart, Trash2, Trophy } from "lucide-react"
 import { useState } from "react"
 import type { Photo } from "@/types/photo"
 import { Button } from "@/components/ui/button"
@@ -49,7 +49,11 @@ export function PhotoCard({
 	}
 
 	return (
-		<figure className="overflow-hidden rounded-xl border bg-card shadow-sm">
+		<figure
+			className={cn(
+				"overflow-hidden rounded-xl border bg-card shadow-sm",
+				photo.isWinner && "ring-2 ring-amber-400 border-amber-400"
+			)}>
 			<button
 				type="button"
 				aria-label="View full photo"
@@ -69,6 +73,12 @@ export function PhotoCard({
 						aspect === "square" && "aspect-square"
 					)}
 				/>
+				{photo.isWinner && (
+					<div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-amber-400 px-2 py-1 text-xs font-semibold text-amber-950 shadow">
+						<Trophy className="size-3.5" />
+						Winner
+					</div>
+				)}
 			</button>
 			<PhotoLightbox
 				photo={photo}
@@ -77,7 +87,7 @@ export function PhotoCard({
 				canDelete={canDelete}
 				canLike={canLike}
 			/>
-			<figcaption className="flex items-center justify-between gap-2 p-3">
+			<figcaption className="flex items-center justify-between gap-2 p-2">
 				<div className="min-w-0">
 					<p className="truncate text-sm font-medium">{photo.userName}</p>
 					{photo.caption && (
@@ -88,28 +98,6 @@ export function PhotoCard({
 				</div>
 				{/* Actions Start */}
 				<div className="flex items-center gap-1">
-					<Button
-						variant="ghost"
-						size="sm"
-						aria-label={photo.isLikedByViewer ? "Liked" : "Like photo"}
-						disabled={!canLike || photo.isLikedByViewer || likePhoto.isPending}
-						onClick={() => canLike && likePhoto.mutate(photo.id)}
-						className="flex shrink-0 items-center gap-1 px-2.5 text-sm transition-colors cursor-pointer">
-						<Heart
-							className={cn(
-								"size-4",
-								photo.isLikedByViewer && "fill-red-500 text-red-500"
-							)}
-						/>
-						<span
-							className={cn(
-								"tabular-nums",
-								photo.isLikedByViewer && "fill-red-500 text-red-500"
-							)}>
-							{photo.likesCount}
-						</span>
-					</Button>
-
 					{canDelete && (
 						<Dialog>
 							<DialogTrigger asChild>
@@ -119,7 +107,7 @@ export function PhotoCard({
 									size="sm"
 									aria-label="Delete photo"
 									disabled={deletePhoto.isPending}
-									className="shrink-0">
+									className="shrink-0 px-1">
 									<Trash2 className="size-4 text-white/60" />
 								</Button>
 							</DialogTrigger>
@@ -144,6 +132,28 @@ export function PhotoCard({
 							</DialogContent>
 						</Dialog>
 					)}
+
+					<Button
+						variant="ghost"
+						size="sm"
+						aria-label={photo.isLikedByViewer ? "Liked" : "Like photo"}
+						disabled={!canLike || photo.isLikedByViewer || likePhoto.isPending}
+						onClick={() => canLike && likePhoto.mutate(photo.id)}
+						className="flex shrink-0 items-center gap-1 px-1 text-sm transition-colors cursor-pointer">
+						<Heart
+							className={cn(
+								"size-4",
+								photo.isLikedByViewer && "fill-red-500 text-red-500"
+							)}
+						/>
+						<span
+							className={cn(
+								"tabular-nums",
+								photo.isLikedByViewer && "fill-red-500 text-red-500"
+							)}>
+							{photo.likesCount}
+						</span>
+					</Button>
 				</div>
 				{/* Actions End */}
 			</figcaption>

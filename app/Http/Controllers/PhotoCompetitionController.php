@@ -40,6 +40,7 @@ class PhotoCompetitionController extends Controller
             ->whereHas('competition', fn($query) => $query->where('status', PhotoCompetition::STATUS_ENDED))
             ->with('user')
             ->withLikedByViewer($request->user())
+            ->withIsWinner()
             ->latest('created_at')
             ->paginate(30);
 

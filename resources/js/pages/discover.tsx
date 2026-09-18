@@ -46,7 +46,7 @@ export default function Discover() {
 						{/* CSS columns give each photo its own natural aspect ratio,
 						    the same "masonry" effect Instagram's discovery grid uses —
 						    ordering across columns is a tradeoff we accept for it. */}
-						<div className="columns-2 gap-1 sm:columns-3 lg:columns-4 *:mb-4">
+						<div className="columns-2 gap-1 sm:columns-3 lg:columns-4 *:mb-1">
 							{photos.map((photo) => (
 								<div
 									key={photo.id}

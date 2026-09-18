@@ -23,6 +23,7 @@ class PhotoResource extends JsonResource
 			'aspectRatio' => $this->aspect_ratio,
 			'likesCount' => $this->likes_count,
 			'isLikedByViewer' => (bool) ($this->is_liked_by_viewer ?? false),
+			'isWinner' => (bool) ($this->is_winner ?? false),
 			'createdAt' => $this->created_at,
 		];
 	}

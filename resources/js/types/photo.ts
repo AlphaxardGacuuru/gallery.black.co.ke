@@ -12,6 +12,7 @@ export type Photo = {
 	aspectRatio: number
 	likesCount: number
 	isLikedByViewer: boolean
+	isWinner: boolean
 	createdAt: string
 }
 
