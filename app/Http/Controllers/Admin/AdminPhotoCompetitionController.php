@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\KopokopoTransferInitiated;
 use App\Http\Controllers\Controller;
 use App\Http\Services\KopokopoTransferService;
+use App\Http\Services\Service;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\Setting;
@@ -172,6 +174,19 @@ class AdminPhotoCompetitionController extends Controller
     public function payWinner(PhotoCompetition $competition): JsonResponse
     {
         [$status, $message, $data] = $this->kopokopoTransferService->payWinner($competition);
+
+        if ($status === true) {
+            $winner = $competition->winnerPhoto?->user;
+
+            if ($winner?->phone) {
+                KopokopoTransferInitiated::dispatch(
+                    Service::normalizePhoneNumber($winner->phone),
+                    (float) $competition->prize_amount,
+                    $winner->name,
+                    'Black Gallery weekly challenge prize',
+                );
+            }
+        }
 
         return response()->json([
             'status' => $status,

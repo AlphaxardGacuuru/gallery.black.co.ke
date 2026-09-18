@@ -16,8 +16,11 @@ class Service
 
     /**
      * Kopokopo/M-Pesa expects "254XXXXXXXXX" (no "+", no leading 0).
+     * Public static so controllers can reach it too, without instantiating
+     * a service, when they need to normalize a phone number themselves
+     * (e.g. to dispatch an event carrying the normalized number).
      */
-    protected function normalizePhoneNumber(string $phone): string
+    public static function normalizePhoneNumber(string $phone): string
     {
         $digits = preg_replace('/\D/', '', $phone);
 

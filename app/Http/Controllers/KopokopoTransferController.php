@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\KopokopoTransferInitiated;
 use App\Http\Services\KopokopoTransferService;
+use App\Http\Services\Service;
 use App\Models\KopokopoTransfer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -74,6 +76,16 @@ class KopokopoTransferController extends Controller
         ]);
 
         [$status, $message, $data] = $this->service->initiateTransfer($request);
+
+        $phone = Service::normalizePhoneNumber($request->string('destinationReference')->toString());
+
+        KopokopoTransferInitiated::dispatchIf(
+            $status,
+            $phone,
+            (float) $request->input('amount'),
+            $request->input('recipientName'),
+            $request->input('description'),
+        );
 
         return response([
             "status" => $status,
