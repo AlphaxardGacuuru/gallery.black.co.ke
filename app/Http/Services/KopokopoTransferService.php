@@ -27,18 +27,19 @@ class KopokopoTransferService extends Service
     /*
      * Store a completed transfer from Kopokopo's send_money callback
      */
-    public function store($request)
+    public function store(Request $request)
     {
         // Get Data
         $data = $request->input("data");
         $attributes = $data["attributes"];
+        $destination = $attributes["destinations"][0] ?? [];
 
         $kopokopoTransfer = new KopokopoTransfer;
         $kopokopoTransfer->user_id = $attributes["metadata"]["userId"] ?? null;
         $kopokopoTransfer->kopokopo_id = $data["id"];
         $kopokopoTransfer->kopokopo_created_at = $attributes["created_at"];
-        $kopokopoTransfer->amount = $attributes["amount"]["value"];
-        $kopokopoTransfer->currency = $attributes["amount"]["currency"];
+        $kopokopoTransfer->amount = $destination["amount"] ?? null;
+        $kopokopoTransfer->currency = $attributes["currency"] ?? null;
         $kopokopoTransfer->transfer_batches = $attributes["transfer_batches"];
         $kopokopoTransfer->metadata = $attributes["metadata"];
         $saved = $kopokopoTransfer->save();
@@ -51,7 +52,7 @@ class KopokopoTransferService extends Service
      * The recipient's phone number is normalized to Kopokopo's expected
      * "254XXXXXXXXX" format before the request is built.
      */
-    public function initiateTransfer($request)
+    public function initiateTransfer(Request $request)
     {
         $amount = $request->input('amount');
         $phoneNumber = $this->normalizePhoneNumber($request->input('destinationReference'));
@@ -93,7 +94,7 @@ class KopokopoTransferService extends Service
 
         Log::error('Kopokopo transfer failed', $response);
 
-        return [false, 'Kopokopo transfer failed', $response];
+        return [false, 'Kopokopo Transfer Failed', $response];
     }
 
     /**
