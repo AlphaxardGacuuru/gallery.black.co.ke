@@ -286,7 +286,7 @@ function ScheduleSettings({
 	)
 }
 
-function PayWinnerCell({
+function PayoutCell({
 	competition,
 	isRecipient,
 }: {
@@ -300,12 +300,7 @@ function PayWinnerCell({
 	}
 
 	if (competition.prizePaidAt) {
-		return (
-			<div className="flex items-center gap-2">
-				<span>{competition.winnerName}</span>
-				<Badge variant="secondary">Paid</Badge>
-			</div>
-		)
+		return <Badge variant="secondary">Paid</Badge>
 	}
 
 	function handlePay() {
@@ -319,27 +314,22 @@ function PayWinnerCell({
 		})
 	}
 
-	return (
-		<div className="flex items-center gap-2">
-			<span>{competition.winnerName}</span>
-			{isRecipient ? (
-				<Button
-					variant="outline"
-					size="sm"
-					disabled={payWinner.isPending}
-					onClick={handlePay}>
-					{payWinner.isPending && <Loader2 className="size-3.5 animate-spin" />}
-					Pay KES {competition.prizeAmount}
-				</Button>
-			) : (
-				<Link
-					href="/admin/users"
-					variant="outline"
-					size="sm">
-					Create Kopokopo Recipient
-				</Link>
-			)}
-		</div>
+	return isRecipient ? (
+		<Button
+			variant="outline"
+			size="sm"
+			disabled={payWinner.isPending}
+			onClick={handlePay}>
+			{payWinner.isPending && <Loader2 className="size-3.5 animate-spin" />}
+			Pay KES {competition.prizeAmount}
+		</Button>
+	) : (
+		<Link
+			href="/admin/users"
+			variant="outline"
+			size="sm">
+			Create Kopokopo Recipient
+		</Link>
 	)
 }
 
@@ -384,11 +374,17 @@ export default function AdminPhotoCompetitions() {
 			cell: ({ row }) => `KES ${row.original.prizeAmount}`,
 		},
 		{
-			id: "winner",
+			accessorKey: "winnerName",
 			header: "Winner",
 			enableSorting: false,
+			cell: ({ row }) => row.original.winnerName ?? "—",
+		},
+		{
+			id: "payout",
+			header: "Payout",
+			enableSorting: false,
 			cell: ({ row }) => (
-				<PayWinnerCell
+				<PayoutCell
 					competition={row.original}
 					isRecipient={
 						!!row.original.winnerPhone &&
