@@ -59,7 +59,7 @@ export default function ReferFriends() {
 				<Button
 					type="button"
 					onClick={handleShare}
-					className="gap-2">
+					className="w-full">
 					<Share2 className="size-4" />
 					Share
 				</Button>

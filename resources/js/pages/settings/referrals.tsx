@@ -44,7 +44,7 @@ export default function Referrals() {
 						emptyMessage={
 							isLoading
 								? "Loading…"
-								: "No referrals yet — share your link to get started."
+								: "No referrals yet, share your link to get started."
 						}
 						pagination={{
 							currentPage: data?.meta.current_page ?? 1,
