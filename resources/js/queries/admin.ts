@@ -324,11 +324,14 @@ export type AdminReferralLeaderboardEntry = {
 	name: string
 	avatar: string | null
 	referralsCount: number
+	eligibleAmount: number
 }
 
 export type AdminReferralsData = {
 	totalReferrals: number
 	totalReferrers: number
+	threshold: number
+	rewardAmount: number
 	leaderboard: AdminReferralLeaderboardEntry[]
 }
 
@@ -347,6 +350,8 @@ export type AdminReferral = {
 	referrerName: string | null
 	referredName: string | null
 	createdAt: string
+	amountPaid: number | null
+	paidAt: string | null
 }
 
 type AdminRecentReferralsResponse = {
@@ -361,5 +366,38 @@ export function useAdminRecentReferrals(page = 1, perPage = 20) {
 			Axios.get<AdminRecentReferralsResponse>("api/admin/referrals/recent", {
 				params: { page, per_page: perPage },
 			}).then((res) => res.data),
+	})
+}
+
+export function useUpdateReferralSettings() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (payload: { threshold: number; rewardAmount: number }) =>
+			Axios.put("api/admin/referrals/settings", payload),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "referrals"] })
+		},
+	})
+}
+
+export function usePayReferrer() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		// Same status-in-body convention as useSendKopokopoTransfer.
+		mutationFn: (userId: string) =>
+			Axios.post<{ status: unknown; message: string }>(
+				`api/admin/referrals/${userId}/pay`
+			).then((res) => {
+				if (res.data.status !== true) {
+					throw new Error(res.data.message)
+				}
+
+				return res.data
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "referrals"] })
+		},
 	})
 }

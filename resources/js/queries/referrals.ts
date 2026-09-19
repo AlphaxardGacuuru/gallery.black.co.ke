@@ -21,3 +21,18 @@ export function useMyReferrals(page = 1, perPage = 20) {
 			}).then((res) => res.data),
 	})
 }
+
+export type ReferralSettings = {
+	threshold: number
+	rewardAmount: number
+}
+
+export function useReferralSettings() {
+	return useQuery({
+		queryKey: ["referrals", "settings"],
+		queryFn: () =>
+			Axios.get<{ data: ReferralSettings }>("api/referrals/settings").then(
+				(res) => res.data.data
+			),
+	})
+}

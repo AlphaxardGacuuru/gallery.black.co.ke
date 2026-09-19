@@ -1,6 +1,7 @@
 export type UserSettings = {
 	installOnboardedAt?: string
 	permissionsOnboardedAt?: string
+	referralOnboardedAt?: string
 	[key: string]: unknown
 }
 

@@ -5,6 +5,8 @@ namespace App\Http\Services;
 use App\Http\Resources\KopokopoTransferResource;
 use App\Models\KopokopoTransfer;
 use App\Models\PhotoCompetition;
+use App\Models\Referral;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Kopokopo\SDK\K2;
@@ -82,9 +84,9 @@ class KopokopoTransferService extends Service
             'currency' => 'KES',
             'metadata' => [
                 'userId' => $this->id,
-                'notes' => 'Transfer at '.Carbon::now(),
+                'notes' => 'Transfer at ' . Carbon::now(),
             ],
-            'callbackUrl' => rtrim(env('APP_URL'), '/').'/api/kopokopo-transfers',
+            'callbackUrl' => rtrim(env('APP_URL'), '/') . '/api/kopokopo-transfers',
             'accessToken' => $accessToken,
         ]);
 
@@ -116,7 +118,7 @@ class KopokopoTransferService extends Service
         }
 
         if (! $winner->phone) {
-            return [false, $winner->name.' has no M-Pesa phone number on file', null];
+            return [false, $winner->name . ' has no M-Pesa phone number on file', null];
         }
 
         $request = Request::create('/', 'POST', [
@@ -130,6 +132,50 @@ class KopokopoTransferService extends Service
 
         if ($status === true) {
             $competition->update(['prize_paid_at' => now()]);
+        }
+
+        return [$status === true, $message, $data];
+    }
+
+    /**
+     * Pay a referrer for however many complete referral-reward batches
+     * they've accumulated (see Referral::eligiblePayout()), in a single
+     * transfer, then mark exactly those referrals paid with their even
+     * split of the reward on success.
+     *
+     * @param  array<int, string>  $referralIds  The specific unpaid referrals this payout covers.
+     * @return array{0: bool, 1: string, 2: mixed}
+     */
+    public function payReferrer(
+        User $referrer,
+        float $totalAmount,
+        array $referralIds,
+        float $perReferralAmount
+    ): array {
+        if ($referralIds === []) {
+            return [false, $referrer->name . ' hasn\'t reached the referral threshold yet', null];
+        }
+
+        if (! $referrer->phone) {
+            return [false, $referrer->name . ' has no M-Pesa phone number on file', null];
+        }
+
+        $request = Request::create('/', 'POST', [
+            'destinationReference' => $referrer->phone,
+            'amount' => $totalAmount,
+            'recipientName' => $referrer->name,
+            'description' => 'Black Gallery referral reward',
+        ]);
+
+        [$status, $message, $data] = $this->initiateTransfer($request);
+
+        if ($status === true) {
+            Referral::query()
+                ->whereIn('id', $referralIds)
+                ->update([
+                    'paid_at' => now(),
+                    'amount_paid' => $perReferralAmount,
+                ]);
         }
 
         return [$status === true, $message, $data];

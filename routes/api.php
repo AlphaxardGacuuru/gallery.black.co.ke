@@ -61,11 +61,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('onboarding/install', [OnboardingController::class, 'completeInstall']);
     Route::post('onboarding/permissions', [OnboardingController::class, 'completePermissions']);
+    Route::post('onboarding/referral', [OnboardingController::class, 'completeReferral']);
 
     Route::post('photos', [PhotoController::class, 'store']);
     Route::delete('photos/{id}', [PhotoController::class, 'destroy']);
     Route::post('photos/{id}/like', [PhotoLikeController::class, 'store']);
 
+    Route::get('referrals/settings', [ReferralController::class, 'settings'])->name('referrals.settings');
     Route::get('referrals/mine', [ReferralController::class, 'mine'])->name('referrals.mine');
 });
 
@@ -88,6 +90,8 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::post('kopokopo-recipients', [KopokopoRecipientController::class, 'store'])->name('kopokopo-recipients.store');
         Route::get('referrals', [AdminReferralController::class, 'index'])->name('referrals.index');
         Route::get('referrals/recent', [AdminReferralController::class, 'recent'])->name('referrals.recent');
+        Route::put('referrals/settings', [AdminReferralController::class, 'updateSettings'])->name('referrals.settings');
+        Route::post('referrals/{user}/pay', [AdminReferralController::class, 'pay'])->name('referrals.pay');
     });
 
 // Kopokopo's send_money callback — hit by Kopokopo itself, not the admin UI.

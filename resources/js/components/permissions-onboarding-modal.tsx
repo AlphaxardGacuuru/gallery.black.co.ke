@@ -27,6 +27,24 @@ function wasDismissedThisSession(): boolean {
 	return sessionStorage.getItem(DISMISSED_KEY) === "1"
 }
 
+// Mirrors useIsInstallStepSettled() — the referral onboarding modal waits on
+// this so it never appears ahead of, or stacked on top of, the
+// notifications prompt.
+export function useIsPermissionsStepSettled(): boolean {
+	const { isSupported, permission } = usePushNotifications()
+	const installStepSettled = useIsInstallStepSettled()
+
+	if (!installStepSettled) {
+		return false
+	}
+
+	if (!isSupported || permission === "granted") {
+		return true
+	}
+
+	return wasDismissedThisSession()
+}
+
 export default function PermissionsOnboardingModal() {
 	const { auth } = useApp()
 	const queryClient = useQueryClient()
