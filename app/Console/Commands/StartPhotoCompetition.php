@@ -2,14 +2,12 @@
 
 namespace App\Console\Commands;
 
+use App\Events\PhotoCompetitionStarted;
 use App\Models\PhotoCompetition;
 use App\Models\Setting;
-use App\Models\User;
-use App\Notifications\PhotoCompetitionStartedNotification;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Notification;
 
 #[Signature('app:start-photo-competition')]
 #[Description('Starts this week\'s photo competition using the configured schedule.')]
@@ -43,11 +41,7 @@ class StartPhotoCompetition extends Command
             'prize_amount' => $prizeAmount,
         ]);
 
-        User::query()
-            ->whereHas('pushSubscriptions')
-            ->chunkById(200, function ($users) use ($competition) {
-                Notification::send($users, new PhotoCompetitionStartedNotification($competition));
-            });
+        PhotoCompetitionStarted::dispatch($competition);
 
         $this->components->info("Started competition #{$competition->id}, ends {$endsAt}.");
     }

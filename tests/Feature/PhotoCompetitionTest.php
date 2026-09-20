@@ -2,9 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Events\PhotoCompetitionStarted;
 use App\Models\PhotoCompetition;
 use App\Models\User;
+use App\Notifications\PhotoCompetitionStartedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -14,10 +18,33 @@ class PhotoCompetitionTest extends TestCase
 
     public function test_start_command_creates_active_competition(): void
     {
+        Event::fake([PhotoCompetitionStarted::class]);
+
         $this->artisan('app:start-photo-competition')->assertSuccessful();
 
         $this->assertDatabaseCount('photo_competitions', 1);
-        $this->assertSame(PhotoCompetition::STATUS_ACTIVE, PhotoCompetition::first()->status);
+        $competition = PhotoCompetition::first();
+        $this->assertSame(PhotoCompetition::STATUS_ACTIVE, $competition->status);
+
+        Event::assertDispatched(
+            PhotoCompetitionStarted::class,
+            fn(PhotoCompetitionStarted $event): bool => $event->competition->is($competition),
+        );
+    }
+
+    public function test_start_event_notifies_only_users_with_push_subscriptions(): void
+    {
+        Notification::fake();
+
+        $subscribedUser = User::factory()->create();
+        $subscribedUser->updatePushSubscription('https://example.com/push/subscribed');
+        $unsubscribedUser = User::factory()->create();
+        $competition = PhotoCompetition::factory()->create();
+
+        PhotoCompetitionStarted::dispatch($competition);
+
+        Notification::assertSentTo($subscribedUser, PhotoCompetitionStartedNotification::class);
+        Notification::assertNotSentTo($unsubscribedUser, PhotoCompetitionStartedNotification::class);
     }
 
     public function test_current_endpoint_returns_active_competition_with_photos(): void

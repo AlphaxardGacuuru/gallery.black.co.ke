@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\PhotoCompetitionResource;
 use App\Http\Resources\PhotoResource;
+use App\Http\Services\PhotoCompetitionService;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use Illuminate\Http\JsonResponse;
@@ -11,19 +12,17 @@ use Illuminate\Http\Request;
 
 class PhotoCompetitionController extends Controller
 {
+    public function __construct(protected PhotoCompetitionService $photoCompetitionService)
+    {
+        // 
+    }
+
     /**
      * The active competition and its photos, most-liked first.
      */
     public function current(Request $request): JsonResponse
     {
-        $competition = PhotoCompetition::active()
-            ->with(['photos' => function ($query) use ($request) {
-                $query->with('user')
-                    ->withLikedByViewer($request->user())
-                    ->orderByDesc('likes_count')
-                    ->orderBy('created_at');
-            }])
-            ->first();
+        $competition = $this->photoCompetitionService->current($request);
 
         return response()->json([
             'data' => $competition ? new PhotoCompetitionResource($competition) : null,

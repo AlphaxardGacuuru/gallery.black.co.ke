@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\PhotoCompetition;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
@@ -20,7 +21,27 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 	 */
 	public function via($notifiable): array
 	{
-		return [WebPushChannel::class];
+		return ['mail', 'database', WebPushChannel::class];
+	}
+
+	public function toMail($notifiable): MailMessage
+	{
+		return (new MailMessage)
+			->from('al@mail.black.co.ke', 'Alphaxard from Black Gallery')
+			->subject('This week\'s photo challenge is live')
+			->greeting('Hello ' . $notifiable->name . ',')
+			->line("Submit your best shot before {$this->competition->ends_at->format('l g:ia')} to win KES {$this->competition->prize_amount}.")
+			->action('View the challenge', url('/'))
+			->line('We\'ll be picking the winners soon — good luck!');
+	}
+
+	public function toArray($notifiable): array
+	{
+		return [
+			'url' => '/',
+			'from' => 'Admin',
+			'message' => "Submit your best shot before {$this->competition->ends_at->format('l g:ia')} to win KES {$this->competition->prize_amount}.",
+		];
 	}
 
 	public function toWebPush($notifiable, $notification): WebPushMessage
