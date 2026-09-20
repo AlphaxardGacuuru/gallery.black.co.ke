@@ -124,6 +124,31 @@ class PhotoCompetitionTest extends TestCase
         $this->assertSame($winningPhoto->id, $competition->winner_photo_id);
     }
 
+    public function test_current_endpoint_returns_winner_photo_after_competition_ends(): void
+    {
+        $this->artisan('app:start-photo-competition');
+        $competition = PhotoCompetition::first();
+
+        $winningPhoto = $competition->photos()->create([
+            'user_id' => User::factory()->create()->id,
+            'disk' => 'public',
+            'path' => 'photos/winning.jpg',
+            'likes_count' => 5,
+        ]);
+
+        $this->artisan('app:end-photo-competition');
+
+        $response = $this->actingAs(User::factory()->create())
+            ->getJson('/api/photos/current');
+
+        $response->assertOk()
+            ->assertJsonPath('data.status', PhotoCompetition::STATUS_ENDED)
+            ->assertJsonPath('data.photos.0.id', $winningPhoto->id)
+            ->assertJsonPath('data.photos.0.isWinner', true)
+            ->assertJsonCount(1, 'data.photos')
+            ->assertJsonPath('nextStartsAt', fn($value) => $value !== null);
+    }
+
     public function test_discover_endpoint_only_returns_photos_from_ended_competitions(): void
     {
         $this->artisan('app:start-photo-competition');

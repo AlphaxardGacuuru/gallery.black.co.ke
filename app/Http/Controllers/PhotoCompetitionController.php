@@ -23,10 +23,11 @@ class PhotoCompetitionController extends Controller
     public function current(Request $request): JsonResponse
     {
         $competition = $this->photoCompetitionService->current($request);
+        $isActive = $competition?->status === PhotoCompetition::STATUS_ACTIVE;
 
         return response()->json([
             'data' => $competition ? new PhotoCompetitionResource($competition) : null,
-            'nextStartsAt' => $competition ? null : PhotoCompetition::nextScheduledStart()->toIso8601String(),
+            'nextStartsAt' => $isActive ? null : PhotoCompetition::nextScheduledStart()->toIso8601String(),
         ]);
     }
 

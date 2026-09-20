@@ -12,7 +12,9 @@ export default function Compete() {
 	const { auth } = useApp()
 	const { data, isLoading } = useCurrentCompetition()
 	const competition = data?.competition
-	const hasSubmitted = competition?.photos.some(
+	const activeCompetition =
+		competition?.status === "active" ? competition : undefined
+	const hasSubmitted = activeCompetition?.photos.some(
 		(photo) => String(photo.userId) === String(auth?.id)
 	)
 
@@ -26,15 +28,17 @@ export default function Compete() {
 						This week&apos;s challenge
 					</h2>
 					<p className="text-xl text-muted-foreground">
-						{competition ? (
+						{activeCompetition ? (
 							<>
 								<span className="me-1">
 									This week's most liked photo will win
 								</span>
 								<span className="text-3xl font-bold text-green-600">
-									KES {competition.prizeAmount}
+									KES {activeCompetition.prizeAmount}
 								</span>{" "}
 							</>
+						) : competition ? (
+							"Last week's challenge has ended — here's the winning photo. Check back soon for the next one."
 						) : (
 							"No challenge is running right now, check back soon for your next shot at the prize."
 						)}
@@ -44,12 +48,12 @@ export default function Compete() {
 				<div className="mx-auto w-[80vw]">
 					{isLoading ? (
 						<Skeleton className="h-24 w-full max-w-md" />
-					) : competition ? (
+					) : activeCompetition ? (
 						<>
 							<h2 className="mb-4 text-center font-medium uppercase tracking-wide text-muted-foreground">
 								Competition Ends in
 							</h2>
-							<CompetitionCountdown endsAt={competition.endsAt} />
+							<CompetitionCountdown endsAt={activeCompetition.endsAt} />
 						</>
 					) : data?.nextStartsAt ? (
 						<>
@@ -82,7 +86,11 @@ export default function Compete() {
 							<PhotoCard
 								key={photo.id}
 								photo={photo}
-								canDelete={String(photo.userId) === String(auth?.id)}
+								canDelete={
+									Boolean(activeCompetition) &&
+									String(photo.userId) === String(auth?.id)
+								}
+								canLike={Boolean(activeCompetition)}
 							/>
 						))}
 					</div>
@@ -91,7 +99,7 @@ export default function Compete() {
 
 			<UploadPhotoDialog
 				disabled={hasSubmitted}
-				hasActiveCompetition={Boolean(competition)}
+				hasActiveCompetition={Boolean(activeCompetition)}
 				hasPhoneNumber={Boolean(auth?.phone)}
 			/>
 		</>

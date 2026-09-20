@@ -1,6 +1,7 @@
 import { Heart, Trash2, Trophy } from "lucide-react"
 import { useState } from "react"
 import type { Photo } from "@/types/photo"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
 	Dialog,
@@ -11,6 +12,7 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog"
+import { useInitials } from "@/hooks/use-initials"
 import { cn } from "@/lib/utils"
 import toast from "@/lib/toast"
 import { useDeletePhoto, useLikePhoto } from "@/queries/photos"
@@ -39,6 +41,7 @@ export function PhotoCard({
 }: Props) {
 	const likePhoto = useLikePhoto()
 	const deletePhoto = useDeletePhoto()
+	const getInitials = useInitials()
 	const [lightboxOpen, setLightboxOpen] = useState(false)
 
 	function handleDelete() {
@@ -88,13 +91,24 @@ export function PhotoCard({
 				canLike={canLike}
 			/>
 			<figcaption className="flex items-center justify-between gap-2 p-2">
-				<div className="min-w-0">
-					<p className="truncate text-sm font-medium">{photo.userName}</p>
-					{photo.caption && (
-						<p className="truncate text-xs text-muted-foreground">
-							{photo.caption}
-						</p>
-					)}
+				<div className="flex min-w-0 items-center gap-2">
+					<Avatar className="size-8 shrink-0">
+						<AvatarImage
+							src={photo.userAvatar ?? undefined}
+							alt={photo.userName ?? ""}
+						/>
+						<AvatarFallback className="bg-neutral-200 text-xs text-black dark:bg-neutral-700 dark:text-white">
+							{photo.userName ? getInitials(photo.userName) : "?"}
+						</AvatarFallback>
+					</Avatar>
+					<div className="min-w-0">
+						<p className="truncate text-sm font-medium">{photo.userName}</p>
+						{photo.caption && (
+							<p className="truncate text-xs text-muted-foreground">
+								{photo.caption}
+							</p>
+						)}
+					</div>
 				</div>
 				{/* Actions Start */}
 				<div className="flex items-center gap-1">
