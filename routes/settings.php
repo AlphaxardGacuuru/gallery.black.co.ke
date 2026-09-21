@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\NotificationPreferencesController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,9 @@ Route::get('settings/referrals', fn() => view('app'))->name('referrals.edit');
 // as intended here.
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::patch('settings/notifications', [NotificationPreferencesController::class, 'update'])
+        ->name('notification-preferences.update');
 });
 
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {

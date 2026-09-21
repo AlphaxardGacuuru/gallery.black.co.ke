@@ -2,6 +2,8 @@ export type UserSettings = {
 	installOnboardedAt?: string
 	permissionsOnboardedAt?: string
 	referralOnboardedAt?: string
+	competitionStartedNotification?: boolean
+	competitionWonNotification?: boolean
 	[key: string]: unknown
 }
 

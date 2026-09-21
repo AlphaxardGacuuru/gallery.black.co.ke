@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EmailNotificationCategory;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\URL;
 use Laragear\TwoFactor\TwoFactorAuthentication;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
@@ -121,4 +123,27 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     /*
      * Custom functions
      */
+
+    /**
+     * Whether this user still wants emails for the given category — opt-out
+     * by default (true) so users created before a category existed, or who
+     * never touched their preferences, keep receiving it.
+     */
+    public function wantsEmail(EmailNotificationCategory $category): bool
+    {
+        return (bool) ($this->settings?->{$category->settingsKey()} ?? true);
+    }
+
+    /**
+     * A signed, no-login-required link that turns the given category off —
+     * embedded in every email of that category so it can be unsubscribed
+     * from with one click.
+     */
+    public function unsubscribeUrlFor(EmailNotificationCategory $category): string
+    {
+        return URL::signedRoute('unsubscribe.show', [
+            'user' => $this->getKey(),
+            'category' => $category->value,
+        ]);
+    }
 }

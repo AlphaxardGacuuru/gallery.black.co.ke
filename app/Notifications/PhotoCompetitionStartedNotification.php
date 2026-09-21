@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\EmailNotificationCategory;
 use App\Models\PhotoCompetition;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,7 +22,13 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 	 */
 	public function via($notifiable): array
 	{
-		return ['mail', 'database', WebPushChannel::class];
+		$channels = ['database', WebPushChannel::class];
+
+		if ($notifiable->wantsEmail(EmailNotificationCategory::COMPETITION_STARTED)) {
+			array_unshift($channels, 'mail');
+		}
+
+		return $channels;
 	}
 
 	public function toMail($notifiable): MailMessage
@@ -32,7 +39,10 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 			->greeting('Hello ' . $notifiable->name . ',')
 			->line("Submit your best shot before {$this->competition->ends_at->format('l g:ia')} to win KES {$this->competition->prize_amount}.")
 			->action('View the challenge', url('/'))
-			->line('We\'ll be picking the winners soon — good luck!');
+			->line('We\'ll be picking the winners soon — good luck!')
+			->markdown('notifications::email', [
+				'unsubscribeUrl' => $notifiable->unsubscribeUrlFor(EmailNotificationCategory::COMPETITION_STARTED),
+			]);
 	}
 
 	public function toArray($notifiable): array

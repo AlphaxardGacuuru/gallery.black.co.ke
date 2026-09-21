@@ -34,8 +34,8 @@ class RegisteredUserController extends Controller
         $user->email = $request->email;
         $user->password = Hash::make($request->password);
         $user->settings = [
-            'invoicesGeneratedNotification' => true,
-            'invoiceReminderNotification' => true,
+            'competitionStartedNotification' => true,
+            'competitionWonNotification' => true,
         ];
         $user->save();
 

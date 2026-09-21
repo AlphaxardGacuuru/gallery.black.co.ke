@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\EmailNotificationCategory;
 use App\Models\PhotoCompetition;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,7 +22,13 @@ class PhotoCompetitionWonNotification extends Notification implements ShouldQueu
 	 */
 	public function via($notifiable): array
 	{
-		return ['mail', 'database', WebPushChannel::class];
+		$channels = ['database', WebPushChannel::class];
+
+		if ($notifiable->wantsEmail(EmailNotificationCategory::COMPETITION_WON)) {
+			array_unshift($channels, 'mail');
+		}
+
+		return $channels;
 	}
 
 	public function toMail($notifiable): MailMessage
@@ -32,7 +39,10 @@ class PhotoCompetitionWonNotification extends Notification implements ShouldQueu
 			->greeting('Congratulations ' . $notifiable->name . '!')
 			->line("Your photo took first place in this week's challenge — KES {$this->competition->prize_amount} is on its way.")
 			->action('View the challenge', url('/discover'))
-			->line('Thank you for entering, and see you next week!');
+			->line('Thank you for entering, and see you next week!')
+			->markdown('notifications::email', [
+				'unsubscribeUrl' => $notifiable->unsubscribeUrlFor(EmailNotificationCategory::COMPETITION_WON),
+			]);
 	}
 
 	public function toArray($notifiable): array

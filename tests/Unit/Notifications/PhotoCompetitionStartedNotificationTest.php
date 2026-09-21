@@ -16,7 +16,7 @@ class PhotoCompetitionStartedNotificationTest extends TestCase
 	public function it_sends_email_database_and_web_push_channels(): void
 	{
 		$competition = PhotoCompetition::factory()->create();
-		$user = User::factory()->make(['name' => 'Jane']);
+		$user = User::factory()->create(['name' => 'Jane']);
 
 		$notification = new PhotoCompetitionStartedNotification($competition);
 
