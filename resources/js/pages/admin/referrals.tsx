@@ -24,37 +24,56 @@ function initials(name?: string | null): string {
 	return (name?.trim() || "?").slice(0, 2).toUpperCase()
 }
 
-const referralColumns: ColumnDef<AdminReferral>[] = [
-	{
-		accessorKey: "referrerName",
-		header: "Referred by",
-		cell: ({ row }) => row.original.referrerName ?? "—",
-	},
-	{
-		accessorKey: "referredName",
-		header: "New user",
-		cell: ({ row }) => row.original.referredName ?? "—",
-	},
-	{
-		accessorKey: "createdAt",
-		header: "Signed up",
-		cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
-	},
-	{
-		id: "paid",
-		header: "Reward paid",
-		enableSorting: false,
-		cell: ({ row }) =>
-			row.original.paidAt ? (
-				<span>
-					KES {row.original.amountPaid} ·{" "}
-					{new Date(row.original.paidAt).toLocaleDateString()}
-				</span>
-			) : (
-				<span className="text-muted-foreground">Not yet</span>
-			),
-	},
-]
+function referralColumns(startIndex: number): ColumnDef<AdminReferral>[] {
+	return [
+		{
+			id: "number",
+			header: "#",
+			enableSorting: false,
+			cell: ({ row }) => startIndex + row.index + 1,
+			meta: { className: "w-12 text-muted-foreground" },
+		},
+		{
+			accessorKey: "referrerName",
+			header: "Referred by",
+			cell: ({ row }) => row.original.referrerName ?? "—",
+		},
+		{
+			accessorKey: "referredName",
+			header: "New user",
+			cell: ({ row }) => row.original.referredName ?? "—",
+		},
+		{
+			accessorKey: "createdAt",
+			header: "Signed up",
+			cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
+		},
+		{
+			id: "paid",
+			header: "Reward paid",
+			enableSorting: false,
+			cell: ({ row }) =>
+				row.original.paidAt ? (
+					<span className="text-emerald-500">
+						KES {row.original.amountPaid}
+					</span>
+				) : (
+					<span className="text-muted-foreground">-</span>
+				),
+		},
+		{
+			id: "paid on",
+			header: "Paid on",
+			enableSorting: false,
+			cell: ({ row }) =>
+				row.original.paidAt ? (
+					new Date(row.original.paidAt).toLocaleDateString()
+				) : (
+					<span className="text-muted-foreground">-</span>
+				),
+		},
+	]
+}
 
 function RewardSettings({
 	threshold,
@@ -124,7 +143,11 @@ function RewardSettings({
 	)
 }
 
-function LeaderboardEntryRow({ entry }: { entry: AdminReferralLeaderboardEntry }) {
+function LeaderboardEntryRow({
+	entry,
+}: {
+	entry: AdminReferralLeaderboardEntry
+}) {
 	const payReferrer = usePayReferrer()
 
 	function handlePay() {
@@ -261,7 +284,9 @@ export default function AdminReferrals() {
 					</CardHeader>
 					<CardContent>
 						<DataTable
-							columns={referralColumns}
+							columns={referralColumns(
+								((recent?.meta.current_page ?? 1) - 1) * perPage
+							)}
 							data={recent?.data ?? []}
 							emptyMessage="No referrals yet"
 							pagination={{

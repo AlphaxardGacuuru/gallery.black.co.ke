@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Card, CardContent } from "@/components/ui/card"
 
 type Props = {
 	label: string
@@ -15,22 +16,29 @@ const toneClasses: Record<NonNullable<Props["tone"]>, string> = {
 	warning: "text-amber-600 bg-amber-500/10 dark:text-amber-400",
 }
 
-export default function AdminStatCard({ label, value, icon: Icon, tone = "default" }: Props) {
+export default function AdminStatCard({
+	label,
+	value,
+	icon: Icon,
+	tone = "default",
+}: Props) {
 	return (
-		<div className="flex justify-between items-center gap-4 rounded-lg border p-4">
-			<div className="min-w-0">
-				<p className="text-2xl font-semibold tracking-tight">
-					{value.toLocaleString()}
-				</p>
-				<p className="text-sm leading-tight text-muted-foreground">{label}</p>
-			</div>
-			<div
-				className={cn(
-					"flex size-12 shrink-0 items-center justify-center rounded-md",
-					toneClasses[tone]
-				)}>
-				<Icon className="size-5" />
-			</div>
-		</div>
+		<Card className="p-4">
+			<CardContent className="flex justify-between items-center gap-4">
+				<div className="min-w-0">
+					<p className="text-2xl font-semibold tracking-tight">
+						{value.toLocaleString()}
+					</p>
+					<p className="text-sm leading-tight text-muted-foreground">{label}</p>
+				</div>
+				<div
+					className={cn(
+						"flex size-18 shrink-0 items-center justify-center rounded-md",
+						toneClasses[tone]
+					)}>
+					<Icon className="size-8" />
+				</div>
+			</CardContent>
+		</Card>
 	)
 }

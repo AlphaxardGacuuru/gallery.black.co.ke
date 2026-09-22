@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
                 AdminUserSeeder::class,
                 UserSeeder::class,
                 PhotoCompetitionSeeder::class,
+                ReferralSeeder::class,
             ]);
         }
     }
