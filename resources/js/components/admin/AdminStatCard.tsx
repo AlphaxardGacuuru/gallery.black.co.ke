@@ -23,7 +23,7 @@ export default function AdminStatCard({
 	tone = "default",
 }: Props) {
 	return (
-		<Card className="p-4">
+		<Card>
 			<CardContent className="flex justify-between items-center gap-4">
 				<div className="min-w-0">
 					<p className="text-2xl font-semibold tracking-tight">

@@ -15,6 +15,8 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 {
 	use Queueable;
 
+	private const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
+
 	public function __construct(protected PhotoCompetition $competition) {}
 
 	/**
@@ -31,13 +33,33 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 		return $channels;
 	}
 
+	/**
+	 * One line per paid position, e.g. "1st place: KES 500" — stops at the
+	 * first unpaid tier, same convention EndPhotoCompetition ranks against.
+	 *
+	 * @return array<int, string>
+	 */
+	protected function tierLines(): array
+	{
+		return collect(PhotoCompetition::prizeTiers())
+			->takeWhile(fn(int $amount) => $amount > 0)
+			->map(fn(int $amount, int $index) => self::ORDINALS[$index] . ' place: KES ' . $amount)
+			->all();
+	}
+
+	protected function tierSummary(): string
+	{
+		return implode(', ', $this->tierLines());
+	}
+
 	public function toMail($notifiable): MailMessage
 	{
 		return (new MailMessage)
 			->from('al@mail.black.co.ke', 'Alphaxard from Black Gallery')
 			->subject('This week\'s photo challenge is live')
 			->greeting('Hello ' . $notifiable->name . ',')
-			->line("Submit your best shot before {$this->competition->ends_at->format('l g:ia')} to win KES {$this->competition->prize_amount}.")
+			->line("Submit your best shot before {$this->competition->ends_at->format('l g:ia')} — here's what's up for grabs this week:")
+			->lines($this->tierLines())
 			->action('View the challenge', url('/'))
 			->line('We\'ll be picking the winners soon — good luck!')
 			->markdown('notifications::email', [
@@ -50,7 +72,7 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 		return [
 			'url' => '/',
 			'from' => 'Admin',
-			'message' => "Submit your best shot before {$this->competition->ends_at->format('l g:ia')} to win KES {$this->competition->prize_amount}.",
+			'message' => "Submit your best shot before {$this->competition->ends_at->format('l g:ia')} — prizes: {$this->tierSummary()}.",
 		];
 	}
 
@@ -61,7 +83,7 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
 			->body(
-				"Submit your best shot before {$this->competition->ends_at->format('l g:ia')} to win KES {$this->competition->prize_amount}."
+				"Submit your best shot before {$this->competition->ends_at->format('l g:ia')} — prizes: {$this->tierSummary()}."
 			)
 			->data(['url' => '/']);
 	}

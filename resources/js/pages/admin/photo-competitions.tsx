@@ -24,6 +24,7 @@ import { normalizePhoneNumber } from "@/lib/phone"
 import toast from "@/lib/toast"
 import {
 	type AdminPhotoCompetitionSummary,
+	type AdminPhotoCompetitionWinner,
 	type PhotoCompetitionSchedule,
 	useAdminKopokopoRecipients,
 	useAdminPhotoCompetitions,
@@ -31,7 +32,7 @@ import {
 	usePayCompetitionWinner,
 	useUpdateActiveCompetition,
 	useUpdatePhotoCompetitionSchedule,
-	useUpdatePrizeAmount,
+	useUpdatePrizeTiers,
 } from "@/queries/admin"
 
 const WEEKDAYS = [
@@ -42,6 +43,19 @@ const WEEKDAYS = [
 	"Thursday",
 	"Friday",
 	"Saturday",
+]
+
+const POSITION_LABELS = [
+	"1st",
+	"2nd",
+	"3rd",
+	"4th",
+	"5th",
+	"6th",
+	"7th",
+	"8th",
+	"9th",
+	"10th",
 ]
 
 // <input type="datetime-local"> wants "YYYY-MM-DDTHH:mm" in the viewer's
@@ -57,7 +71,6 @@ function toDatetimeLocalValue(iso: string): string {
 type ActiveCompetition = {
 	id: string
 	endsAt: string
-	prizeAmount: number
 	photosCount: number
 }
 
@@ -68,17 +81,9 @@ function EditActiveCompetitionModal({
 }) {
 	const updateActive = useUpdateActiveCompetition()
 	const [open, setOpen] = useState(false)
-	const [prizeAmount, setPrizeAmount] = useState(String(current.prizeAmount))
 	const [endsAt, setEndsAt] = useState(toDatetimeLocalValue(current.endsAt))
 
 	function handleSave() {
-		const parsedPrizeAmount = Number(prizeAmount)
-
-		if (!Number.isFinite(parsedPrizeAmount) || parsedPrizeAmount < 0) {
-			toast.error("Enter a valid amount")
-			return
-		}
-
 		if (!endsAt) {
 			toast.error("Pick an end date and time")
 			return
@@ -86,7 +91,6 @@ function EditActiveCompetitionModal({
 
 		updateActive.mutate(
 			{
-				prizeAmount: parsedPrizeAmount,
 				// Sent as-is (the input's own local wall-clock value, e.g.
 				// "2026-09-20T18:30"), not converted to a UTC instant here —
 				// this app stores/interprets naive datetimes as
@@ -115,7 +119,6 @@ function EditActiveCompetitionModal({
 			onOpenChange={(next) => {
 				setOpen(next)
 				if (next) {
-					setPrizeAmount(String(current.prizeAmount))
 					setEndsAt(toDatetimeLocalValue(current.endsAt))
 				}
 			}}>
@@ -133,13 +136,6 @@ function EditActiveCompetitionModal({
 					<DialogTitle>Edit active competition</DialogTitle>
 				</DialogHeader>
 				<div className="space-y-4">
-					<Input
-						type="number"
-						min={0}
-						label="Prize amount (KES)"
-						value={prizeAmount}
-						onChange={(event) => setPrizeAmount(event.target.value)}
-					/>
 					<Input
 						type="datetime-local"
 						label="Ends at"
@@ -159,43 +155,50 @@ function EditActiveCompetitionModal({
 	)
 }
 
-function PrizeAmountSettings({ prizeAmount }: { prizeAmount: number }) {
-	const updatePrizeAmount = useUpdatePrizeAmount()
-	const [amount, setAmount] = useState(String(prizeAmount))
+function PrizeTiersSettings({ prizeTiers }: { prizeTiers: number[] }) {
+	const updatePrizeTiers = useUpdatePrizeTiers()
+	const [tiers, setTiers] = useState(prizeTiers.map(String))
 
 	function handleSave() {
-		const parsed = Number(amount)
+		const parsed = tiers.map(Number)
 
-		if (!Number.isFinite(parsed) || parsed < 0) {
-			toast.error("Enter a valid amount")
+		if (parsed.some((value) => !Number.isFinite(value) || value < 0)) {
+			toast.error("Enter valid amounts")
 			return
 		}
 
-		updatePrizeAmount.mutate(parsed, {
-			onSuccess: () => toast.success("Prize amount updated"),
-			onError: () => toast.error("Couldn't update the prize amount"),
+		updatePrizeTiers.mutate(parsed, {
+			onSuccess: () => toast.success("Prize tiers updated"),
+			onError: () => toast.error("Couldn't update the prize tiers"),
 		})
 	}
 
 	return (
-		<div className="max-w-sm flex-1 space-y-2 rounded-lg border p-4">
+		<div className="max-w-xl flex-1 space-y-3 rounded-lg border p-4">
 			<Heading
 				variant="small"
-				title="Weekly prize amount"
-				description="Applies to the next competition the scheduler starts."
+				title="Weekly prize tiers"
+				description="Applies going forward — position 1 pays first, positions with KES 0 aren't ranked."
 			/>
-			<div className="flex items-start gap-2">
-				<Input
-					type="number"
-					min={0}
-					label="Prize amount (KES)"
-					value={amount}
-					onChange={(event) => setAmount(event.target.value)}
-				/>
+			<div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+				{POSITION_LABELS.map((label, index) => (
+					<Input
+						key={label}
+						type="number"
+						min={0}
+						label={label}
+						value={tiers[index]}
+						onChange={(event) => {
+							const next = [...tiers]
+							next[index] = event.target.value
+							setTiers(next)
+						}}
+					/>
+				))}
 			</div>
 			<div className="flex justify-end">
 				<Button
-					disabled={amount.trim() === "" || updatePrizeAmount.isPending}
+					disabled={updatePrizeTiers.isPending}
 					onClick={handleSave}>
 					Save
 				</Button>
@@ -286,27 +289,18 @@ function ScheduleSettings({
 	)
 }
 
-function PayoutCell({
-	competition,
+function WinnerRow({
+	winner,
 	isRecipient,
 }: {
-	competition: AdminPhotoCompetitionSummary
+	winner: AdminPhotoCompetitionWinner
 	isRecipient: boolean
 }) {
 	const payWinner = usePayCompetitionWinner()
 
-	if (!competition.winnerName) {
-		return <span className="text-muted-foreground">—</span>
-	}
-
-	if (competition.prizePaidAt) {
-		return <Badge variant="secondary">Paid</Badge>
-	}
-
 	function handlePay() {
-		payWinner.mutate(competition.id, {
-			onSuccess: () =>
-				toast.success(`Prize sent to ${competition.winnerName}`),
+		payWinner.mutate(winner.id, {
+			onSuccess: () => toast.success(`Prize sent to ${winner.userName}`),
 			onError: (error) =>
 				toast.error("Couldn't pay the winner", {
 					description: error.message,
@@ -314,22 +308,86 @@ function PayoutCell({
 		})
 	}
 
-	return isRecipient ? (
-		<Button
-			variant="outline"
-			size="sm"
-			disabled={payWinner.isPending}
-			onClick={handlePay}>
-			{payWinner.isPending && <Loader2 className="size-3.5 animate-spin" />}
-			Pay KES {competition.prizeAmount}
-		</Button>
-	) : (
-		<Link
-			href="/admin/users"
-			variant="outline"
-			size="sm">
-			Create Kopokopo Recipient
-		</Link>
+	return (
+		<div className="flex items-center justify-between gap-3 border-b py-2 last:border-b-0">
+			<div className="flex items-center gap-2">
+				<Badge
+					variant="secondary"
+					className="tabular-nums">
+					#{winner.position}
+				</Badge>
+				<div>
+					<p className="text-sm font-medium">{winner.userName ?? "—"}</p>
+					<p className="text-xs text-muted-foreground">
+						KES {winner.prizeAmount}
+					</p>
+				</div>
+			</div>
+			{winner.prizePaidAt ? (
+				<Badge variant="secondary">Paid</Badge>
+			) : isRecipient ? (
+				<Button
+					variant="outline"
+					size="sm"
+					disabled={payWinner.isPending}
+					onClick={handlePay}>
+					{payWinner.isPending && <Loader2 className="size-3.5 animate-spin" />}
+					Pay
+				</Button>
+			) : (
+				<Link
+					href="/admin/users"
+					variant="outline"
+					size="sm">
+					Create Recipient
+				</Link>
+			)}
+		</div>
+	)
+}
+
+function WinnersDialog({
+	competition,
+	registeredPhones,
+}: {
+	competition: AdminPhotoCompetitionSummary
+	registeredPhones: Set<string>
+}) {
+	if (competition.winners.length === 0) {
+		return <span className="text-muted-foreground">—</span>
+	}
+
+	const paidCount = competition.winners.filter(
+		(winner) => winner.prizePaidAt
+	).length
+
+	return (
+		<Dialog>
+			<DialogTrigger asChild>
+				<Button
+					variant="outline"
+					size="sm">
+					{paidCount}/{competition.winners.length} paid
+				</Button>
+			</DialogTrigger>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>Winners</DialogTitle>
+				</DialogHeader>
+				<div className="space-y-1">
+					{competition.winners.map((winner) => (
+						<WinnerRow
+							key={winner.id}
+							winner={winner}
+							isRecipient={
+								!!winner.userPhone &&
+								registeredPhones.has(normalizePhoneNumber(winner.userPhone))
+							}
+						/>
+					))}
+				</div>
+			</DialogContent>
+		</Dialog>
 	)
 }
 
@@ -342,7 +400,10 @@ export default function AdminPhotoCompetitions() {
 
 	const registeredPhones = new Set(
 		(recipients ?? [])
-			.filter((recipient) => recipient.type === "mobile_wallet" && recipient.phoneNumber)
+			.filter(
+				(recipient) =>
+					recipient.type === "mobile_wallet" && recipient.phoneNumber
+			)
 			.map((recipient) => recipient.phoneNumber!)
 	)
 
@@ -369,27 +430,13 @@ export default function AdminPhotoCompetitions() {
 			header: "Entries",
 		},
 		{
-			accessorKey: "prizeAmount",
-			header: "Prize",
-			cell: ({ row }) => `KES ${row.original.prizeAmount}`,
-		},
-		{
-			accessorKey: "winnerName",
-			header: "Winner",
-			enableSorting: false,
-			cell: ({ row }) => row.original.winnerName ?? "—",
-		},
-		{
-			id: "payout",
-			header: "Payout",
+			id: "winners",
+			header: "Winners",
 			enableSorting: false,
 			cell: ({ row }) => (
-				<PayoutCell
+				<WinnersDialog
 					competition={row.original}
-					isRecipient={
-						!!row.original.winnerPhone &&
-						registeredPhones.has(normalizePhoneNumber(row.original.winnerPhone))
-					}
+					registeredPhones={registeredPhones}
 				/>
 			),
 		},
@@ -442,8 +489,8 @@ export default function AdminPhotoCompetitions() {
 									<p className="font-medium">Active competition</p>
 									<p className="mt-1 text-muted-foreground">
 										{data.current.photosCount} entries so far · ends{" "}
-										{new Date(data.current.endsAt).toLocaleString()} · KES{" "}
-										{data.current.prizeAmount} prize
+										{new Date(data.current.endsAt).toLocaleString()} · top prize
+										KES {data.prizeTiers[0]}
 									</p>
 								</div>
 								<EditActiveCompetitionModal current={data.current} />
@@ -451,7 +498,7 @@ export default function AdminPhotoCompetitions() {
 						)}
 
 						<div className="flex flex-wrap gap-4">
-							<PrizeAmountSettings prizeAmount={data.prizeAmount} />
+							<PrizeTiersSettings prizeTiers={data.prizeTiers} />
 							<ScheduleSettings schedule={data.schedule} />
 						</div>
 

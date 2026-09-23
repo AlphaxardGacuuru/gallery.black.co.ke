@@ -13,9 +13,14 @@ return new class extends Migration
     {
         Schema::create('referrals', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('referrer_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('referrer_id')
+                ->constrained('users')
+                ->cascadeOnDelete();
             // A user can only be credited to one referrer, ever.
-            $table->foreignUuid('referred_id')->unique()->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('referred_id')
+                ->unique()
+                ->constrained('users')
+                ->cascadeOnDelete();
             $table->timestamps();
 
             $table->index('referrer_id');

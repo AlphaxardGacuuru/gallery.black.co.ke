@@ -14,7 +14,7 @@ export default function ReferFriends() {
 		return null
 	}
 
-	const referralLink = `${window.location.origin}/register?ref=${auth.id}`
+	const referralLink = `${window.location.origin}/login?ref=${auth.id}`
 	const referralsCount = auth.referralsCount ?? 0
 
 	async function handleShare() {

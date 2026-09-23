@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Enums\EmailNotificationCategory;
 use App\Models\PhotoCompetition;
+use App\Models\PhotoCompetitionWinner;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -15,7 +16,10 @@ class PhotoCompetitionWonNotification extends Notification implements ShouldQueu
 {
 	use Queueable;
 
-	public function __construct(protected PhotoCompetition $competition) {}
+	public function __construct(
+		protected PhotoCompetition $competition,
+		protected PhotoCompetitionWinner $winner,
+	) {}
 
 	/**
 	 * @return array<int, string>
@@ -31,13 +35,32 @@ class PhotoCompetitionWonNotification extends Notification implements ShouldQueu
 		return $channels;
 	}
 
+	protected function isFirstPlace(): bool
+	{
+		return $this->winner->position === 1;
+	}
+
+	protected function subject(): string
+	{
+		return $this->isFirstPlace()
+			? 'You won this week\'s challenge! 🏆'
+			: "You placed #{$this->winner->position} this week! 🎉";
+	}
+
+	protected function bodyLine(): string
+	{
+		return $this->isFirstPlace()
+			? "Your photo took first place in this week's challenge — KES {$this->winner->prize_amount} is on its way."
+			: "Your photo placed #{$this->winner->position} in this week's challenge — KES {$this->winner->prize_amount} is on its way.";
+	}
+
 	public function toMail($notifiable): MailMessage
 	{
 		return (new MailMessage)
 			->from('al@mail.black.co.ke', 'Alphaxard from Black Gallery')
-			->subject('You won this week\'s challenge! 🏆')
-			->greeting('Congratulations ' . $notifiable->name . '!')
-			->line("Your photo took first place in this week's challenge — KES {$this->competition->prize_amount} is on its way.")
+			->subject($this->subject())
+			->greeting(($this->isFirstPlace() ? 'Congratulations ' : 'Nice shot, ') . $notifiable->name . '!')
+			->line($this->bodyLine())
 			->action('View the challenge', url('/discover'))
 			->line('Thank you for entering, and see you next week!')
 			->markdown('notifications::email', [
@@ -50,17 +73,17 @@ class PhotoCompetitionWonNotification extends Notification implements ShouldQueu
 		return [
 			'url' => '/discover',
 			'from' => 'Admin',
-			'message' => "Congratulations! Your photo won this week's challenge — KES {$this->competition->prize_amount} is on its way.",
+			'message' => $this->bodyLine(),
 		];
 	}
 
 	public function toWebPush($notifiable, $notification): WebPushMessage
 	{
 		return (new WebPushMessage)
-			->title('You won this week\'s challenge! 🏆')
+			->title($this->subject())
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
-			->body("Your photo took first place — KES {$this->competition->prize_amount} is on its way.")
+			->body($this->bodyLine())
 			->data(['url' => '/discover']);
 	}
 }

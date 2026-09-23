@@ -76,11 +76,17 @@ export function PhotoCard({
 						aspect === "square" && "aspect-square"
 					)}
 				/>
-				{photo.isWinner && (
+				{photo.isWinner ? (
 					<div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-amber-400 px-2 py-1 text-xs font-semibold text-amber-950 shadow">
 						<Trophy className="size-3.5" />
 						Winner
 					</div>
+				) : (
+					photo.position && (
+						<div className="absolute left-2 top-2 rounded-full bg-neutral-900/80 px-1.5 py-0.5 text-[11px] font-semibold text-white shadow dark:bg-neutral-100/90 dark:text-neutral-900">
+							#{photo.position}
+						</div>
+					)
 				)}
 			</button>
 			<PhotoLightbox

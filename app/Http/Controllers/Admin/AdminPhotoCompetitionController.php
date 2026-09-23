@@ -8,6 +8,7 @@ use App\Http\Services\KopokopoTransferService;
 use App\Http\Services\Service;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
+use App\Models\PhotoCompetitionWinner;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ class AdminPhotoCompetitionController extends Controller
 
     /**
      * Stats overview, the active competition, and the configurable prize
-     * amount/schedule. The full competition history is paginated separately
+     * tiers/schedule. The full competition history is paginated separately
      * via recent() so paging through it doesn't refetch all of this too.
      */
     public function index(): JsonResponse
@@ -40,24 +41,24 @@ class AdminPhotoCompetitionController extends Controller
                 'current' => $current ? [
                     'id' => $current->id,
                     'endsAt' => $current->ends_at,
-                    'prizeAmount' => $current->prize_amount,
                     'photosCount' => $current->photos_count,
                 ] : null,
                 'totals' => $totals,
-                'prizeAmount' => (int) (Setting::query()->where('key', 'photo_prize_amount')->value('value') ?? 500),
+                'prizeTiers' => PhotoCompetition::prizeTiers(),
                 'schedule' => PhotoCompetition::schedule(),
             ],
         ]);
     }
 
     /**
-     * Paginated competition history, most recent first.
+     * Paginated competition history, most recent first, each with its
+     * ranked winners (however many positions were actually paid out).
      */
     public function recent(Request $request): JsonResponse
     {
         $competitions = PhotoCompetition::query()
             ->withCount('photos')
-            ->with('winnerPhoto.user')
+            ->with('winners.user')
             ->latest('starts_at')
             ->paginate($request->integer('per_page', 10));
 
@@ -67,11 +68,15 @@ class AdminPhotoCompetitionController extends Controller
                 'startsAt' => $competition->starts_at,
                 'endsAt' => $competition->ends_at,
                 'status' => $competition->status,
-                'prizeAmount' => $competition->prize_amount,
                 'photosCount' => $competition->photos_count,
-                'winnerName' => $competition->winnerPhoto?->user?->name,
-                'winnerPhone' => $competition->winnerPhoto?->user?->phone,
-                'prizePaidAt' => $competition->prize_paid_at,
+                'winners' => $competition->winners->map(fn(PhotoCompetitionWinner $winner) => [
+                    'id' => $winner->id,
+                    'position' => $winner->position,
+                    'userName' => $winner->user?->name,
+                    'userPhone' => $winner->user?->phone,
+                    'prizeAmount' => $winner->prize_amount,
+                    'prizePaidAt' => $winner->prize_paid_at,
+                ])->values(),
             ]),
             'meta' => [
                 'current_page' => $competitions->currentPage(),
@@ -82,20 +87,24 @@ class AdminPhotoCompetitionController extends Controller
     }
 
     /**
-     * Set the default weekly prize amount used for future competitions.
+     * Set the KES prize for each of the top 10 positions, used going
+     * forward by every future EndPhotoCompetition run.
      */
-    public function updatePrizeAmount(Request $request): JsonResponse
+    public function updatePrizeTiers(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'prizeAmount' => 'required|integer|min:0',
+            'prizeTiers' => 'required|array|min:1|max:10',
+            'prizeTiers.*' => 'required|integer|min:0',
         ]);
 
+        $tiers = array_pad(array_slice($data['prizeTiers'], 0, 10), 10, 0);
+
         Setting::query()->updateOrCreate(
-            ['key' => 'photo_prize_amount'],
-            ['value' => $data['prizeAmount']]
+            ['key' => 'photo_prize_tiers'],
+            ['value' => $tiers]
         );
 
-        return response()->json(['data' => ['prizeAmount' => $data['prizeAmount']]]);
+        return response()->json(['data' => ['prizeTiers' => $tiers]]);
     }
 
     /**
@@ -133,9 +142,9 @@ class AdminPhotoCompetitionController extends Controller
     }
 
     /**
-     * Directly edit the currently active competition's prize amount and end
-     * time — for correcting mistakes or extending/shortening this week's
-     * challenge without waiting for the scheduler.
+     * Directly edit the currently active competition's end time — for
+     * extending/shortening this week's challenge without waiting for the
+     * scheduler.
      */
     public function updateActive(Request $request): JsonResponse
     {
@@ -143,47 +152,42 @@ class AdminPhotoCompetitionController extends Controller
 
         if (! $competition) {
             throw ValidationException::withMessages([
-                'prizeAmount' => 'There is no active competition to edit.',
+                'endsAt' => 'There is no active competition to edit.',
             ]);
         }
 
         $data = $request->validate([
-            'prizeAmount' => 'required|integer|min:0',
             'endsAt' => 'required|date|after:' . $competition->starts_at,
         ]);
 
-        $competition->update([
-            'prize_amount' => $data['prizeAmount'],
-            'ends_at' => $data['endsAt'],
-        ]);
+        $competition->update(['ends_at' => $data['endsAt']]);
 
         return response()->json([
             'data' => [
                 'id' => $competition->id,
                 'endsAt' => $competition->ends_at,
-                'prizeAmount' => $competition->prize_amount,
                 'photosCount' => $competition->photos_count,
             ],
         ]);
     }
 
     /**
-     * Pay the prize for a past competition to its winning photo's
-     * submitter via Kopokopo M-Pesa.
+     * Pay one position's prize to its winning photo's submitter via
+     * Kopokopo M-Pesa.
      */
-    public function payWinner(PhotoCompetition $competition): JsonResponse
+    public function payWinner(PhotoCompetitionWinner $winner): JsonResponse
     {
-        [$status, $message, $data] = $this->kopokopoTransferService->payWinner($competition);
+        [$status, $message, $data] = $this->kopokopoTransferService->payWinner($winner);
 
         if ($status === true) {
-            $winner = $competition->winnerPhoto?->user;
+            $user = $winner->user;
 
-            if ($winner?->phone) {
+            if ($user?->phone) {
                 KopokopoTransferInitiated::dispatch(
-                    Service::normalizePhoneNumber($winner->phone),
-                    (float) $competition->prize_amount,
-                    $winner->name,
-                    'Black Gallery weekly challenge prize',
+                    Service::normalizePhoneNumber($user->phone),
+                    (float) $winner->prize_amount,
+                    $user->name,
+                    'Black Gallery weekly challenge prize (#' . $winner->position . ')',
                 );
             }
         }
@@ -191,7 +195,7 @@ class AdminPhotoCompetitionController extends Controller
         return response()->json([
             'status' => $status,
             'message' => $message,
-            'data' => $status ? ['prizePaidAt' => $competition->fresh()->prize_paid_at] : $data,
+            'data' => $status ? ['prizePaidAt' => $winner->fresh()->prize_paid_at] : $data,
         ]);
     }
 

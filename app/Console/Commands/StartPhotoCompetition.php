@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Events\PhotoCompetitionStarted;
 use App\Models\PhotoCompetition;
-use App\Models\Setting;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -30,15 +29,10 @@ class StartPhotoCompetition extends Command
         // EndPhotoCompetition, but never leave two competitions active.
         PhotoCompetition::active()->update(['status' => PhotoCompetition::STATUS_ENDED]);
 
-        $prizeAmount = (int) (Setting::query()
-            ->where('key', 'photo_prize_amount')
-            ->value('value') ?? 500);
-
         $competition = PhotoCompetition::create([
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
             'status' => PhotoCompetition::STATUS_ACTIVE,
-            'prize_amount' => $prizeAmount,
         ]);
 
         PhotoCompetitionStarted::dispatch($competition);

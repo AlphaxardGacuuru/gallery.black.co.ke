@@ -49,7 +49,6 @@ type SpaPage = {
 
 const GUEST_ONLY = new Set([
 	"auth/login",
-	"auth/register",
 	"auth/forgot-password",
 	"auth/reset-password",
 	"auth/two-factor-challenge",
@@ -223,9 +222,9 @@ function PageRenderer() {
 // ─── Mount ───────────────────────────────────────────────────────────────────
 
 // A shared link (e.g. "?ref=<userId>") can land on any page — the welcome
-// page, straight on /register, anywhere — and the visitor might browse a
+// page, straight on /login, anywhere — and the visitor might browse a
 // bit before signing up, so the code is captured here on every load and
-// held in localStorage until register.tsx (or the Google OAuth redirect)
+// held in localStorage until login.tsx (or the Google OAuth redirect)
 // consumes it.
 const referralCode = new URLSearchParams(window.location.search).get("ref")
 

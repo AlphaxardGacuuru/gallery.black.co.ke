@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PhotoCompetition extends Model
@@ -23,16 +22,11 @@ class PhotoCompetition extends Model
         'starts_at',
         'ends_at',
         'status',
-        'prize_amount',
-        'winner_photo_id',
-        'prize_paid_at',
     ];
 
     protected $casts = [
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
-        'prize_amount' => 'integer',
-        'prize_paid_at' => 'datetime',
     ];
 
     public function photos(): HasMany
@@ -40,9 +34,9 @@ class PhotoCompetition extends Model
         return $this->hasMany(Photo::class, 'competition_id');
     }
 
-    public function winnerPhoto(): BelongsTo
+    public function winners(): HasMany
     {
-        return $this->belongsTo(Photo::class, 'winner_photo_id');
+        return $this->hasMany(PhotoCompetitionWinner::class, 'competition_id')->orderBy('position');
     }
 
     public function scopeActive(Builder $query): Builder
@@ -74,6 +68,19 @@ class PhotoCompetition extends Model
             'endDay' => (int) ($settings['photo_competition_end_day'] ?? 5),
             'endTime' => $settings['photo_competition_end_time'] ?? '20:00',
         ];
+    }
+
+    /**
+     * The KES prize for each of the top 10 positions, index 0 = position 1.
+     * A position with a prize of 0 (the default beyond position 1) means
+     * that rank isn't paid — EndPhotoCompetition stops ranking further once
+     * it hits one, so only positions with a real prize get a winner row.
+     */
+    public static function prizeTiers(): array
+    {
+        $tiers = Setting::query()->where('key', 'photo_prize_tiers')->value('value') ?? [500];
+
+        return collect($tiers)->take(10)->pad(10, 0)->all();
     }
 
     /**

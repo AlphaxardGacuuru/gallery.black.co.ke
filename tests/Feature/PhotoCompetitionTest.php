@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Events\PhotoCompetitionStarted;
 use App\Models\PhotoCompetition;
+use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\PhotoCompetitionStartedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -66,6 +67,19 @@ class PhotoCompetitionTest extends TestCase
             ->assertJsonPath('data.photos.0.id', $photo->id);
     }
 
+    public function test_current_endpoint_exposes_top_prize_amount_from_settings(): void
+    {
+        Setting::query()->updateOrCreate(
+            ['key' => 'photo_prize_tiers'],
+            ['value' => [750, 250]]
+        );
+
+        $response = $this->actingAs(User::factory()->create())
+            ->getJson('/api/photos/current');
+
+        $response->assertOk()->assertJsonPath('topPrizeAmount', 750);
+    }
+
     public function test_authenticated_user_can_like_and_unlike_a_photo(): void
     {
         Storage::fake('public');
@@ -98,22 +112,38 @@ class PhotoCompetitionTest extends TestCase
         $this->assertSame(0, $photo->fresh()->likes_count);
     }
 
-    public function test_end_command_crowns_the_most_liked_photo_as_winner(): void
+    public function test_end_command_creates_top_ranked_winner_rows(): void
     {
+        Setting::query()->updateOrCreate(
+            ['key' => 'photo_prize_tiers'],
+            ['value' => [500, 300, 100]]
+        );
+
         $this->artisan('app:start-photo-competition');
         $competition = PhotoCompetition::first();
 
-        $competition->photos()->create([
+        $fourthPlace = $competition->photos()->create([
             'user_id' => User::factory()->create()->id,
             'disk' => 'public',
-            'path' => 'photos/losing.jpg',
+            'path' => 'photos/fourth.jpg',
             'likes_count' => 1,
         ]);
-
-        $winningPhoto = $competition->photos()->create([
+        $thirdPlace = $competition->photos()->create([
             'user_id' => User::factory()->create()->id,
             'disk' => 'public',
-            'path' => 'photos/winning.jpg',
+            'path' => 'photos/third.jpg',
+            'likes_count' => 3,
+        ]);
+        $secondPlace = $competition->photos()->create([
+            'user_id' => User::factory()->create()->id,
+            'disk' => 'public',
+            'path' => 'photos/second.jpg',
+            'likes_count' => 4,
+        ]);
+        $firstPlace = $competition->photos()->create([
+            'user_id' => User::factory()->create()->id,
+            'disk' => 'public',
+            'path' => 'photos/first.jpg',
             'likes_count' => 5,
         ]);
 
@@ -121,18 +151,102 @@ class PhotoCompetitionTest extends TestCase
 
         $competition->refresh();
         $this->assertSame(PhotoCompetition::STATUS_ENDED, $competition->status);
-        $this->assertSame($winningPhoto->id, $competition->winner_photo_id);
+        $this->assertCount(3, $competition->winners);
+
+        $winners = $competition->winners;
+        $this->assertSame($firstPlace->id, $winners[0]->photo_id);
+        $this->assertSame($firstPlace->user_id, $winners[0]->user_id);
+        $this->assertSame(1, $winners[0]->position);
+        $this->assertSame(500, $winners[0]->prize_amount);
+
+        $this->assertSame($secondPlace->id, $winners[1]->photo_id);
+        $this->assertSame(2, $winners[1]->position);
+        $this->assertSame(300, $winners[1]->prize_amount);
+
+        $this->assertSame($thirdPlace->id, $winners[2]->photo_id);
+        $this->assertSame(3, $winners[2]->position);
+        $this->assertSame(100, $winners[2]->prize_amount);
+
+        $this->assertFalse($competition->winners->pluck('photo_id')->contains($fourthPlace->id));
     }
 
-    public function test_current_endpoint_returns_winner_photo_after_competition_ends(): void
+    public function test_end_command_stops_at_first_zero_tier(): void
+    {
+        Setting::query()->updateOrCreate(
+            ['key' => 'photo_prize_tiers'],
+            ['value' => [500, 0, 100]]
+        );
+
+        $this->artisan('app:start-photo-competition');
+        $competition = PhotoCompetition::first();
+
+        foreach (range(1, 3) as $i) {
+            $competition->photos()->create([
+                'user_id' => User::factory()->create()->id,
+                'disk' => 'public',
+                'path' => "photos/{$i}.jpg",
+                'likes_count' => $i,
+            ]);
+        }
+
+        $this->artisan('app:end-photo-competition');
+
+        $competition->refresh();
+        $this->assertCount(1, $competition->winners);
+        $this->assertSame(1, $competition->winners->first()->position);
+    }
+
+    public function test_end_command_defaults_to_position_one_only_when_tiers_setting_absent(): void
     {
         $this->artisan('app:start-photo-competition');
         $competition = PhotoCompetition::first();
 
-        $winningPhoto = $competition->photos()->create([
+        $competition->photos()->create([
             'user_id' => User::factory()->create()->id,
             'disk' => 'public',
-            'path' => 'photos/winning.jpg',
+            'path' => 'photos/only.jpg',
+            'likes_count' => 5,
+        ]);
+
+        $this->artisan('app:end-photo-competition');
+
+        $competition->refresh();
+        $this->assertCount(1, $competition->winners);
+        $this->assertSame(500, $competition->winners->first()->prize_amount);
+    }
+
+    public function test_end_command_creates_no_winners_when_no_photos_submitted(): void
+    {
+        $this->artisan('app:start-photo-competition');
+        $competition = PhotoCompetition::first();
+
+        $this->artisan('app:end-photo-competition')->assertSuccessful();
+
+        $competition->refresh();
+        $this->assertSame(PhotoCompetition::STATUS_ENDED, $competition->status);
+        $this->assertCount(0, $competition->winners);
+    }
+
+    public function test_current_endpoint_returns_winner_photos_after_competition_ends(): void
+    {
+        Setting::query()->updateOrCreate(
+            ['key' => 'photo_prize_tiers'],
+            ['value' => [500, 300]]
+        );
+
+        $this->artisan('app:start-photo-competition');
+        $competition = PhotoCompetition::first();
+
+        $secondPlace = $competition->photos()->create([
+            'user_id' => User::factory()->create()->id,
+            'disk' => 'public',
+            'path' => 'photos/second.jpg',
+            'likes_count' => 3,
+        ]);
+        $firstPlace = $competition->photos()->create([
+            'user_id' => User::factory()->create()->id,
+            'disk' => 'public',
+            'path' => 'photos/first.jpg',
             'likes_count' => 5,
         ]);
 
@@ -143,9 +257,13 @@ class PhotoCompetitionTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('data.status', PhotoCompetition::STATUS_ENDED)
-            ->assertJsonPath('data.photos.0.id', $winningPhoto->id)
+            ->assertJsonPath('data.photos.0.id', $firstPlace->id)
             ->assertJsonPath('data.photos.0.isWinner', true)
-            ->assertJsonCount(1, 'data.photos')
+            ->assertJsonPath('data.photos.0.position', 1)
+            ->assertJsonPath('data.photos.1.id', $secondPlace->id)
+            ->assertJsonPath('data.photos.1.isWinner', false)
+            ->assertJsonPath('data.photos.1.position', 2)
+            ->assertJsonCount(2, 'data.photos')
             ->assertJsonPath('nextStartsAt', fn($value) => $value !== null);
     }
 
@@ -165,7 +283,6 @@ class PhotoCompetitionTest extends TestCase
             'starts_at' => now()->subWeek(),
             'ends_at' => now()->subWeek()->addDays(4),
             'status' => PhotoCompetition::STATUS_ENDED,
-            'prize_amount' => 500,
         ]);
         $endedPhoto = $endedCompetition->photos()->create([
             'user_id' => $author->id,

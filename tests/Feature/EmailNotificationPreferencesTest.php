@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\EmailNotificationCategory;
 use App\Models\PhotoCompetition;
+use App\Models\PhotoCompetitionWinner;
 use App\Models\User;
 use App\Notifications\PhotoCompetitionStartedNotification;
 use App\Notifications\PhotoCompetitionWonNotification;
@@ -15,19 +16,9 @@ class EmailNotificationPreferencesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registering_defaults_both_competition_email_preferences_to_enabled(): void
+    public function test_new_users_default_both_competition_email_preferences_to_enabled(): void
     {
-        $response = $this->postJson('/register', [
-            'name' => 'Jane Doe',
-            'email' => 'jane@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
-            'device_name' => 'phpunit',
-        ]);
-
-        $response->assertOk();
-
-        $user = User::where('email', 'jane@example.com')->firstOrFail();
+        $user = User::factory()->create(['settings' => null]);
 
         $this->assertTrue($user->wantsEmail(EmailNotificationCategory::COMPETITION_STARTED));
         $this->assertTrue($user->wantsEmail(EmailNotificationCategory::COMPETITION_WON));
@@ -51,8 +42,10 @@ class EmailNotificationPreferencesTest extends TestCase
         $user = User::factory()->create(['settings' => []]);
         $competition = PhotoCompetition::factory()->create();
 
+        $winner = PhotoCompetitionWinner::factory()->make(['competition_id' => $competition->id]);
+
         $startedChannels = (new PhotoCompetitionStartedNotification($competition))->via($user);
-        $wonChannels = (new PhotoCompetitionWonNotification($competition))->via($user);
+        $wonChannels = (new PhotoCompetitionWonNotification($competition, $winner))->via($user);
 
         $this->assertContains('mail', $startedChannels);
         $this->assertContains('mail', $wonChannels);

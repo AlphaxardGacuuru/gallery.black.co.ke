@@ -69,16 +69,21 @@ class Photo extends Model
     }
 
     /**
-     * Annotate each photo with whether it's its competition's winner, via a
-     * correlated exists() subquery rather than eager-loading the competition.
+     * Annotate each photo with whether it placed 1st (is_winner) and, if it
+     * placed at all, its rank (position) — via correlated subqueries against
+     * photo_competition_winners rather than eager-loading the relation.
      */
     public function scopeWithIsWinner(Builder $query): Builder
     {
         return $query->addSelect([
-            'is_winner' => PhotoCompetition::query()
+            'is_winner' => PhotoCompetitionWinner::query()
                 ->selectRaw('1')
-                ->whereColumn('id', 'photos.competition_id')
-                ->whereColumn('winner_photo_id', 'photos.id')
+                ->whereColumn('photo_id', 'photos.id')
+                ->where('position', 1)
+                ->limit(1),
+            'position' => PhotoCompetitionWinner::query()
+                ->select('position')
+                ->whereColumn('photo_id', 'photos.id')
                 ->limit(1),
         ]);
     }

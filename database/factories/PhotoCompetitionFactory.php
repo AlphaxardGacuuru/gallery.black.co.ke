@@ -23,7 +23,6 @@ class PhotoCompetitionFactory extends Factory
             'starts_at' => $startsAt,
             'ends_at' => $startsAt->copy()->addDays(4)->setTime(20, 0),
             'status' => PhotoCompetition::STATUS_ACTIVE,
-            'prize_amount' => 500,
         ];
     }
 

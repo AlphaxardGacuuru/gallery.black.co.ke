@@ -13,6 +13,7 @@ export type Photo = {
 	likesCount: number
 	isLikedByViewer: boolean
 	isWinner: boolean
+	position: number | null
 	createdAt: string
 }
 
@@ -21,7 +22,5 @@ export type PhotoCompetition = {
 	startsAt: string
 	endsAt: string
 	status: "active" | "ended"
-	prizeAmount: number
-	winnerPhotoId: string | null
 	photos: Photo[]
 }

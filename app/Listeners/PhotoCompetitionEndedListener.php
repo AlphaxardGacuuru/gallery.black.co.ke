@@ -20,12 +20,10 @@ class PhotoCompetitionEndedListener
      */
     public function handle(PhotoCompetitionEnded $event): void
     {
-        $winner = $event->competition->winnerPhoto;
-
-        if ($winner) {
-            $winner
-                ->user
-                ->notify(new PhotoCompetitionWonNotification($event->competition));
-        }
+        $event->competition->winners
+            ->filter(fn($winner) => $winner->user)
+            ->each(fn($winner) => $winner->user->notify(
+                new PhotoCompetitionWonNotification($event->competition, $winner)
+            ));
     }
 }

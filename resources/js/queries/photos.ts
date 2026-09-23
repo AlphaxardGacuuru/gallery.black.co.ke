@@ -14,6 +14,7 @@ import type { Photo, PhotoCompetition } from "@/types/photo"
 type CurrentCompetitionData = {
 	competition: PhotoCompetition | null
 	nextStartsAt: string | null
+	topPrizeAmount: number
 }
 
 export function useCurrentCompetition() {
@@ -23,10 +24,12 @@ export function useCurrentCompetition() {
 			Axios.get<{
 				data: PhotoCompetition | null
 				nextStartsAt: string | null
+				topPrizeAmount: number
 			}>(PhotoCompetitionController.current.url()).then(
 				(res): CurrentCompetitionData => ({
 					competition: res.data.data,
 					nextStartsAt: res.data.nextStartsAt,
+					topPrizeAmount: res.data.topPrizeAmount,
 				})
 			),
 		// Likes and the countdown both move without any action from this

@@ -66,23 +66,28 @@ export type PhotoCompetitionSchedule = {
 	endTime: string
 }
 
+export type AdminPhotoCompetitionWinner = {
+	id: string
+	position: number
+	userName: string | null
+	userPhone: string | null
+	prizeAmount: number
+	prizePaidAt: string | null
+}
+
 export type AdminPhotoCompetitionSummary = {
 	id: string
 	startsAt: string
 	endsAt: string
 	status: string
-	prizeAmount: number
 	photosCount: number
-	winnerName: string | null
-	winnerPhone: string | null
-	prizePaidAt: string | null
+	winners: AdminPhotoCompetitionWinner[]
 }
 
 export type AdminPhotoCompetitionsData = {
 	current: {
 		id: string
 		endsAt: string
-		prizeAmount: number
 		photosCount: number
 	} | null
 	totals: {
@@ -90,7 +95,7 @@ export type AdminPhotoCompetitionsData = {
 		totalPhotos: number
 		totalLikes: number
 	}
-	prizeAmount: number
+	prizeTiers: number[]
 	schedule: PhotoCompetitionSchedule
 }
 
@@ -125,9 +130,9 @@ export function usePayCompetitionWinner() {
 
 	return useMutation({
 		// Same status-in-body convention as useSendKopokopoTransfer.
-		mutationFn: (competitionId: string) =>
+		mutationFn: (winnerId: string) =>
 			Axios.post<{ status: unknown; message: string }>(
-				`api/admin/photo-competitions/${competitionId}/pay-winner`
+				`api/admin/photo-competition-winners/${winnerId}/pay`
 			).then((res) => {
 				if (res.data.status !== true) {
 					throw new Error(res.data.message)
@@ -143,12 +148,12 @@ export function usePayCompetitionWinner() {
 	})
 }
 
-export function useUpdatePrizeAmount() {
+export function useUpdatePrizeTiers() {
 	const queryClient = useQueryClient()
 
 	return useMutation({
-		mutationFn: (prizeAmount: number) =>
-			Axios.put("api/admin/photo-competitions/prize-amount", { prizeAmount }),
+		mutationFn: (prizeTiers: number[]) =>
+			Axios.put("api/admin/photo-competitions/prize-tiers", { prizeTiers }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				queryKey: ["admin", "photo-competitions"],
@@ -175,7 +180,7 @@ export function useUpdateActiveCompetition() {
 	const queryClient = useQueryClient()
 
 	return useMutation({
-		mutationFn: (payload: { prizeAmount: number; endsAt: string }) =>
+		mutationFn: (payload: { endsAt: string }) =>
 			Axios.put("api/admin/photo-competitions/active", payload),
 		onSuccess: () => {
 			queryClient.invalidateQueries({

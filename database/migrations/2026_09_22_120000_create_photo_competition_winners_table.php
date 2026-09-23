@@ -11,24 +11,25 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('photo_likes', function (Blueprint $table) {
+        Schema::create('photo_competition_winners', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('photo_id')
-                ->constrained('photos')
+            $table->foreignUuid('competition_id')
+                ->constrained('photo_competitions')
                 ->cascadeOnDelete();
+            $table->foreignUuid('photo_id')
+                ->nullable()
+                ->constrained('photos')
+                ->nullOnDelete();
             $table->foreignUuid('user_id')
                 ->constrained('users')
                 ->cascadeOnDelete();
+            $table->unsignedTinyInteger('position');
+            $table->unsignedInteger('prize_amount');
+            $table->timestamp('prize_paid_at')->nullable();
             $table->timestamps();
 
-            $table->unique(['photo_id', 'user_id']);
-        });
-
-        Schema::table('photo_competitions', function (Blueprint $table) {
-            $table->foreign('winner_photo_id')
-                ->references('id')
-                ->on('photos')
-                ->nullOnDelete();
+            $table->unique(['competition_id', 'position']);
+            $table->index(['competition_id', 'photo_id']);
         });
     }
 
@@ -37,10 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('photo_competitions', function (Blueprint $table) {
-            $table->dropForeign(['winner_photo_id']);
-        });
-
-        Schema::dropIfExists('photo_likes');
+        Schema::dropIfExists('photo_competition_winners');
     }
 };

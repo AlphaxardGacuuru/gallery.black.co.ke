@@ -24,6 +24,7 @@ class PhotoResource extends JsonResource
 			'likesCount' => $this->likes_count,
 			'isLikedByViewer' => (bool) ($this->is_liked_by_viewer ?? false),
 			'isWinner' => (bool) ($this->is_winner ?? false),
+			'position' => $this->position !== null ? (int) $this->position : null,
 			'createdAt' => $this->created_at,
 		];
 	}

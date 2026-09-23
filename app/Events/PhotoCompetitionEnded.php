@@ -32,7 +32,10 @@ class PhotoCompetitionEnded implements ShouldBroadcast
 	{
 		return [
 			'competitionId' => $this->competition->id,
-			'winnerPhotoId' => $this->competition->winner_photo_id,
+			'winners' => $this->competition->winners->map(fn($winner) => [
+				'position' => $winner->position,
+				'photoId' => $winner->photo_id,
+			])->all(),
 		];
 	}
 }

@@ -59,11 +59,17 @@ export function PhotoLightbox({
 				<header className="flex shrink-0 items-center justify-between gap-2 p-3 text-white">
 					<div className="flex min-w-0 items-center gap-2">
 						<p className="truncate text-sm font-medium">{photo.userName}</p>
-						{photo.isWinner && (
+						{photo.isWinner ? (
 							<span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-400 px-2 py-1 text-xs font-semibold text-amber-950">
 								<Trophy className="size-3.5" />
 								Winner
 							</span>
+						) : (
+							photo.position && (
+								<span className="flex shrink-0 items-center rounded-full bg-white/20 px-1.5 py-0.5 text-[11px] font-semibold text-white">
+									#{photo.position}
+								</span>
+							)
 						)}
 					</div>
 					<DialogClose asChild>

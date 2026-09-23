@@ -38,7 +38,7 @@ export default function Welcome() {
 
 	const primaryCta = auth
 		? { href: "/compete", label: "View this week's challenge" }
-		: { href: "/register", label: "Join the challenge" }
+		: { href: "/login", label: "Join the challenge" }
 
 	return (
 		<div className="relative isolate min-h-screen overflow-hidden bg-background text-foreground">
@@ -67,18 +67,11 @@ export default function Welcome() {
 							Go to challenge
 						</Link>
 					) : (
-						<>
-							<Link
-								href="/login"
-								variant="ghost">
-								Sign in
-							</Link>
-							<Link
-								href="/register"
-								variant="solid">
-								Join now
-							</Link>
-						</>
+						<Link
+							href="/login"
+							variant="solid">
+							Sign in
+						</Link>
 					)}
 				</div>
 			</header>
@@ -110,7 +103,7 @@ export default function Welcome() {
 									This week&apos;s prize
 								</p>
 								<p className="text-4xl font-extrabold tracking-tight text-primary sm:text-5xl">
-									KES {competition.prizeAmount}
+									KES {data?.topPrizeAmount}
 								</p>
 							</div>
 						)}

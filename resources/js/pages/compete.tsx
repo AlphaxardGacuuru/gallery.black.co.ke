@@ -34,7 +34,7 @@ export default function Compete() {
 									This week's most liked photo will win
 								</span>
 								<span className="text-3xl font-bold text-green-600">
-									KES {activeCompetition.prizeAmount}
+									KES {data?.topPrizeAmount}
 								</span>{" "}
 							</>
 						) : competition ? (

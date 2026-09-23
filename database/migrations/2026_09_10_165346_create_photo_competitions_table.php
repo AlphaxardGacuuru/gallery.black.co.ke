@@ -17,11 +17,8 @@ return new class extends Migration
             $table->dateTime('ends_at');
             $table->string('status')->default('active');
             $table->unsignedInteger('prize_amount');
-            // No FK constraint here: photos.competition_id references this
-            // table, so this column's FK (added once photos exists) is
-            // defined in the photo_likes migration to avoid a create-order
-            // cycle between these two tables.
             $table->uuid('winner_photo_id')->nullable();
+            $table->timestamp('prize_paid_at')->nullable();
             $table->timestamps();
 
             $table->index(['status', 'starts_at']);

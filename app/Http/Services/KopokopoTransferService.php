@@ -4,7 +4,7 @@ namespace App\Http\Services;
 
 use App\Http\Resources\KopokopoTransferResource;
 use App\Models\KopokopoTransfer;
-use App\Models\PhotoCompetition;
+use App\Models\PhotoCompetitionWinner;
 use App\Models\Referral;
 use App\Models\User;
 use Carbon\Carbon;
@@ -76,8 +76,7 @@ class KopokopoTransferService extends Service
                     'nickname' => $request->input('recipientName'),
                     'phoneNumber' => $phoneNumber,
                     'network' => 'Safaricom',
-                    // 'amount' => $amount,
-                    'amount' => 20,
+                    'amount' => $amount,
                     'description' => $request->input('description', 'Black Gallery challenge prize'),
                 ],
             ],
@@ -100,38 +99,39 @@ class KopokopoTransferService extends Service
     }
 
     /**
-     * Pay a competition's prize to its winning photo's submitter via
-     * Kopokopo, then mark the competition as paid on success.
+     * Pay one winning position's prize to its submitter via Kopokopo, then
+     * mark that specific position as paid on success. One row = one
+     * recipient = one transfer.
      *
      * @return array{0: bool, 1: string, 2: mixed}
      */
-    public function payWinner(PhotoCompetition $competition): array
+    public function payWinner(PhotoCompetitionWinner $winner): array
     {
-        if ($competition->prize_paid_at) {
-            return [false, 'This week\'s prize has already been paid', null];
+        if ($winner->prize_paid_at) {
+            return [false, 'This prize has already been paid', null];
         }
 
-        $winner = $competition->winnerPhoto?->user;
+        $user = $winner->user;
 
-        if (! $winner) {
-            return [false, 'This competition has no winner yet', null];
+        if (! $user) {
+            return [false, 'This winner has no associated user', null];
         }
 
-        if (! $winner->phone) {
-            return [false, $winner->name . ' has no M-Pesa phone number on file', null];
+        if (! $user->phone) {
+            return [false, $user->name . ' has no M-Pesa phone number on file', null];
         }
 
         $request = Request::create('/', 'POST', [
-            'destinationReference' => $winner->phone,
-            'amount' => $competition->prize_amount,
-            'recipientName' => $winner->name,
-            'description' => 'Black Gallery weekly challenge prize',
+            'destinationReference' => $user->phone,
+            'amount' => $winner->prize_amount,
+            'recipientName' => $user->name,
+            'description' => 'Black Gallery weekly challenge prize (#' . $winner->position . ')',
         ]);
 
         [$status, $message, $data] = $this->initiateTransfer($request);
 
         if ($status === true) {
-            $competition->update(['prize_paid_at' => now()]);
+            $winner->update(['prize_paid_at' => now()]);
         }
 
         return [$status === true, $message, $data];

@@ -28,7 +28,7 @@ class PhotoCompetitionService extends Service
 	}
 
 	/**
-	 * The most recently ended competition, with only its winner photo
+	 * The most recently ended competition, with its ranked winner photos
 	 * loaded — kept on the compete page (with the winner treatment) until
 	 * the next competition starts and takes over as the active one.
 	 */
@@ -36,7 +36,7 @@ class PhotoCompetitionService extends Service
 	{
 		$ended = PhotoCompetition::query()
 			->where('status', PhotoCompetition::STATUS_ENDED)
-			->whereNotNull('winner_photo_id')
+			->whereHas('winners')
 			->latest('ends_at')
 			->first();
 
@@ -44,14 +44,18 @@ class PhotoCompetitionService extends Service
 			return null;
 		}
 
-		$winnerPhoto = Photo::query()
-			->where('id', $ended->winner_photo_id)
+		$winnerPhotoIds = $ended->winners()->pluck('photo_id')->filter()->values();
+
+		$photos = Photo::query()
+			->whereIn('id', $winnerPhotoIds)
 			->with('user')
 			->withLikedByViewer($request->user())
 			->withIsWinner()
-			->first();
+			->get()
+			->sortBy(fn(Photo $photo) => $winnerPhotoIds->search($photo->id))
+			->values();
 
-		$ended->setRelation('photos', $winnerPhoto ? collect([$winnerPhoto]) : collect());
+		$ended->setRelation('photos', $photos);
 
 		return $ended;
 	}
