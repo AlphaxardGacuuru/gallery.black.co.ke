@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Events\PhotoCompetitionEnded;
+use App\Notifications\PhotoCompetitionEndedNotification;
 use App\Notifications\PhotoCompetitionWonNotification;
 
 class PhotoCompetitionEndedListener
@@ -24,6 +25,18 @@ class PhotoCompetitionEndedListener
             ->filter(fn($winner) => $winner->user)
             ->each(fn($winner) => $winner->user->notify(
                 new PhotoCompetitionWonNotification($event->competition, $winner)
+            ));
+
+        // Every entrant hears the challenge is over, winners included — they
+        // also get their own placement notification above.
+        $event
+            ->competition
+            ->photos
+            ->pluck('user')
+            ->filter()
+            ->unique('id')
+            ->each(fn($user) => $user->notify(
+                new PhotoCompetitionEndedNotification($event->competition)
             ));
     }
 }

@@ -7,7 +7,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 
-class PhotoCompetitionService extends Service 
+class PhotoCompetitionService extends Service
 {
 	public function current(Request $request): ?PhotoCompetition
 	{
@@ -31,12 +31,17 @@ class PhotoCompetitionService extends Service
 	 * The most recently ended competition, with its ranked winner photos
 	 * loaded — kept on the compete page (with the winner treatment) until
 	 * the next competition starts and takes over as the active one.
+	 *
+	 * Deliberately looks at the single latest-ended competition, not just
+	 * the latest one that happens to have winners — a winnerless week (no
+	 * entries, or every tier is unpaid) must show nothing rather than
+	 * falling back to an older competition's winner, which would dangle a
+	 * stale photo on the compete page well past when it actually won.
 	 */
 	protected function mostRecentlyEnded(Request $request): ?PhotoCompetition
 	{
 		$ended = PhotoCompetition::query()
 			->where('status', PhotoCompetition::STATUS_ENDED)
-			->whereHas('winners')
 			->latest('ends_at')
 			->first();
 
@@ -44,7 +49,15 @@ class PhotoCompetitionService extends Service
 			return null;
 		}
 
-		$winnerPhotoIds = $ended->winners()->pluck('photo_id')->filter()->values();
+		$winnerPhotoIds = $ended
+			->winners()
+			->pluck('photo_id')
+			->filter()
+			->values();
+
+		if ($winnerPhotoIds->isEmpty()) {
+			return null;
+		}
 
 		$photos = Photo::query()
 			->whereIn('id', $winnerPhotoIds)

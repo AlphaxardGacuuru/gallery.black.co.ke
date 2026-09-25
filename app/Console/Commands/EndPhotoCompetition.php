@@ -58,7 +58,7 @@ class EndPhotoCompetition extends Command
         }
 
         $competition->update(['status' => PhotoCompetition::STATUS_ENDED]);
-        $competition->load('winners.user');
+        $competition->load(['winners.user', 'photos.user']);
 
         // PhotoCompetitionEndedListener notifies each winner — dispatching
         // still broadcasts too, since the event implements ShouldBroadcast.

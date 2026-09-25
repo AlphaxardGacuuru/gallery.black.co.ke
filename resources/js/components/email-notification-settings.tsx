@@ -16,7 +16,7 @@ const CATEGORIES: { key: PreferenceKey; label: string; description: string }[] =
 		{
 			key: "competitionStartedNotification",
 			label: "Challenge announcements",
-			description: "Email me when a new weekly challenge opens.",
+			description: "Email me when a new weekly challenge opens or ends.",
 		},
 		{
 			key: "competitionWonNotification",

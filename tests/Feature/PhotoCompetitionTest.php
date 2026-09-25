@@ -6,7 +6,9 @@ use App\Events\PhotoCompetitionStarted;
 use App\Models\PhotoCompetition;
 use App\Models\Setting;
 use App\Models\User;
+use App\Notifications\PhotoCompetitionEndedNotification;
 use App\Notifications\PhotoCompetitionStartedNotification;
+use App\Notifications\PhotoCompetitionWonNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
@@ -225,6 +227,85 @@ class PhotoCompetitionTest extends TestCase
         $competition->refresh();
         $this->assertSame(PhotoCompetition::STATUS_ENDED, $competition->status);
         $this->assertCount(0, $competition->winners);
+    }
+
+    public function test_end_command_notifies_all_participants_and_winners_separately(): void
+    {
+        Notification::fake();
+
+        Setting::query()->updateOrCreate(
+            ['key' => 'photo_prize_tiers'],
+            ['value' => [500]]
+        );
+
+        $this->artisan('app:start-photo-competition');
+        $competition = PhotoCompetition::first();
+
+        $winner = User::factory()->create();
+        $runnerUp = User::factory()->create();
+
+        $competition->photos()->create([
+            'user_id' => $winner->id,
+            'disk' => 'public',
+            'path' => 'photos/winner.jpg',
+            'likes_count' => 5,
+        ]);
+        $competition->photos()->create([
+            'user_id' => $runnerUp->id,
+            'disk' => 'public',
+            'path' => 'photos/runner-up.jpg',
+            'likes_count' => 1,
+        ]);
+
+        // The listener runs off the real event, dispatched by the command —
+        // fire it directly (rather than faking Event) so both the winner
+        // notification and the ended notification actually get sent.
+        $this->artisan('app:end-photo-competition');
+
+        $competition->refresh();
+
+        Notification::assertSentTo($winner, PhotoCompetitionWonNotification::class);
+        Notification::assertSentTo($winner, PhotoCompetitionEndedNotification::class);
+        Notification::assertSentTo($runnerUp, PhotoCompetitionEndedNotification::class);
+        Notification::assertNotSentTo($runnerUp, PhotoCompetitionWonNotification::class);
+    }
+
+    public function test_current_endpoint_does_not_show_a_stale_winner_from_an_older_competition(): void
+    {
+        Setting::query()->updateOrCreate(
+            ['key' => 'photo_prize_tiers'],
+            ['value' => [500]]
+        );
+
+        $olderCompetition = PhotoCompetition::create([
+            'starts_at' => now()->subWeeks(2),
+            'ends_at' => now()->subWeeks(2)->addDays(4),
+            'status' => PhotoCompetition::STATUS_ENDED,
+        ]);
+        $olderPhoto = $olderCompetition->photos()->create([
+            'user_id' => User::factory()->create()->id,
+            'disk' => 'public',
+            'path' => 'photos/older-winner.jpg',
+        ]);
+        $olderCompetition->winners()->create([
+            'photo_id' => $olderPhoto->id,
+            'user_id' => $olderPhoto->user_id,
+            'position' => 1,
+            'prize_amount' => 500,
+        ]);
+
+        // The just-ended competition has zero entries, so it has no winner
+        // at all — this must not fall back to showing the older winner.
+        PhotoCompetition::create([
+            'starts_at' => now()->subWeek(),
+            'ends_at' => now()->subWeek()->addDays(4),
+            'status' => PhotoCompetition::STATUS_ENDED,
+        ]);
+
+        $response = $this->actingAs(User::factory()->create())
+            ->getJson('/api/photos/current');
+
+        $response->assertOk()->assertJsonPath('data', null);
     }
 
     public function test_current_endpoint_returns_winner_photos_after_competition_ends(): void
