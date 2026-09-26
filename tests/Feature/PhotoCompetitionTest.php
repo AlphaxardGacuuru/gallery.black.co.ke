@@ -69,7 +69,7 @@ class PhotoCompetitionTest extends TestCase
             ->assertJsonPath('data.photos.0.id', $photo->id);
     }
 
-    public function test_current_endpoint_exposes_top_prize_amount_from_settings(): void
+    public function test_current_endpoint_exposes_prize_tiers_from_settings(): void
     {
         Setting::query()->updateOrCreate(
             ['key' => 'photo_prize_tiers'],
@@ -79,7 +79,10 @@ class PhotoCompetitionTest extends TestCase
         $response = $this->actingAs(User::factory()->create())
             ->getJson('/api/photos/current');
 
-        $response->assertOk()->assertJsonPath('topPrizeAmount', 750);
+        $response->assertOk()->assertJsonPath(
+            'prizeTiers',
+            [750, 250, 0, 0, 0, 0, 0, 0, 0, 0]
+        );
     }
 
     public function test_authenticated_user_can_like_and_unlike_a_photo(): void

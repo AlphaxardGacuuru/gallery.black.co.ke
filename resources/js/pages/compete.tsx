@@ -8,6 +8,36 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useApp } from "@/contexts/AppContext"
 import { useCurrentCompetition } from "@/queries/photos"
 
+const ORDINALS = [
+	"1st",
+	"2nd",
+	"3rd",
+	"4th",
+	"5th",
+	"6th",
+	"7th",
+	"8th",
+	"9th",
+	"10th",
+]
+
+// Mirrors the backend's EndPhotoCompetition/notification convention: tiers
+// are contiguous and descending, so the first non-positive one means
+// nothing further is paid either.
+function activePrizeTiers(tiers: number[]): number[] {
+	const active: number[] = []
+
+	for (const amount of tiers) {
+		if (amount <= 0) {
+			break
+		}
+
+		active.push(amount)
+	}
+
+	return active
+}
+
 export default function Compete() {
 	const { auth } = useApp()
 	const { data, isLoading } = useCurrentCompetition()
@@ -17,6 +47,8 @@ export default function Compete() {
 	const hasSubmitted = activeCompetition?.photos.some(
 		(photo) => String(photo.userId) === String(auth?.id)
 	)
+	const prizeTiers = activePrizeTiers(data?.prizeTiers ?? [])
+	const runnerUpTiers = prizeTiers.slice(1)
 
 	return (
 		<>
@@ -34,7 +66,7 @@ export default function Compete() {
 									This week's most liked photo will win
 								</span>
 								<span className="text-3xl font-bold text-green-600">
-									KES {data?.topPrizeAmount}
+									KES {prizeTiers[0]}
 								</span>{" "}
 							</>
 						) : competition ? (
@@ -43,6 +75,17 @@ export default function Compete() {
 							"No challenge is running right now, check back soon for your next shot at the prize."
 						)}
 					</p>
+					{activeCompetition && runnerUpTiers.length > 0 && (
+						<p className="text-sm text-muted-foreground">
+							Plus runner-up prizes:{" "}
+							{runnerUpTiers
+								.map(
+									(amount, index) =>
+										`${ORDINALS[index + 1]} place KES ${amount}`
+								)
+								.join(" · ")}
+						</p>
+					)}
 				</header>
 
 				<div className="mx-auto w-[80vw]">

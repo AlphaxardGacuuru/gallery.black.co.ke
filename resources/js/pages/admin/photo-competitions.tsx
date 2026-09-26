@@ -180,7 +180,7 @@ function PrizeTiersSettings({ prizeTiers }: { prizeTiers: number[] }) {
 				title="Weekly prize tiers"
 				description="Applies going forward — position 1 pays first, positions with KES 0 aren't ranked."
 			/>
-			<div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+			<div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
 				{POSITION_LABELS.map((label, index) => (
 					<Input
 						key={label}

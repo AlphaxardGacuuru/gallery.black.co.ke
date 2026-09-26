@@ -103,7 +103,7 @@ export default function Welcome() {
 									This week&apos;s prize
 								</p>
 								<p className="text-4xl font-extrabold tracking-tight text-primary sm:text-5xl">
-									KES {data?.topPrizeAmount}
+									KES {data?.prizeTiers?.[0]}
 								</p>
 							</div>
 						)}

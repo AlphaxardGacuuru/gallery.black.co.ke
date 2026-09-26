@@ -28,7 +28,7 @@ class PhotoCompetitionController extends Controller
         return response()->json([
             'data' => $competition ? new PhotoCompetitionResource($competition) : null,
             'nextStartsAt' => $isActive ? null : PhotoCompetition::nextScheduledStart()->toIso8601String(),
-            'topPrizeAmount' => PhotoCompetition::prizeTiers()[0],
+            'prizeTiers' => PhotoCompetition::prizeTiers(),
         ]);
     }
 
