@@ -1,4 +1,5 @@
 import type { MouseEvent } from "react"
+import { useState } from "react"
 import { Link } from "@/components/ui/link"
 import axios from "@/lib/axios"
 import toast from "@/lib/toast"
@@ -10,6 +11,7 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { Spinner } from "@/components/ui/spinner"
 import { UserInfo } from "@/components/user-info"
 import { useMobileNavigation } from "@/hooks/use-mobile-navigation"
 import { clearAuth } from "@/middleware/auth"
@@ -24,12 +26,14 @@ type Props = {
 export function UserMenuContent({ user }: Props) {
 	const cleanup = useMobileNavigation()
 	const navigate = useNavigate()
+	const [loggingOut, setLoggingOut] = useState(false)
 
 	const handleLogout = (
 		event: MouseEvent<HTMLAnchorElement | HTMLButtonElement>
 	) => {
 		event.preventDefault()
 		cleanup()
+		setLoggingOut(true)
 
 		const route = logout()
 
@@ -57,6 +61,7 @@ export function UserMenuContent({ user }: Props) {
 				clearAuth()
 				navigate({ to: "/login" })
 			})
+			.finally(() => setLoggingOut(false))
 	}
 
 	return (
@@ -95,10 +100,15 @@ export function UserMenuContent({ user }: Props) {
 			<DropdownMenuSeparator />
 			<DropdownMenuItem asChild>
 				<button
-					className="block w-full cursor-pointer"
+					className="block w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
 					onClick={handleLogout}
+					disabled={loggingOut}
 					data-test="logout-button">
-					<LogOut className="mr-2" />
+					{loggingOut ? (
+						<Spinner className="mr-2 size-4" />
+					) : (
+						<LogOut className="mr-2" />
+					)}
 					Log out
 				</button>
 			</DropdownMenuItem>

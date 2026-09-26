@@ -136,6 +136,9 @@ function RewardSettings({
 				<Button
 					disabled={updateSettings.isPending}
 					onClick={handleSave}>
+					{updateSettings.isPending && (
+						<Loader2 className="size-3.5 animate-spin" />
+					)}
 					Save
 				</Button>
 			</div>

@@ -18,6 +18,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog"
 import { Link } from "@/components/ui/link"
+import { Spinner } from "@/components/ui/spinner"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 import { useSubmitPhoto } from "@/queries/photos"
@@ -136,8 +137,8 @@ export function UploadPhotoDialog({
 							onClick={() => setOpen(false)}>
 							profile
 						</Link>{" "}
-						before you can submit a photo, that&apos;s where your prize money
-						is sent.
+						before you can submit a photo, that&apos;s where your prize money is
+						sent.
 					</p>
 				) : (
 					<>
@@ -214,11 +215,10 @@ export function UploadPhotoDialog({
 					{hasActiveCompetition && hasPhoneNumber ? (
 						<Button
 							disabled={
-								!temporaryUploadId ||
-								!caption.trim() ||
-								submitPhoto.isPending
+								!temporaryUploadId || !caption.trim() || submitPhoto.isPending
 							}
 							onClick={handleSubmit}>
+							{submitPhoto.isPending && <Spinner className="size-4" />}
 							Submit entry
 						</Button>
 					) : (

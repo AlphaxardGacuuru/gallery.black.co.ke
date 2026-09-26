@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Head } from "@/lib/spa"
@@ -161,6 +162,9 @@ function SendMoneyForm() {
 				<Button
 					disabled={sendTransfer.isPending}
 					onClick={handleSend}>
+					{sendTransfer.isPending && (
+						<Loader2 className="size-3.5 animate-spin" />
+					)}
 					Send
 				</Button>
 			</CardContent>

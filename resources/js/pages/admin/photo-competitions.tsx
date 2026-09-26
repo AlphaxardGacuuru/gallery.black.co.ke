@@ -147,6 +147,9 @@ function EditActiveCompetitionModal({
 					<Button
 						disabled={updateActive.isPending}
 						onClick={handleSave}>
+						{updateActive.isPending && (
+							<Loader2 className="size-3.5 animate-spin" />
+						)}
 						Save
 					</Button>
 				</DialogFooter>
@@ -200,6 +203,9 @@ function PrizeTiersSettings({ prizeTiers }: { prizeTiers: number[] }) {
 				<Button
 					disabled={updatePrizeTiers.isPending}
 					onClick={handleSave}>
+					{updatePrizeTiers.isPending && (
+						<Loader2 className="size-3.5 animate-spin" />
+					)}
 					Save
 				</Button>
 			</div>
@@ -282,6 +288,9 @@ function ScheduleSettings({
 				<Button
 					disabled={updateSchedule.isPending}
 					onClick={handleSave}>
+					{updateSchedule.isPending && (
+						<Loader2 className="size-3.5 animate-spin" />
+					)}
 					Save
 				</Button>
 			</div>

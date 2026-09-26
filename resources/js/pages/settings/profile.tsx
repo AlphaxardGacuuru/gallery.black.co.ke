@@ -11,6 +11,7 @@ import InputError from "@/components/input-error"
 import PushNotificationSettings from "@/components/push-notification-settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Spinner } from "@/components/ui/spinner"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 import { edit } from "@/routes/profile"
@@ -34,6 +35,14 @@ export default function Profile({
 
 	const [processing, setProcessing] = useState(false)
 	const [errors, setErrors] = useState<Record<string, string>>({})
+	const [resendingVerification, setResendingVerification] = useState(false)
+
+	function handleResendVerification() {
+		setResendingVerification(true)
+		Axios.request({ url: send().url, method: send().method }).finally(() =>
+			setResendingVerification(false)
+		)
+	}
 
 	function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault()
@@ -154,10 +163,10 @@ export default function Profile({
 								Your email address is unverified.{" "}
 								<button
 									type="button"
-									onClick={() =>
-										Axios.request({ url: send().url, method: send().method })
-									}
-									className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500">
+									onClick={handleResendVerification}
+									disabled={resendingVerification}
+									className="inline-flex items-center gap-1.5 text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! disabled:cursor-not-allowed disabled:opacity-50 dark:decoration-neutral-500">
+									{resendingVerification && <Spinner className="size-3.5" />}
 									Click here to resend the verification email.
 								</button>
 							</p>

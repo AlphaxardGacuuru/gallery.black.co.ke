@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
 import { Bell, Trash2 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import type { MouseEvent } from "react"
 import { useEchoModel } from "@laravel/echo-react"
 import { Link } from "@/components/ui/link"
@@ -20,6 +20,7 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar"
+import { Spinner } from "@/components/ui/spinner"
 import { useApp } from "@/contexts/AppContext"
 import { useIsMobile } from "@/hooks/use-mobile"
 import Axios from "@/lib/axios"
@@ -36,6 +37,7 @@ export function NavNotifications() {
 	const isMobile = useIsMobile()
 	const queryClient = useQueryClient()
 	const { channel } = useEchoModel("App.Models.User", auth?.id ?? 0)
+	const [deletingId, setDeletingId] = useState<string | null>(null)
 
 	const { data: notifications = [] } = useQuery<Notification[]>({
 		queryKey: ["notifications"],
@@ -64,9 +66,12 @@ export function NavNotifications() {
 		// Clear the notifications array
 		queryClient.invalidateQueries({ queryKey: ["notifications"] })
 
-		Axios.delete(destroyRoute.url(id)).then(() => {
-			queryClient.invalidateQueries({ queryKey: ["notifications"] })
-		})
+		setDeletingId(id)
+		Axios.delete(destroyRoute.url(id))
+			.then(() => {
+				queryClient.invalidateQueries({ queryKey: ["notifications"] })
+			})
+			.finally(() => setDeletingId(null))
 	}
 
 	const handleDeleteNotification = (
@@ -117,7 +122,11 @@ export function NavNotifications() {
 								<button
 									type="button"
 									onClick={handleClearAll}
-									className="text-xs font-normal text-muted-foreground hover:text-foreground cursor-pointer">
+									disabled={deletingId === "0"}
+									className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground hover:text-foreground cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
+									{deletingId === "0" && (
+										<Spinner className="size-3 text-muted-foreground" />
+									)}
 									Clear all
 								</button>
 							)}
@@ -186,9 +195,14 @@ export function NavNotifications() {
 													onClick={(event) =>
 														handleDeleteNotification(event, notification.id)
 													}
-													className="shrink-0 self-center rounded-sm p-1 text-destructive/80 hover:bg-destructive/10 hover:text-destructive cursor-pointer"
+													disabled={deletingId === notification.id}
+													className="shrink-0 self-center rounded-sm p-1 text-destructive/80 hover:bg-destructive/10 hover:text-destructive cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
 													aria-label="Delete notification">
-													<Trash2 className="size-4 shrink-0" />
+													{deletingId === notification.id ? (
+														<Spinner className="size-4 shrink-0" />
+													) : (
+														<Trash2 className="size-4 shrink-0" />
+													)}
 												</button>
 											</div>
 										</DropdownMenuItem>
