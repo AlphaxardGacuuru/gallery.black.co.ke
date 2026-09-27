@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Socialite\Facades\Socialite;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 
@@ -161,7 +162,14 @@ class AuthenticatedSessionController extends Controller
             return response(["message" => "No active authenticated user found"], 401);
         }
 
-        $user->currentAccessToken()->delete();
+        // A session-authenticated (stateful SPA) request carries a
+        // TransientToken rather than a stored token, so there's nothing to
+        // revoke — only the web session below needs tearing down.
+        $token = $user->currentAccessToken();
+
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();
+        }
 
         if (Auth::guard('web')->check()) {
             Auth::guard('web')->logout();

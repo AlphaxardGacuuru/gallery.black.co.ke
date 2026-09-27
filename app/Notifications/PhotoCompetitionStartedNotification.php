@@ -15,8 +15,6 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 {
 	use Queueable;
 
-	private const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
-
 	public function __construct(protected PhotoCompetition $competition) {}
 
 	/**
@@ -33,23 +31,9 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 		return $channels;
 	}
 
-	/**
-	 * One line per paid position, e.g. "1st place: KES 500" — stops at the
-	 * first unpaid tier, same convention EndPhotoCompetition ranks against.
-	 *
-	 * @return array<int, string>
-	 */
-	protected function tierLines(): array
-	{
-		return collect(PhotoCompetition::prizeTiers())
-			->takeWhile(fn(int $amount) => $amount > 0)
-			->map(fn(int $amount, int $index) => self::ORDINALS[$index] . ' place: KES ' . $amount)
-			->all();
-	}
-
 	protected function tierSummary(): string
 	{
-		return implode(', ', $this->tierLines());
+		return implode(', ', PhotoCompetition::prizeTierLines());
 	}
 
 	public function toMail($notifiable): MailMessage
@@ -59,7 +43,7 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 			->subject('This week\'s photo challenge is live')
 			->greeting('Hello ' . $notifiable->name . ',')
 			->line("Submit your best shot before {$this->competition->ends_at->format('l g:ia')} — here's what's up for grabs this week:")
-			->lines($this->tierLines())
+			->lines(PhotoCompetition::prizeTierLines())
 			->action('View the challenge', url('/'))
 			->line('We\'ll be picking the winners soon — good luck!')
 			->markdown('notifications::email', [

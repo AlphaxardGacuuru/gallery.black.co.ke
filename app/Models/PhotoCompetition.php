@@ -84,6 +84,22 @@ class PhotoCompetition extends Model
     }
 
     /**
+     * One line per paid position, e.g. "1st place: KES 500" — stops at the
+     * first unpaid tier, same convention EndPhotoCompetition ranks against.
+     *
+     * @return array<int, string>
+     */
+    public static function prizeTierLines(): array
+    {
+        $ordinals = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
+
+        return collect(static::prizeTiers())
+            ->takeWhile(fn(int $amount) => $amount > 0)
+            ->map(fn(int $amount, int $index) => $ordinals[$index] . ' place: KES ' . $amount)
+            ->all();
+    }
+
+    /**
      * The exact starts_at/ends_at instants for the week containing $anchor,
      * derived from schedule(). Anchored to a fixed Sunday-starting week (not
      * the app's configured week start) so the day-of-week offsets above are

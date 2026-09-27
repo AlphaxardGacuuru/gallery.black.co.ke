@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\PhotoCompetition;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -45,6 +46,8 @@ class WelcomeNotification extends Notification implements ShouldQueue
             ->subject('Welcome to Black Gallery!')
             ->greeting('Hello ' . $notifiable->name . ',')
             ->line("Thank you for joining Black Gallery. We are excited to have you on board!")
+            ->line("Every week we run a photo challenge, and the top shots win cash. Here's what's up for grabs right now:")
+            ->lines(PhotoCompetition::prizeTierLines())
             ->action('View this week\'s challenge', url('/compete'));
     }
 
