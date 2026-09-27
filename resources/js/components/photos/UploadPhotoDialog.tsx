@@ -144,7 +144,11 @@ export function UploadPhotoDialog({
 					<>
 						<FilePond
 							allowMultiple={false}
-							acceptedFileTypes={["image/png", "image/jpeg", "image/webp"]}
+							// A plain "image/*" (rather than a specific MIME list) is
+							// what makes Chrome on Android open its full Photos
+							// picker — including Google Photos as a source — instead
+							// of falling back to the bare system Files browser.
+							acceptedFileTypes={["image/*"]}
 							maxFileSize="25MB"
 							credits={false}
 							labelIdle='<span class="filepond--label-action">Choose a photo</span> or drag and drop'

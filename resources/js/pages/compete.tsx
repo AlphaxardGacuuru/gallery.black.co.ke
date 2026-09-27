@@ -6,37 +6,8 @@ import { PhotoCard } from "@/components/photos/PhotoCard"
 import { UploadPhotoDialog } from "@/components/photos/UploadPhotoDialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useApp } from "@/contexts/AppContext"
+import { activePrizeTiers, PRIZE_TIER_ORDINALS } from "@/lib/prize-tiers"
 import { useCurrentCompetition } from "@/queries/photos"
-
-const ORDINALS = [
-	"1st",
-	"2nd",
-	"3rd",
-	"4th",
-	"5th",
-	"6th",
-	"7th",
-	"8th",
-	"9th",
-	"10th",
-]
-
-// Mirrors the backend's EndPhotoCompetition/notification convention: tiers
-// are contiguous and descending, so the first non-positive one means
-// nothing further is paid either.
-function activePrizeTiers(tiers: number[]): number[] {
-	const active: number[] = []
-
-	for (const amount of tiers) {
-		if (amount <= 0) {
-			break
-		}
-
-		active.push(amount)
-	}
-
-	return active
-}
 
 export default function Compete() {
 	const { auth } = useApp()
@@ -81,7 +52,7 @@ export default function Compete() {
 							{runnerUpTiers
 								.map(
 									(amount, index) =>
-										`${ORDINALS[index + 1]} place KES ${amount}`
+										`${PRIZE_TIER_ORDINALS[index + 1]} place KES ${amount}`
 								)
 								.join(" · ")}
 						</p>

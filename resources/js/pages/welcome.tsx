@@ -8,6 +8,8 @@ import { GlassCard, GlassInner } from "@/components/ui/glass-card"
 import { Link } from "@/components/ui/link"
 import { Head } from "@/lib/spa"
 import { useApp } from "@/contexts/AppContext"
+import { activePrizeTiers, PRIZE_TIER_ORDINALS } from "@/lib/prize-tiers"
+import { cn } from "@/lib/utils"
 import { useCurrentCompetition } from "@/queries/photos"
 
 const howItWorks = [
@@ -35,6 +37,7 @@ export default function Welcome() {
 	const { auth } = useApp()
 	const { data } = useCurrentCompetition()
 	const competition = data?.competition
+	const prizeTiers = activePrizeTiers(data?.prizeTiers ?? [])
 
 	const primaryCta = auth
 		? { href: "/compete", label: "View this week's challenge" }
@@ -97,14 +100,33 @@ export default function Welcome() {
 							</p>
 						</div>
 
-						{competition && (
-							<div className="flex items-baseline gap-3">
-								<p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-									This week&apos;s prize
-								</p>
-								<p className="text-4xl font-extrabold tracking-tight text-primary sm:text-5xl">
-									KES {data?.prizeTiers?.[0]}
-								</p>
+						{competition && prizeTiers.length > 0 && (
+							<div className="space-y-3">
+								<div className="flex items-baseline gap-3">
+									<p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+										This week&apos;s prize
+									</p>
+									<p className="text-4xl font-extrabold tracking-tight text-primary sm:text-5xl">
+										KES {prizeTiers[0]}
+									</p>
+								</div>
+								{prizeTiers.length > 1 && (
+									<div className="flex flex-wrap gap-2">
+										{prizeTiers.map((amount, index) => (
+											<div
+												key={index}
+												className={cn(
+													"flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold",
+													index === 0
+														? "border-primary/30 bg-primary/10 text-primary"
+														: "border-border/70 bg-background/70 text-foreground"
+												)}>
+												<span>{PRIZE_TIER_ORDINALS[index]}</span>
+												<span className="tabular-nums">KES {amount}</span>
+											</div>
+										))}
+									</div>
+								)}
 							</div>
 						)}
 
