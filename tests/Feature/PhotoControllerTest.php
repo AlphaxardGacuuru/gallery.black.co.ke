@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoSlotPurchase;
 use App\Models\TemporaryUpload;
@@ -102,5 +103,61 @@ class PhotoControllerTest extends TestCase
         ])->assertUnprocessable();
 
         $this->assertSame(2, $competition->photos()->where('user_id', $user->id)->count());
+    }
+
+    public function test_show_lets_any_authenticated_user_view_a_photo(): void
+    {
+        $competition = PhotoCompetition::factory()->create();
+        $owner = User::factory()->create(['name' => 'Owner']);
+        $viewer = User::factory()->create();
+        $photo = Photo::factory()->create([
+            'competition_id' => $competition->id,
+            'user_id' => $owner->id,
+        ]);
+
+        $this->actingAs($viewer, 'sanctum')
+            ->getJson("/api/photos/{$photo->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $photo->id)
+            ->assertJsonPath('data.userName', 'Owner')
+            ->assertJsonPath('canDelete', false)
+            ->assertJsonPath('canLike', true);
+    }
+
+    public function test_show_allows_the_owner_to_delete_only_while_the_competition_is_active(): void
+    {
+        $activeCompetition = PhotoCompetition::factory()->create();
+        $owner = User::factory()->create();
+        $photo = Photo::factory()->create([
+            'competition_id' => $activeCompetition->id,
+            'user_id' => $owner->id,
+        ]);
+
+        $this->actingAs($owner, 'sanctum')
+            ->getJson("/api/photos/{$photo->id}")
+            ->assertOk()
+            ->assertJsonPath('canDelete', true)
+            ->assertJsonPath('canLike', true);
+
+        $endedCompetition = PhotoCompetition::factory()->ended()->create();
+        $endedPhoto = Photo::factory()->create([
+            'competition_id' => $endedCompetition->id,
+            'user_id' => $owner->id,
+        ]);
+
+        $this->actingAs($owner, 'sanctum')
+            ->getJson("/api/photos/{$endedPhoto->id}")
+            ->assertOk()
+            ->assertJsonPath('canDelete', false)
+            ->assertJsonPath('canLike', false);
+    }
+
+    public function test_show_returns_not_found_for_a_missing_photo(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/photos/does-not-exist')
+            ->assertNotFound();
     }
 }

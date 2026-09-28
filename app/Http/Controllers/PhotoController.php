@@ -16,6 +16,27 @@ use Illuminate\Validation\ValidationException;
 class PhotoController extends Controller
 {
     /**
+     * A single photo's full-size view (any competitor's, active or ended),
+     * plus this viewer's permissions for it, since those depend on whether
+     * its competition is still active.
+     */
+    public function show(Request $request, string $id): JsonResponse
+    {
+        $photo = Photo::with(['user', 'competition'])
+            ->withLikedByViewer($request->user())
+            ->withIsWinner()
+            ->findOrFail($id);
+
+        $isActive = $photo->competition->status === PhotoCompetition::STATUS_ACTIVE;
+
+        return response()->json([
+            'data' => new PhotoResource($photo),
+            'canDelete' => $isActive && $photo->user_id === $request->user()->id,
+            'canLike' => $isActive,
+        ]);
+    }
+
+    /**
      * Submit a photo (already uploaded via FilePond) into the active competition.
      */
     public function store(Request $request): JsonResponse

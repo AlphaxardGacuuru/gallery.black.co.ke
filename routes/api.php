@@ -65,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('onboarding/permissions', [OnboardingController::class, 'completePermissions']);
     Route::post('onboarding/referral', [OnboardingController::class, 'completeReferral']);
 
+    Route::get('photos/{id}', [PhotoController::class, 'show']);
     Route::post('photos', [PhotoController::class, 'store']);
     Route::delete('photos/{id}', [PhotoController::class, 'destroy']);
     Route::post('photos/{id}/like', [PhotoLikeController::class, 'store']);

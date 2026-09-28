@@ -1,4 +1,5 @@
-import { Heart, Trash2, Trophy } from "lucide-react"
+import { AlignRight, Heart, Trash2, Trophy } from "lucide-react"
+import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import type { Photo } from "@/types/photo"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -10,13 +11,17 @@ import {
 	DialogDescription,
 	DialogFooter,
 	DialogTitle,
-	DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useInitials } from "@/hooks/use-initials"
 import { cn } from "@/lib/utils"
 import toast from "@/lib/toast"
 import { useDeletePhoto, useLikePhoto } from "@/queries/photos"
-import { PhotoLightbox } from "./PhotoLightbox"
 
 type Props = {
 	photo: Photo
@@ -52,7 +57,7 @@ export function PhotoCard({
 	const likePhoto = useLikePhoto()
 	const deletePhoto = useDeletePhoto()
 	const getInitials = useInitials()
-	const [lightboxOpen, setLightboxOpen] = useState(false)
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
 	function handleDelete() {
 		deletePhoto.mutate(photo.id, {
@@ -67,11 +72,82 @@ export function PhotoCard({
 				"overflow-hidden rounded-xl border bg-card shadow-sm",
 				photo.isWinner && "ring-2 ring-amber-400 border-amber-400"
 			)}>
-			<button
-				type="button"
+			<figcaption className="flex items-center justify-between gap-2 p-2">
+				<div className="flex min-w-0 items-center gap-2">
+					<Avatar className="size-8 shrink-0">
+						<AvatarImage
+							src={photo.userAvatar ?? undefined}
+							alt={photo.userName ?? ""}
+						/>
+						<AvatarFallback className="bg-neutral-200 text-xs text-black dark:bg-neutral-700 dark:text-white">
+							{photo.userName ? getInitials(photo.userName) : "?"}
+						</AvatarFallback>
+					</Avatar>
+					<div className="min-w-0">
+						<p className="truncate text-sm font-medium">{photo.userName}</p>
+					</div>
+				</div>
+				<div className="flex justify-between items-center gap-1">
+					{/* Options Menu Start */}
+					{canDelete && (
+						<>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										aria-label="Photo options"
+										className="shrink-0 px-1">
+										<AlignRight className="size-4 text-muted-foreground" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end">
+									<DropdownMenuItem
+										variant="destructive"
+										className="cursor-pointer"
+										disabled={deletePhoto.isPending}
+										onSelect={(event) => {
+											event.preventDefault()
+											setDeleteDialogOpen(true)
+										}}>
+										<Trash2 />
+										Delete
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+							<Dialog
+								open={deleteDialogOpen}
+								onOpenChange={setDeleteDialogOpen}>
+								<DialogContent>
+									<DialogTitle>Delete this photo?</DialogTitle>
+									<DialogDescription>
+										This removes your entry from this week&apos;s challenge and
+										can&apos;t be undone.
+									</DialogDescription>
+									<DialogFooter className="gap-2">
+										<DialogClose asChild>
+											<Button variant="secondary">Cancel</Button>
+										</DialogClose>
+										<DialogClose asChild>
+											<Button
+												variant="destructive"
+												onClick={handleDelete}>
+												Delete
+											</Button>
+										</DialogClose>
+									</DialogFooter>
+								</DialogContent>
+							</Dialog>
+						</>
+					)}
+					{/* Options Menu End */}
+				</div>
+			</figcaption>
+			<Link
+				to={`/photos/${photo.id}` as never}
 				aria-label="View full photo"
-				onClick={() => setLightboxOpen(true)}
-				className="relative block w-full cursor-pointer">
+				className="relative block w-full">
 				<img
 					src={photo.thumbnailUrl}
 					alt={photo.caption ?? "Competition entry"}
@@ -103,71 +179,9 @@ export function PhotoCard({
 						</div>
 					)
 				)}
-			</button>
-			<PhotoLightbox
-				photo={photo}
-				open={lightboxOpen}
-				onOpenChange={setLightboxOpen}
-				canDelete={canDelete}
-				canLike={canLike}
-			/>
-			<figcaption className="flex items-center justify-between gap-2 p-2">
-				<div className="flex min-w-0 items-center gap-2">
-					<Avatar className="size-8 shrink-0">
-						<AvatarImage
-							src={photo.userAvatar ?? undefined}
-							alt={photo.userName ?? ""}
-						/>
-						<AvatarFallback className="bg-neutral-200 text-xs text-black dark:bg-neutral-700 dark:text-white">
-							{photo.userName ? getInitials(photo.userName) : "?"}
-						</AvatarFallback>
-					</Avatar>
-					<div className="min-w-0">
-						<p className="truncate text-sm font-medium">{photo.userName}</p>
-						{photo.caption && (
-							<p className="truncate text-xs text-muted-foreground">
-								{photo.caption}
-							</p>
-						)}
-					</div>
-				</div>
-				{/* Actions Start */}
-				<div className="flex items-center gap-1">
-					{canDelete && (
-						<Dialog>
-							<DialogTrigger asChild>
-								<Button
-									type="button"
-									variant="ghost"
-									size="sm"
-									aria-label="Delete photo"
-									disabled={deletePhoto.isPending}
-									className="shrink-0 px-1">
-									<Trash2 className="size-4 text-white/60" />
-								</Button>
-							</DialogTrigger>
-							<DialogContent>
-								<DialogTitle>Delete this photo?</DialogTitle>
-								<DialogDescription>
-									This removes your entry from this week&apos;s challenge and
-									can&apos;t be undone.
-								</DialogDescription>
-								<DialogFooter className="gap-2">
-									<DialogClose asChild>
-										<Button variant="secondary">Cancel</Button>
-									</DialogClose>
-									<DialogClose asChild>
-										<Button
-											variant="destructive"
-											onClick={handleDelete}>
-											Delete
-										</Button>
-									</DialogClose>
-								</DialogFooter>
-							</DialogContent>
-						</Dialog>
-					)}
-
+			</Link>
+			<figcaption className="flex flex-col gap-1 p-2">
+				<div className="flex items-center">
 					<Button
 						variant="ghost"
 						size="sm"
@@ -190,7 +204,11 @@ export function PhotoCard({
 						</span>
 					</Button>
 				</div>
-				{/* Actions End */}
+				{photo.caption && (
+					<p className="truncate text-xs text-muted-foreground">
+						{photo.caption}
+					</p>
+				)}
 			</figcaption>
 		</figure>
 	)

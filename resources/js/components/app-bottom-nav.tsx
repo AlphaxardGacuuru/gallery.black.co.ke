@@ -1,13 +1,13 @@
 import { Link } from "@/components/ui/link"
 import { findActiveNavHref, mainNavItems } from "@/components/app-sidebar"
 import { useCurrentUrl } from "@/hooks/use-current-url"
-import { shouldHideBottomNav } from "@/lib/bottom-nav"
+import { isFullScreenRoute } from "@/lib/bottom-nav"
 import { cn } from "@/lib/utils"
 
 export function AppBottomNav() {
 	const { currentUrl } = useCurrentUrl()
 
-	if (shouldHideBottomNav()) {
+	if (isFullScreenRoute()) {
 		return null
 	}
 

@@ -94,6 +94,27 @@ function updateCachedDiscoverPhotos(
 	)
 }
 
+export type PhotoDetail = {
+	photo: Photo
+	canDelete: boolean
+	canLike: boolean
+}
+
+// The single-photo detail page keeps its own cache entry (keyed by id)
+// alongside the list-shaped ones above, so a like applied there needs this
+// same per-photo update too.
+function updateCachedShowPhoto(
+	queryClient: ReturnType<typeof useQueryClient>,
+	photoId: string,
+	updater: (photos: Photo[]) => Photo[]
+) {
+	queryClient.setQueryData<PhotoDetail>(
+		["photos", "show", photoId],
+		(current) =>
+			current ? { ...current, photo: updater([current.photo])[0] } : current
+	)
+}
+
 type DiscoverPage = {
 	data: Photo[]
 	meta: { current_page: number; last_page: number }
@@ -111,6 +132,22 @@ export function useDiscoverPhotos() {
 			lastPage.meta.current_page < lastPage.meta.last_page
 				? lastPage.meta.current_page + 1
 				: undefined,
+	})
+}
+
+export function usePhoto(id: string) {
+	return useQuery({
+		queryKey: ["photos", "show", id],
+		queryFn: () =>
+			Axios.get<{ data: Photo; canDelete: boolean; canLike: boolean }>(
+				PhotoController.show.url(id)
+			).then(
+				(res): PhotoDetail => ({
+					photo: res.data.data,
+					canDelete: res.data.canDelete,
+					canLike: res.data.canLike,
+				})
+			),
 	})
 }
 
@@ -143,6 +180,7 @@ export function useLikePhoto() {
 		onMutate: async (photoId) => {
 			await queryClient.cancelQueries({ queryKey: ["photos", "current"] })
 			await queryClient.cancelQueries({ queryKey: ["photos", "discover"] })
+			await queryClient.cancelQueries({ queryKey: ["photos", "show", photoId] })
 
 			const previousCurrent = queryClient.getQueryData<CurrentCompetitionData>([
 				"photos",
@@ -151,6 +189,11 @@ export function useLikePhoto() {
 			const previousDiscover = queryClient.getQueryData<
 				InfiniteData<DiscoverPage>
 			>(["photos", "discover"])
+			const previousShow = queryClient.getQueryData<PhotoDetail>([
+				"photos",
+				"show",
+				photoId,
+			])
 
 			const applyLike = (photos: Photo[]) =>
 				photos.map((photo) =>
@@ -165,10 +208,11 @@ export function useLikePhoto() {
 
 			updateCachedPhotos(queryClient, applyLike)
 			updateCachedDiscoverPhotos(queryClient, applyLike)
+			updateCachedShowPhoto(queryClient, photoId, applyLike)
 
-			return { previousCurrent, previousDiscover }
+			return { previousCurrent, previousDiscover, previousShow }
 		},
-		onError: (_error, _photoId, context) => {
+		onError: (_error, photoId, context) => {
 			if (context?.previousCurrent !== undefined) {
 				queryClient.setQueryData(["photos", "current"], context.previousCurrent)
 			}
@@ -178,10 +222,17 @@ export function useLikePhoto() {
 					context.previousDiscover
 				)
 			}
+			if (context?.previousShow !== undefined) {
+				queryClient.setQueryData(
+					["photos", "show", photoId],
+					context.previousShow
+				)
+			}
 		},
-		onSettled: () => {
+		onSettled: (_data, _error, photoId) => {
 			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
 			queryClient.invalidateQueries({ queryKey: ["photos", "discover"] })
+			queryClient.invalidateQueries({ queryKey: ["photos", "show", photoId] })
 		},
 	})
 }
@@ -198,6 +249,7 @@ export function useDeletePhoto() {
 			)
 
 			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
+			queryClient.removeQueries({ queryKey: ["photos", "show", photoId] })
 		},
 	})
 }
