@@ -16,6 +16,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! $this->indexExists()) {
+            return;
+        }
+
         Schema::table('photos', function (Blueprint $table) {
             $table->dropUnique(['competition_id', 'user_id']);
         });
@@ -26,8 +30,21 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if ($this->indexExists()) {
+            return;
+        }
+
         Schema::table('photos', function (Blueprint $table) {
             $table->unique(['competition_id', 'user_id']);
         });
+    }
+
+    private function indexExists(): bool
+    {
+        return in_array(
+            'photos_competition_id_user_id_unique',
+            array_column(Schema::getIndexes('photos'), 'name'),
+            true
+        );
     }
 };
