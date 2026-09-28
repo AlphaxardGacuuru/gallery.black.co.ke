@@ -13,3 +13,7 @@ This app runs under [Laravel Sail](https://laravel.com/docs/sail) (Docker). Alwa
 If `./vendor/bin/sail` or `docker-compose.yml` is missing from a checkout, it hasn't been published yet — run `php artisan sail:install` (via a one-off local PHP, or `composer install` first) to generate it before using the commands above.
 
 `.env`'s `DB_HOST=mysql` etc. are Docker Compose service hostnames — they only resolve inside the Sail network, not on the host.
+
+# Writing style
+
+Do not use the em dash character ("—") anywhere in this repo: not in code comments, commit messages, UI copy, or docs. Use a period, comma, or parentheses instead.

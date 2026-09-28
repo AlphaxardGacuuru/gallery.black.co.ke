@@ -19,6 +19,7 @@ class UpdateNotificationPreferencesRequest extends FormRequest
         return [
             'competitionStartedNotification' => ['required', 'boolean'],
             'competitionWonNotification' => ['required', 'boolean'],
+            'referralSignupNotification' => ['required', 'boolean'],
         ];
     }
 }

@@ -46,6 +46,7 @@ class AdminPhotoCompetitionController extends Controller
                 'totals' => $totals,
                 'prizeTiers' => PhotoCompetition::prizeTiers(),
                 'schedule' => PhotoCompetition::schedule(),
+                'extraSlot' => PhotoCompetition::extraSlotSettings(),
             ],
         ]);
     }
@@ -105,6 +106,25 @@ class AdminPhotoCompetitionController extends Controller
         );
 
         return response()->json(['data' => ['prizeTiers' => $tiers]]);
+    }
+
+    /**
+     * Toggle whether users can buy an extra photo-submission slot, and set
+     * its KES price.
+     */
+    public function updateExtraSlot(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'enabled' => 'required|boolean',
+            'price' => 'required|integer|min:0',
+        ]);
+
+        Setting::query()->updateOrCreate(
+            ['key' => 'photo_extra_slot'],
+            ['value' => $data]
+        );
+
+        return response()->json(['data' => $data]);
     }
 
     /**

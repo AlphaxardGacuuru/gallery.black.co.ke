@@ -31,6 +31,14 @@ type Props = {
 	 *  closed — pass false there; compete.tsx's still-active entries stay
 	 *  likeable by default. */
 	canLike?: boolean
+	/** This photo's current standing in a still-active challenge (1-based),
+	 *  only pass this, alongside livePrizeAmount, for entries currently
+	 *  inside a paid tier. Distinct from photo.isWinner/position, which
+	 *  reflect a challenge's already-decided final result. */
+	livePosition?: number
+	/** The KES amount this photo would win if the challenge ended right now
+	 *  at its current livePosition. */
+	livePrizeAmount?: number
 }
 
 export function PhotoCard({
@@ -38,6 +46,8 @@ export function PhotoCard({
 	aspect = "square",
 	canDelete = false,
 	canLike = true,
+	livePosition,
+	livePrizeAmount,
 }: Props) {
 	const likePhoto = useLikePhoto()
 	const deletePhoto = useDeletePhoto()
@@ -81,10 +91,15 @@ export function PhotoCard({
 						<Trophy className="size-3.5" />
 						Winner
 					</div>
+				) : photo.position ? (
+					<div className="absolute left-2 top-2 rounded-full bg-neutral-900/80 px-1.5 py-0.5 text-[11px] font-semibold text-white shadow dark:bg-neutral-100/90 dark:text-neutral-900">
+						#{photo.position}
+					</div>
 				) : (
-					photo.position && (
-						<div className="absolute left-2 top-2 rounded-full bg-neutral-900/80 px-1.5 py-0.5 text-[11px] font-semibold text-white shadow dark:bg-neutral-100/90 dark:text-neutral-900">
-							#{photo.position}
+					livePosition &&
+					livePrizeAmount !== undefined && (
+						<div className="absolute left-2 top-2 rounded-full bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground shadow">
+							#{livePosition} · KES {livePrizeAmount}
 						</div>
 					)
 				)}

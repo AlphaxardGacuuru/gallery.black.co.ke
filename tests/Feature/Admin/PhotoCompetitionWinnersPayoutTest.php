@@ -142,6 +142,34 @@ class PhotoCompetitionWinnersPayoutTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_admin_can_update_extra_slot_settings(): void
+    {
+        $response = $this->actingAs($this->admin(), 'sanctum')
+            ->putJson('/api/admin/photo-competitions/extra-slot', [
+                'enabled' => true,
+                'price' => 100,
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.enabled', true)
+            ->assertJsonPath('data.price', 100);
+
+        $this->assertEqualsCanonicalizing(
+            ['enabled' => true, 'price' => 100],
+            Setting::query()->where('key', 'photo_extra_slot')->value('value')
+        );
+    }
+
+    public function test_extra_slot_validation_rejects_a_negative_price(): void
+    {
+        $this->actingAs($this->admin(), 'sanctum')
+            ->putJson('/api/admin/photo-competitions/extra-slot', [
+                'enabled' => true,
+                'price' => -1,
+            ])
+            ->assertUnprocessable();
+    }
+
     public function test_admin_can_update_active_competition_end_time_without_a_prize_field(): void
     {
         $competition = PhotoCompetition::factory()->create([

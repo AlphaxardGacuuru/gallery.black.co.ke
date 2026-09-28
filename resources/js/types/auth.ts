@@ -4,6 +4,7 @@ export type UserSettings = {
 	referralOnboardedAt?: string
 	competitionStartedNotification?: boolean
 	competitionWonNotification?: boolean
+	referralSignupNotification?: boolean
 	[key: string]: unknown
 }
 

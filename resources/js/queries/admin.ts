@@ -84,6 +84,11 @@ export type AdminPhotoCompetitionSummary = {
 	winners: AdminPhotoCompetitionWinner[]
 }
 
+export type AdminExtraSlotSettings = {
+	enabled: boolean
+	price: number
+}
+
 export type AdminPhotoCompetitionsData = {
 	current: {
 		id: string
@@ -97,6 +102,7 @@ export type AdminPhotoCompetitionsData = {
 	}
 	prizeTiers: number[]
 	schedule: PhotoCompetitionSchedule
+	extraSlot: AdminExtraSlotSettings
 }
 
 export function useAdminPhotoCompetitions() {
@@ -154,6 +160,20 @@ export function useUpdatePrizeTiers() {
 	return useMutation({
 		mutationFn: (prizeTiers: number[]) =>
 			Axios.put("api/admin/photo-competitions/prize-tiers", { prizeTiers }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "photo-competitions"],
+			})
+		},
+	})
+}
+
+export function useUpdateExtraSlot() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (payload: AdminExtraSlotSettings) =>
+			Axios.put("api/admin/photo-competitions/extra-slot", payload),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				queryKey: ["admin", "photo-competitions"],

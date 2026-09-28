@@ -109,6 +109,7 @@ class EmailNotificationPreferencesTest extends TestCase
             ->patchJson('/settings/notifications', [
                 'competitionStartedNotification' => false,
                 'competitionWonNotification' => true,
+                'referralSignupNotification' => true,
             ])
             ->assertOk();
 

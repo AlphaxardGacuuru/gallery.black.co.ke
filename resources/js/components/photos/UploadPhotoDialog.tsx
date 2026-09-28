@@ -3,7 +3,7 @@ import FilePondPluginFileValidateSize from "filepond-plugin-file-validate-size"
 import FilePondPluginFileValidateType from "filepond-plugin-file-validate-type"
 import FilePondPluginImageExifOrientation from "filepond-plugin-image-exif-orientation"
 import FilePondPluginImagePreview from "filepond-plugin-image-preview"
-import { Camera } from "lucide-react"
+import { Camera, ShoppingCart } from "lucide-react"
 import { useState } from "react"
 import { FilePond, registerPlugin } from "react-filepond"
 import FilePondController from "@/actions/App/Http/Controllers/FilePondController"
@@ -21,7 +21,12 @@ import { Link } from "@/components/ui/link"
 import { Spinner } from "@/components/ui/spinner"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
-import { useSubmitPhoto } from "@/queries/photos"
+import {
+	type ExtraSlotState,
+	useBuyExtraSlot,
+	usePollSlotPurchase,
+	useSubmitPhoto,
+} from "@/queries/photos"
 import { edit } from "@/routes/profile"
 
 import "filepond/dist/filepond.min.css"
@@ -35,14 +40,83 @@ registerPlugin(
 	FilePondPluginImagePreview
 )
 
+function errorMessage(error: unknown, fallback: string): string {
+	if (
+		isAxiosError<{ message?: string; errors?: Record<string, string[]> }>(error)
+	) {
+		return (
+			error.response?.data.errors?.competition?.[0] ??
+			error.response?.data.message ??
+			fallback
+		)
+	}
+
+	return error instanceof Error ? error.message : fallback
+}
+
+/** Replaces the disabled "Already submitted" pill when the extra-slot
+ *  feature is on, walks idle -> buying -> waiting for the STK push to be
+ *  approved on the user's phone -> paid (upload dialog takes over) or
+ *  failed (back to idle so they can retry). */
+function BuyExtraSlotButton({ extraSlot }: { extraSlot: ExtraSlotState }) {
+	const buyExtraSlot = useBuyExtraSlot()
+	const [purchaseId, setPurchaseId] = useState<string | null>(
+		extraSlot.pendingPurchaseId
+	)
+	const { data: purchase } = usePollSlotPurchase(purchaseId)
+
+	function handleBuy() {
+		buyExtraSlot.mutate(undefined, {
+			onSuccess: ({ purchaseId: id }) => setPurchaseId(id),
+			onError: (error) =>
+				toast.error("Couldn't start the payment", {
+					description: errorMessage(error, "Please try again."),
+				}),
+		})
+	}
+
+	if (purchaseId && purchase?.status !== "failed") {
+		const pending = !purchase || purchase.status === "pending"
+
+		return (
+			<Button
+				size="xl"
+				disabled
+				className="fixed right-4 bottom-26 z-40 gap-2 rounded-full shadow-lg md:right-70 md:bottom-6">
+				<Spinner className="size-4" />
+				{pending
+					? `Check your phone, approve KES ${extraSlot.price}`
+					: "Unlocking your extra slot..."}
+			</Button>
+		)
+	}
+
+	return (
+		<Button
+			size="xl"
+			disabled={buyExtraSlot.isPending}
+			onClick={handleBuy}
+			className="fixed right-4 bottom-26 z-40 gap-2 rounded-full shadow-lg md:right-70 md:bottom-6">
+			{buyExtraSlot.isPending ? (
+				<Spinner className="size-4" />
+			) : (
+				<ShoppingCart className="size-4" />
+			)}
+			Buy extra slot (KES {extraSlot.price})
+		</Button>
+	)
+}
+
 export function UploadPhotoDialog({
 	disabled,
 	hasActiveCompetition = true,
 	hasPhoneNumber = true,
+	extraSlot,
 }: {
 	disabled?: boolean
 	hasActiveCompetition?: boolean
 	hasPhoneNumber?: boolean
+	extraSlot?: ExtraSlotState
 }) {
 	const [open, setOpen] = useState(false)
 	const [temporaryUploadId, setTemporaryUploadId] = useState<number | null>(
@@ -83,6 +157,10 @@ export function UploadPhotoDialog({
 	}
 
 	if (disabled) {
+		if (extraSlot?.enabled && !extraSlot.hasPaidExtraSlot) {
+			return <BuyExtraSlotButton extraSlot={extraSlot} />
+		}
+
 		return (
 			<Button
 				size="xl"

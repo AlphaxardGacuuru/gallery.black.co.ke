@@ -8,13 +8,22 @@ import {
 import PhotoCompetitionController from "@/actions/App/Http/Controllers/PhotoCompetitionController"
 import PhotoController from "@/actions/App/Http/Controllers/PhotoController"
 import PhotoLikeController from "@/actions/App/Http/Controllers/PhotoLikeController"
+import PhotoSlotPurchaseController from "@/actions/App/Http/Controllers/PhotoSlotPurchaseController"
 import Axios from "@/lib/axios"
 import type { Photo, PhotoCompetition } from "@/types/photo"
+
+export type ExtraSlotState = {
+	enabled: boolean
+	price: number
+	hasPaidExtraSlot: boolean
+	pendingPurchaseId: string | null
+}
 
 type CurrentCompetitionData = {
 	competition: PhotoCompetition | null
 	nextStartsAt: string | null
 	prizeTiers: number[]
+	extraSlot: ExtraSlotState
 }
 
 export function useCurrentCompetition() {
@@ -25,11 +34,13 @@ export function useCurrentCompetition() {
 				data: PhotoCompetition | null
 				nextStartsAt: string | null
 				prizeTiers: number[]
+				extraSlot: ExtraSlotState
 			}>(PhotoCompetitionController.current.url()).then(
 				(res): CurrentCompetitionData => ({
 					competition: res.data.data,
 					nextStartsAt: res.data.nextStartsAt,
 					prizeTiers: res.data.prizeTiers,
+					extraSlot: res.data.extraSlot,
 				})
 			),
 		// Likes and the countdown both move without any action from this
@@ -188,5 +199,45 @@ export function useDeletePhoto() {
 
 			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
 		},
+	})
+}
+
+export function useBuyExtraSlot() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		// Same status-in-body convention as the admin payout mutations.
+		// Kopokopo/M-Pesa errors surface in the body's status/message, not
+		// the HTTP status, so a non-success body is turned into a rejected
+		// promise here. Guard-clause failures (no active competition, etc.)
+		// come back as normal 422s instead and reject on their own.
+		mutationFn: () =>
+			Axios.post<{
+				status: boolean
+				message: string
+				data: { purchaseId: string }
+			}>(PhotoSlotPurchaseController.store.url()).then((res) => {
+				if (res.data.status !== true) {
+					throw new Error(res.data.message)
+				}
+
+				return res.data.data
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
+		},
+	})
+}
+
+export function usePollSlotPurchase(purchaseId: string | null) {
+	return useQuery({
+		queryKey: ["photo-slot-purchases", purchaseId],
+		queryFn: () =>
+			Axios.get<{ data: { status: "pending" | "paid" | "failed" } }>(
+				PhotoSlotPurchaseController.show.url(purchaseId!)
+			).then((res) => res.data.data),
+		enabled: !!purchaseId,
+		refetchInterval: (query) =>
+			query.state.data?.status === "pending" ? 3000 : false,
 	})
 }

@@ -6,6 +6,7 @@ use App\Http\Resources\PhotoResource;
 use App\Jobs\GeneratePhotoThumbnailJob;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
+use App\Models\PhotoSlotPurchase;
 use App\Models\TemporaryUpload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,11 +39,18 @@ class PhotoController extends Controller
             ]);
         }
 
-        $alreadySubmitted = Photo::where('competition_id', $competition->id)
+        $hasPaidExtraSlot = PhotoSlotPurchase::where('competition_id', $competition->id)
             ->where('user_id', $request->user()->id)
+            ->where('status', PhotoSlotPurchase::STATUS_PAID)
             ->exists();
 
-        if ($alreadySubmitted) {
+        $allowedSlots = $hasPaidExtraSlot ? 2 : 1;
+
+        $submittedCount = Photo::where('competition_id', $competition->id)
+            ->where('user_id', $request->user()->id)
+            ->count();
+
+        if ($submittedCount >= $allowedSlots) {
             throw ValidationException::withMessages([
                 'temporaryUploadId' => 'You\'ve already submitted a photo to this week\'s competition.',
             ]);

@@ -6,7 +6,6 @@ use App\Http\Resources\MPESATransactionResource;
 use App\Models\Integration;
 use App\Models\MPESATransaction;
 use App\Models\User;
-use App\Models\UserSubscriptionPlan;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use Kopokopo\SDK\K2;
@@ -105,8 +104,6 @@ class MPESATransactionService extends Service
         $mpesaTransaction->user_id = $user->id;
         $saved = $mpesaTransaction->save();
 
-        $this->updateUserSubscriptionPlan($amount, $user->id);
-
         $message = "Transaction Saved Successfully";
 
         return [$saved, $message, $mpesaTransaction, $user];
@@ -161,14 +158,14 @@ class MPESATransactionService extends Service
 
         $response = $stk->initiateIncomingPayment([
             'paymentChannel' => 'M-PESA STK Push',
-            'tillNumber' => 'K433842',
+            'tillNumber' => config('services.kopokopo.till_number'),
             'firstName' => $firstname,
             'lastName' => $lastname,
             'phoneNumber' => $betterPhone,
             'amount' => $request->input('amount'),
             'currency' => 'KES',
             'email' => auth('sanctum')->user()->email,
-            'callbackUrl' => env('APP_URL', 'https://property.black.co.ke') . '/api/mpesa-transactions',
+            'callbackUrl' => url('/api/mpesa-transactions'),
             'accessToken' => $token,
         ]);
 
@@ -222,28 +219,6 @@ class MPESATransactionService extends Service
         return ["failed", "Failed to check STK push status", $response];
     }
 
-    /*
-	* Update User Subscription Plan
-	*/
-    public function updateUserSubscriptionPlan($amount, $id)
-    {
-        $userSubscriptionPlan = UserSubscriptionPlan::where("user_id", $id)
-            ->where("status", "pending")
-            ->first();
-
-        if (!$userSubscriptionPlan) {
-            return; // Avoid errors if plan is already active or doesn't exist
-        }
-
-        $userSubscriptionPlan->amount_paid = $amount;
-        $userSubscriptionPlan->start_date = now();
-
-        $months = $userSubscriptionPlan->billing_cycle == "monthly" ? 1 : 12;
-        $userSubscriptionPlan->end_date = now()->addMonths($months);
-        $userSubscriptionPlan->status = "active";
-        $userSubscriptionPlan->save();
-    }
-
     public function subscribe()
     {
         $events = [
@@ -260,9 +235,9 @@ class MPESATransactionService extends Service
 
         $response = $K2->Webhooks()->subscribe([
             'eventType' => 'buygoods_transaction_received',
-            'url'       => 'https://property.black.co.ke/api/kopokopo/save-webhook',
+            'url'       => url('/api/kopokopo/save-webhook'),
             'scope'     => 'till',
-            'scopeReference' => '613289', // Your Till Number
+            'scopeReference' => config('services.kopokopo.till_number'),
             'accessToken' => $token,
         ]);
 
@@ -402,7 +377,7 @@ class MPESATransactionService extends Service
                             ->sendTransactionSmsNotification([
                                 'webhookEventReference' => $data['id'],
                                 'message' => $message,
-                                'callbackUrl' => env('APP_URL', 'https://property.black.co.ke') . '/api/mpesa-transactions',
+                                'callbackUrl' => url('/api/mpesa-transactions'),
                                 'accessToken' => $token,
                             ]);
 

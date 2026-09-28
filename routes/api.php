@@ -7,11 +7,13 @@ use App\Http\Controllers\FilePondController;
 use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\KopokopoRecipientController;
 use App\Http\Controllers\KopokopoTransferController;
+use App\Http\Controllers\MPESATransactionController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PhotoCompetitionController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\PhotoLikeController;
+use App\Http\Controllers\PhotoSlotPurchaseController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\SettingController;
@@ -67,6 +69,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('photos/{id}', [PhotoController::class, 'destroy']);
     Route::post('photos/{id}/like', [PhotoLikeController::class, 'store']);
 
+    Route::post('photo-slot-purchases', [PhotoSlotPurchaseController::class, 'store']);
+    Route::get('photo-slot-purchases/{purchase}', [PhotoSlotPurchaseController::class, 'show']);
+
     Route::get('referrals/settings', [ReferralController::class, 'settings'])->name('referrals.settings');
     Route::get('referrals/mine', [ReferralController::class, 'mine'])->name('referrals.mine');
 });
@@ -81,6 +86,7 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::get('photo-competitions', [AdminPhotoCompetitionController::class, 'index'])->name('photo-competitions.index');
         Route::get('photo-competitions/recent', [AdminPhotoCompetitionController::class, 'recent'])->name('photo-competitions.recent');
         Route::put('photo-competitions/prize-tiers', [AdminPhotoCompetitionController::class, 'updatePrizeTiers'])->name('photo-competitions.prize-tiers');
+        Route::put('photo-competitions/extra-slot', [AdminPhotoCompetitionController::class, 'updateExtraSlot'])->name('photo-competitions.extra-slot');
         Route::put('photo-competitions/schedule', [AdminPhotoCompetitionController::class, 'updateSchedule'])->name('photo-competitions.schedule');
         Route::put('photo-competitions/active', [AdminPhotoCompetitionController::class, 'updateActive'])->name('photo-competitions.update-active');
         Route::post('photo-competition-winners/{winner}/pay', [AdminPhotoCompetitionController::class, 'payWinner'])->name('photo-competition-winners.pay');
@@ -96,6 +102,9 @@ Route::middleware(['auth:sanctum', 'admin'])
 
 // Kopokopo's send_money callback — hit by Kopokopo itself, not the admin UI.
 Route::post('kopokopo-transfers', [KopokopoTransferController::class, 'store']);
+
+// Kopokopo's STK push (incoming payment) callback, hit by Kopokopo itself.
+Route::post('mpesa-transactions', [MPESATransactionController::class, 'store']);
 
 /*
  * Filepond Controller

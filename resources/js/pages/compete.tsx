@@ -15,9 +15,12 @@ export default function Compete() {
 	const competition = data?.competition
 	const activeCompetition =
 		competition?.status === "active" ? competition : undefined
-	const hasSubmitted = activeCompetition?.photos.some(
-		(photo) => String(photo.userId) === String(auth?.id)
-	)
+	const mySubmissionCount =
+		activeCompetition?.photos.filter(
+			(photo) => String(photo.userId) === String(auth?.id)
+		).length ?? 0
+	const allowedSlots = data?.extraSlot?.hasPaidExtraSlot ? 2 : 1
+	const hasReachedSlotLimit = mySubmissionCount >= allowedSlots
 	const prizeTiers = activePrizeTiers(data?.prizeTiers ?? [])
 	const runnerUpTiers = prizeTiers.slice(1)
 
@@ -96,7 +99,7 @@ export default function Compete() {
 					</div>
 				) : (
 					<div className="grid grid-cols-1 gap-1 sm:grid-cols-3 lg:grid-cols-4">
-						{competition.photos.map((photo) => (
+						{competition.photos.map((photo, index) => (
 							<PhotoCard
 								key={photo.id}
 								photo={photo}
@@ -105,6 +108,16 @@ export default function Compete() {
 									String(photo.userId) === String(auth?.id)
 								}
 								canLike={Boolean(activeCompetition)}
+								livePosition={
+									activeCompetition && index < prizeTiers.length
+										? index + 1
+										: undefined
+								}
+								livePrizeAmount={
+									activeCompetition && index < prizeTiers.length
+										? prizeTiers[index]
+										: undefined
+								}
 							/>
 						))}
 					</div>
@@ -112,9 +125,10 @@ export default function Compete() {
 			</div>
 
 			<UploadPhotoDialog
-				disabled={hasSubmitted}
+				disabled={hasReachedSlotLimit}
 				hasActiveCompetition={Boolean(activeCompetition)}
 				hasPhoneNumber={Boolean(auth?.phone)}
+				extraSlot={activeCompetition ? data?.extraSlot : undefined}
 			/>
 		</>
 	)

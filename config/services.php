@@ -56,6 +56,10 @@ return [
 
     'kopokopo' => [
         'environment' => env('KOPOKOPO_ENV', 'live'),
+        // The till/paybill number this app receives payments into (e.g. the
+        // extra photo-slot purchase), not environment-specific like the API
+        // credentials above, so it lives at the top level.
+        'till_number' => env('KOPOKOPO_TILL_NUMBER'),
         'sandbox' => [
             'clientId' => env('KOPOKOPO_CLIENT_ID_SANDBOX'),
             'clientSecret' => env('KOPOKOPO_CLIENT_SECRET_SANDBOX'),

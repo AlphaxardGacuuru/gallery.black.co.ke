@@ -10,6 +10,7 @@ import toast from "@/lib/toast"
 type PreferenceKey =
 	| "competitionStartedNotification"
 	| "competitionWonNotification"
+	| "referralSignupNotification"
 
 const CATEGORIES: { key: PreferenceKey; label: string; description: string }[] =
 	[
@@ -22,6 +23,11 @@ const CATEGORIES: { key: PreferenceKey; label: string; description: string }[] =
 			key: "competitionWonNotification",
 			label: "Challenge results",
 			description: "Email me when I win a challenge.",
+		},
+		{
+			key: "referralSignupNotification",
+			label: "Referral signups",
+			description: "Email me when someone joins using my referral link.",
 		},
 	]
 
@@ -50,6 +56,7 @@ export default function EmailNotificationSettings() {
 						"competitionStartedNotification"
 					),
 					competitionWonNotification: isEnabled("competitionWonNotification"),
+					referralSignupNotification: isEnabled("referralSignupNotification"),
 					[key]: checked,
 				},
 			})

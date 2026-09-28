@@ -100,6 +100,25 @@ class PhotoCompetition extends Model
     }
 
     /**
+     * Whether users can buy an extra photo-submission slot, and at what KES
+     * price (a single JSON-object Setting rather than two rows, since both
+     * values are always read/written together).
+     *
+     * @return array{enabled: bool, price: int}
+     */
+    public static function extraSlotSettings(): array
+    {
+        $value = Setting::query()
+            ->where('key', 'photo_extra_slot')
+            ->value('value') ?? [];
+
+        return [
+            'enabled' => (bool) ($value['enabled'] ?? false),
+            'price' => (int) ($value['price'] ?? 0),
+        ];
+    }
+
+    /**
      * The exact starts_at/ends_at instants for the week containing $anchor,
      * derived from schedule(). Anchored to a fixed Sunday-starting week (not
      * the app's configured week start) so the day-of-week offsets above are

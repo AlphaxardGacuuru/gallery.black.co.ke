@@ -20,9 +20,11 @@ import { Input } from "@/components/ui/input"
 import { Link } from "@/components/ui/link"
 import { SelectField, SelectItem } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
 import { normalizePhoneNumber } from "@/lib/phone"
 import toast from "@/lib/toast"
 import {
+	type AdminExtraSlotSettings,
 	type AdminPhotoCompetitionSummary,
 	type AdminPhotoCompetitionWinner,
 	type PhotoCompetitionSchedule,
@@ -31,6 +33,7 @@ import {
 	useAdminRecentPhotoCompetitions,
 	usePayCompetitionWinner,
 	useUpdateActiveCompetition,
+	useUpdateExtraSlot,
 	useUpdatePhotoCompetitionSchedule,
 	useUpdatePrizeTiers,
 } from "@/queries/admin"
@@ -204,6 +207,68 @@ function PrizeTiersSettings({ prizeTiers }: { prizeTiers: number[] }) {
 					disabled={updatePrizeTiers.isPending}
 					onClick={handleSave}>
 					{updatePrizeTiers.isPending && (
+						<Loader2 className="size-3.5 animate-spin" />
+					)}
+					Save
+				</Button>
+			</div>
+		</div>
+	)
+}
+
+function ExtraSlotSettings({
+	extraSlot,
+}: {
+	extraSlot: AdminExtraSlotSettings
+}) {
+	const updateExtraSlot = useUpdateExtraSlot()
+	const [enabled, setEnabled] = useState(extraSlot.enabled)
+	const [price, setPrice] = useState(String(extraSlot.price))
+
+	function handleSave() {
+		const parsedPrice = Number(price)
+
+		if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+			toast.error("Enter a valid price")
+			return
+		}
+
+		updateExtraSlot.mutate(
+			{ enabled, price: parsedPrice },
+			{
+				onSuccess: () => toast.success("Extra slot settings updated"),
+				onError: () => toast.error("Couldn't update the extra slot settings"),
+			}
+		)
+	}
+
+	return (
+		<div className="max-w-sm flex-1 space-y-3 rounded-lg border p-4">
+			<Heading
+				variant="small"
+				title="Buy an extra slot"
+				description="Let entrants pay for a second submission via M-Pesa STK push."
+			/>
+			<div className="flex items-center justify-between gap-4">
+				<p className="text-sm font-medium">Enabled</p>
+				<Switch
+					checked={enabled}
+					onCheckedChange={setEnabled}
+					aria-label="Toggle buy-an-extra-slot"
+				/>
+			</div>
+			<Input
+				type="number"
+				min={0}
+				label="Price (KES)"
+				value={price}
+				onChange={(event) => setPrice(event.target.value)}
+			/>
+			<div className="flex justify-end">
+				<Button
+					disabled={updateExtraSlot.isPending}
+					onClick={handleSave}>
+					{updateExtraSlot.isPending && (
 						<Loader2 className="size-3.5 animate-spin" />
 					)}
 					Save
@@ -508,6 +573,7 @@ export default function AdminPhotoCompetitions() {
 
 						<div className="flex flex-wrap gap-4">
 							<PrizeTiersSettings prizeTiers={data.prizeTiers} />
+							<ExtraSlotSettings extraSlot={data.extraSlot} />
 							<ScheduleSettings schedule={data.schedule} />
 						</div>
 
