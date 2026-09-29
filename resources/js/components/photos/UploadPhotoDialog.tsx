@@ -102,7 +102,7 @@ function BuyExtraSlotButton({ extraSlot }: { extraSlot: ExtraSlotState }) {
 			) : (
 				<ShoppingCart className="size-4" />
 			)}
-			Buy extra slot (KES {extraSlot.price})
+			Buy extra slot @ KES {extraSlot.price}
 		</Button>
 	)
 }
