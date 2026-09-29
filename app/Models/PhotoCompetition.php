@@ -22,11 +22,13 @@ class PhotoCompetition extends Model
         'starts_at',
         'ends_at',
         'status',
+        'reminder_sent_at',
     ];
 
     protected $casts = [
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
+        'reminder_sent_at' => 'datetime',
     ];
 
     public function photos(): HasMany
@@ -42,6 +44,19 @@ class PhotoCompetition extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    /**
+     * Halfway between starts_at and ends_at, when the mid-challenge reminder
+     * (SendPhotoCompetitionReminder) goes out.
+     */
+    public function midpoint(): \Carbon\CarbonInterface
+    {
+        $durationInSeconds = $this->starts_at->diffInSeconds($this->ends_at);
+
+        return $this->starts_at
+            ->copy()
+            ->addSeconds((int) ($durationInSeconds / 2));
     }
 
     /**

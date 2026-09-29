@@ -36,3 +36,10 @@ Schedule::command('app:start-photo-competition')
 Schedule::command('app:end-photo-competition')
     ->everyMinute()
     ->when(fn() => PhotoCompetition::matchesScheduledMoment('end'));
+
+// Halfway through the active challenge, nudge non-entrants to enter and
+// entrants to share their referral link. The command itself checks the
+// midpoint and marks reminder_sent_at, so it's safe to run every minute.
+Schedule::command('app:send-photo-competition-reminder')
+    ->everyMinute()
+    ->withoutOverlapping();

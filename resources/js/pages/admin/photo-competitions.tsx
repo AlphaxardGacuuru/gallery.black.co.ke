@@ -180,7 +180,7 @@ function PrizeTiersSettings({ prizeTiers }: { prizeTiers: number[] }) {
 	}
 
 	return (
-		<div className="max-w-xl flex-1 space-y-3 rounded-lg border p-4">
+		<div className="w-full space-y-3 sm:max-w-xl sm:flex-1 rounded-lg border p-4">
 			<Heading
 				variant="small"
 				title="Weekly prize tiers"
@@ -243,7 +243,7 @@ function ExtraSlotSettings({
 	}
 
 	return (
-		<div className="max-w-sm flex-1 space-y-3 rounded-lg border p-4">
+		<div className="w-full space-y-3 sm:max-w-sm sm:flex-1 rounded-lg border p-4">
 			<Heading
 				variant="small"
 				title="Buy an extra slot"
@@ -303,7 +303,7 @@ function ScheduleSettings({
 	}
 
 	return (
-		<div className="max-w-lg space-y-3 rounded-lg border p-4">
+		<div className="w-full space-y-3 sm:w-auto sm:max-w-lg rounded-lg border p-4">
 			<Heading
 				variant="small"
 				title="Weekly schedule"

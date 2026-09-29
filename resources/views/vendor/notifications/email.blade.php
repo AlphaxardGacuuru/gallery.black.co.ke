@@ -57,7 +57,11 @@
 @endisset
 @isset($unsubscribeUrl)
 
-[Unsubscribe from these emails]({{ $unsubscribeUrl }})
+Don't want to receive these emails anymore?
+
+<x-mail::button :url="$unsubscribeUrl" color="primary">
+Unsubscribe
+</x-mail::button>
 @endisset
 </x-slot:subcopy>
 @endif
