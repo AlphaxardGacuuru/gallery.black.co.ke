@@ -4,7 +4,8 @@ import FilePondPluginFileValidateType from "filepond-plugin-file-validate-type"
 import FilePondPluginImageExifOrientation from "filepond-plugin-image-exif-orientation"
 import FilePondPluginImagePreview from "filepond-plugin-image-preview"
 import { Camera, ShoppingCart } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { FilePond, registerPlugin } from "react-filepond"
 import FilePondController from "@/actions/App/Http/Controllers/FilePondController"
 import { Button } from "@/components/ui/button"
@@ -59,11 +60,30 @@ function errorMessage(error: unknown, fallback: string): string {
  *  approved on the user's phone -> paid (upload dialog takes over) or
  *  failed (back to idle so they can retry). */
 function BuyExtraSlotButton({ extraSlot }: { extraSlot: ExtraSlotState }) {
+	const queryClient = useQueryClient()
 	const buyExtraSlot = useBuyExtraSlot()
 	const [purchaseId, setPurchaseId] = useState<string | null>(
 		extraSlot.pendingPurchaseId
 	)
 	const { data: purchase } = usePollSlotPurchase(purchaseId)
+	const notifiedPaidRef = useRef(false)
+
+	// The poll above stops once the purchase leaves "pending", but nothing
+	// else reacts to a "paid" result landing. Without this, the button
+	// sits on "Unlocking your extra slot..." forever instead of handing
+	// back to the normal upload flow once extraSlot.hasPaidExtraSlot
+	// actually refreshes.
+	useEffect(() => {
+		if (purchase?.status !== "paid" || notifiedPaidRef.current) {
+			return
+		}
+
+		notifiedPaidRef.current = true
+		toast.success("Payment received", {
+			description: "Your extra slot is ready to use.",
+		})
+		queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
+	}, [purchase?.status, queryClient])
 
 	function handleBuy() {
 		buyExtraSlot.mutate(undefined, {

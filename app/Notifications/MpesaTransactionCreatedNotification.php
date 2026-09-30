@@ -8,6 +8,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class MpesaTransactionCreatedNotification extends Notification implements ShouldQueue
 {
@@ -33,7 +35,7 @@ class MpesaTransactionCreatedNotification extends Notification implements Should
      */
     public function via($notifiable)
     {
-        return ['mail', 'database', 'broadcast'];
+        return ['mail', 'database', 'broadcast', WebPushChannel::class];
     }
 
     /**
@@ -81,5 +83,20 @@ class MpesaTransactionCreatedNotification extends Notification implements Should
             "from" => "",
             "message" => "Payment of KES ".number_format($this->mpesaTransaction->amount)." received.",
         ]);
+    }
+
+    /**
+     * Get the web push representation of the notification.
+     *
+     * @param  mixed  $notifiable
+     */
+    public function toWebPush($notifiable, $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title('Payment Received')
+            ->icon('/notification-badge-192x192.png')
+            ->badge('/notification-badge-192x192.png')
+            ->body('Payment of KES '.number_format($this->mpesaTransaction->amount).' received.')
+            ->data(['url' => '/admin/billing']);
     }
 }
