@@ -457,9 +457,10 @@ function CompetitionStatusBadge({ status }: { status: string }) {
 		<Badge
 			variant="secondary"
 			className={cn(
-				"capitalize",
-				status === "active" &&
-					"border-transparent bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+				"capitalize border-transparent ",
+				status === "active"
+					? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+					: "bg-red-200 text-red-800 dark:text-red-800"
 			)}>
 			{status}
 		</Badge>

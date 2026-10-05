@@ -1,7 +1,8 @@
-import { AlignRight, ArrowLeft, Heart, Trash2, Trophy } from "lucide-react"
+import { AlignRight, ArrowLeft, Heart, Trash2, Trophy, Users } from "lucide-react"
 import { useCanGoBack, useNavigate, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { Head } from "@/lib/spa"
+import { ManageLikesDialog } from "@/components/photos/ManageLikesDialog"
 import { Button } from "@/components/ui/button"
 import {
 	Dialog,
@@ -18,6 +19,8 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Spinner } from "@/components/ui/spinner"
+import { useApp } from "@/contexts/AppContext"
+import { ADMIN_EMAIL } from "@/middleware/auth"
 import { cn } from "@/lib/utils"
 import toast from "@/lib/toast"
 import { useDeletePhoto, useLikePhoto, usePhoto } from "@/queries/photos"
@@ -31,9 +34,12 @@ export default function PhotoShow({ id }: Props) {
 	const navigate = useNavigate()
 	const canGoBack = useCanGoBack()
 	const { data, isLoading } = usePhoto(id)
+	const { auth } = useApp()
+	const isAdmin = auth?.email === ADMIN_EMAIL
 	const likePhoto = useLikePhoto()
 	const deletePhoto = useDeletePhoto()
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+	const [manageLikesOpen, setManageLikesOpen] = useState(false)
 
 	function goBack() {
 		if (canGoBack) {
@@ -89,7 +95,7 @@ export default function PhotoShow({ id }: Props) {
 						</span>
 					)
 				)}
-				{canDelete && (
+				{(canDelete || isAdmin) && (
 					<div className="ml-auto shrink-0">
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
@@ -102,37 +108,58 @@ export default function PhotoShow({ id }: Props) {
 								</Button>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end">
-								<DropdownMenuItem
-									variant="destructive"
-									disabled={deletePhoto.isPending}
-									onSelect={(event) => {
-										event.preventDefault()
-										setDeleteDialogOpen(true)
-									}}>
-									<Trash2 />
-									Delete
-								</DropdownMenuItem>
+								{isAdmin && (
+									<DropdownMenuItem
+										onSelect={(event) => {
+											event.preventDefault()
+											setManageLikesOpen(true)
+										}}>
+										<Users />
+										Manage likes
+									</DropdownMenuItem>
+								)}
+								{canDelete && (
+									<DropdownMenuItem
+										variant="destructive"
+										disabled={deletePhoto.isPending}
+										onSelect={(event) => {
+											event.preventDefault()
+											setDeleteDialogOpen(true)
+										}}>
+										<Trash2 />
+										Delete
+									</DropdownMenuItem>
+								)}
 							</DropdownMenuContent>
 						</DropdownMenu>
-						<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-							<DialogContent>
-								<DialogTitle>Delete this photo?</DialogTitle>
-								<DialogDescription>
-									This removes your entry from this week&apos;s challenge and
-									can&apos;t be undone.
-								</DialogDescription>
-								<DialogFooter className="gap-2">
-									<DialogClose asChild>
-										<Button variant="secondary">Cancel</Button>
-									</DialogClose>
-									<DialogClose asChild>
-										<Button variant="destructive" onClick={handleDelete}>
-											Delete
-										</Button>
-									</DialogClose>
-								</DialogFooter>
-							</DialogContent>
-						</Dialog>
+						{canDelete && (
+							<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+								<DialogContent>
+									<DialogTitle>Delete this photo?</DialogTitle>
+									<DialogDescription>
+										This removes your entry from this week&apos;s challenge and
+										can&apos;t be undone.
+									</DialogDescription>
+									<DialogFooter className="gap-2">
+										<DialogClose asChild>
+											<Button variant="secondary">Cancel</Button>
+										</DialogClose>
+										<DialogClose asChild>
+											<Button variant="destructive" onClick={handleDelete}>
+												Delete
+											</Button>
+										</DialogClose>
+									</DialogFooter>
+								</DialogContent>
+							</Dialog>
+						)}
+						{isAdmin && (
+							<ManageLikesDialog
+								photoId={photo.id}
+								open={manageLikesOpen}
+								onOpenChange={setManageLikesOpen}
+							/>
+						)}
 					</div>
 				)}
 			</header>

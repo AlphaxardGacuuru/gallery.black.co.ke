@@ -1,8 +1,9 @@
-import { AlignRight, Heart, Trash2, Trophy } from "lucide-react"
+import { AlignRight, Heart, Trash2, Trophy, Users } from "lucide-react"
 import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import type { Photo } from "@/types/photo"
 import { AvatarPreviewDialog } from "@/components/avatar-preview-dialog"
+import { ManageLikesDialog } from "@/components/photos/ManageLikesDialog"
 import { Button } from "@/components/ui/button"
 import {
 	Dialog,
@@ -18,7 +19,9 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useApp } from "@/contexts/AppContext"
 import { useInitials } from "@/hooks/use-initials"
+import { ADMIN_EMAIL } from "@/middleware/auth"
 import { cn } from "@/lib/utils"
 import toast from "@/lib/toast"
 import { useDeletePhoto, useLikePhoto } from "@/queries/photos"
@@ -55,10 +58,13 @@ export function PhotoCard({
 	livePosition,
 	livePrizeAmount,
 }: Props) {
+	const { auth } = useApp()
+	const isAdmin = auth?.email === ADMIN_EMAIL
 	const likePhoto = useLikePhoto()
 	const deletePhoto = useDeletePhoto()
 	const getInitials = useInitials()
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+	const [manageLikesOpen, setManageLikesOpen] = useState(false)
 
 	function handleDelete() {
 		deletePhoto.mutate(photo.id, {
@@ -71,7 +77,7 @@ export function PhotoCard({
 		<figure
 			className={cn(
 				"overflow-hidden rounded-xl border bg-card shadow-sm",
-				photo.isWinner && "ring-2 ring-amber-400 border-amber-400"
+				photo.isWinner && "ring-1 ring-amber-400"
 			)}>
 			<figcaption className="flex items-center justify-between gap-2 p-2">
 				<div className="flex min-w-0 items-center gap-2">
@@ -88,7 +94,7 @@ export function PhotoCard({
 				</div>
 				<div className="flex justify-between items-center gap-1">
 					{/* Options Menu Start */}
-					{canDelete && (
+					{(canDelete || isAdmin) && (
 						<>
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -102,42 +108,64 @@ export function PhotoCard({
 									</Button>
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end">
-									<DropdownMenuItem
-										variant="destructive"
-										className="cursor-pointer"
-										disabled={deletePhoto.isPending}
-										onSelect={(event) => {
-											event.preventDefault()
-											setDeleteDialogOpen(true)
-										}}>
-										<Trash2 />
-										Delete
-									</DropdownMenuItem>
+									{isAdmin && (
+										<DropdownMenuItem
+											className="cursor-pointer"
+											onSelect={(event) => {
+												event.preventDefault()
+												setManageLikesOpen(true)
+											}}>
+											<Users />
+											Manage likes
+										</DropdownMenuItem>
+									)}
+									{canDelete && (
+										<DropdownMenuItem
+											variant="destructive"
+											className="cursor-pointer"
+											disabled={deletePhoto.isPending}
+											onSelect={(event) => {
+												event.preventDefault()
+												setDeleteDialogOpen(true)
+											}}>
+											<Trash2 />
+											Delete
+										</DropdownMenuItem>
+									)}
 								</DropdownMenuContent>
 							</DropdownMenu>
-							<Dialog
-								open={deleteDialogOpen}
-								onOpenChange={setDeleteDialogOpen}>
-								<DialogContent>
-									<DialogTitle>Delete this photo?</DialogTitle>
-									<DialogDescription>
-										This removes your entry from this week&apos;s challenge and
-										can&apos;t be undone.
-									</DialogDescription>
-									<DialogFooter className="gap-2">
-										<DialogClose asChild>
-											<Button variant="secondary">Cancel</Button>
-										</DialogClose>
-										<DialogClose asChild>
-											<Button
-												variant="destructive"
-												onClick={handleDelete}>
-												Delete
-											</Button>
-										</DialogClose>
-									</DialogFooter>
-								</DialogContent>
-							</Dialog>
+							{canDelete && (
+								<Dialog
+									open={deleteDialogOpen}
+									onOpenChange={setDeleteDialogOpen}>
+									<DialogContent>
+										<DialogTitle>Delete this photo?</DialogTitle>
+										<DialogDescription>
+											This removes your entry from this week&apos;s challenge
+											and can&apos;t be undone.
+										</DialogDescription>
+										<DialogFooter className="gap-2">
+											<DialogClose asChild>
+												<Button variant="secondary">Cancel</Button>
+											</DialogClose>
+											<DialogClose asChild>
+												<Button
+													variant="destructive"
+													onClick={handleDelete}>
+													Delete
+												</Button>
+											</DialogClose>
+										</DialogFooter>
+									</DialogContent>
+								</Dialog>
+							)}
+							{isAdmin && (
+								<ManageLikesDialog
+									photoId={photo.id}
+									open={manageLikesOpen}
+									onOpenChange={setManageLikesOpen}
+								/>
+							)}
 						</>
 					)}
 					{/* Options Menu End */}

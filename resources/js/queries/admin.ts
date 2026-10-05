@@ -453,3 +453,42 @@ export function usePayReferrer() {
 		},
 	})
 }
+
+export type AdminPhotoLiker = {
+	id: string
+	name: string
+	avatar: string | null
+	likesPhoto: boolean
+}
+
+export function useAdminPhotoLikers(photoId: string, search: string) {
+	return useQuery({
+		queryKey: ["admin", "photo-likes", photoId, search],
+		queryFn: () =>
+			Axios.get<{ data: AdminPhotoLiker[] }>(
+				`api/admin/photos/${photoId}/likes`,
+				{ params: { name: search || undefined } }
+			).then((res) => res.data.data),
+	})
+}
+
+export function useToggleAdminPhotoLike(photoId: string) {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (userId: string) =>
+			Axios.post<{
+				data: { userId: string; liked: boolean; likesCount: number }
+			}>(`api/admin/photos/${photoId}/likes/${userId}`).then(
+				(res) => res.data.data
+			),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "photo-likes", photoId],
+			})
+			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
+			queryClient.invalidateQueries({ queryKey: ["photos", "discover"] })
+			queryClient.invalidateQueries({ queryKey: ["photos", "show", photoId] })
+		},
+	})
+}

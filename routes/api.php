@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminPhotoCompetitionController;
+use App\Http\Controllers\Admin\AdminPhotoLikeController;
 use App\Http\Controllers\Admin\AdminReferralController;
 use App\Http\Controllers\FilePondController;
 use App\Http\Controllers\IntegrationController;
@@ -100,6 +101,8 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::get('referrals/recent', [AdminReferralController::class, 'recent'])->name('referrals.recent');
         Route::put('referrals/settings', [AdminReferralController::class, 'updateSettings'])->name('referrals.settings');
         Route::post('referrals/{user}/pay', [AdminReferralController::class, 'pay'])->name('referrals.pay');
+        Route::get('photos/{photo}/likes', [AdminPhotoLikeController::class, 'index'])->name('photos.likes.index');
+        Route::post('photos/{photo}/likes/{user}', [AdminPhotoLikeController::class, 'toggle'])->name('photos.likes.toggle');
     });
 
 // Kopokopo's send_money callback — hit by Kopokopo itself, not the admin UI.
