@@ -17,12 +17,10 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Link } from "@/components/ui/link"
 import { SelectField, SelectItem } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
-import { normalizePhoneNumber } from "@/lib/phone"
 import toast from "@/lib/toast"
 import {
 	type AdminExtraSlotSettings,
@@ -30,7 +28,6 @@ import {
 	type AdminPhotoCompetitionWinner,
 	type AdminPhotoSlotPurchase,
 	type PhotoCompetitionSchedule,
-	useAdminKopokopoRecipients,
 	useAdminPhotoCompetitions,
 	useAdminPhotoSlotPurchases,
 	useAdminRecentPhotoCompetitions,
@@ -366,13 +363,7 @@ function ScheduleSettings({
 	)
 }
 
-function WinnerRow({
-	winner,
-	isRecipient,
-}: {
-	winner: AdminPhotoCompetitionWinner
-	isRecipient: boolean
-}) {
+function WinnerRow({ winner }: { winner: AdminPhotoCompetitionWinner }) {
 	const payWinner = usePayCompetitionWinner()
 
 	function handlePay() {
@@ -402,7 +393,11 @@ function WinnerRow({
 			</div>
 			{winner.prizePaidAt ? (
 				<Badge variant="secondary">Paid</Badge>
-			) : isRecipient ? (
+			) : winner.userPhone ? (
+				// Kopokopo's sendMoney() call takes the phone number/amount
+				// directly (see KopokopoTransferService::payWinner()), it
+				// never looks up a saved KopokopoRecipient, so paying doesn't
+				// need one to exist first.
 				<Button
 					variant="outline"
 					size="sm"
@@ -412,12 +407,7 @@ function WinnerRow({
 					Pay
 				</Button>
 			) : (
-				<Link
-					href="/admin/users"
-					variant="outline"
-					size="sm">
-					Create Recipient
-				</Link>
+				<span className="text-xs text-muted-foreground">No phone number</span>
 			)}
 		</div>
 	)
@@ -425,10 +415,8 @@ function WinnerRow({
 
 function WinnersDialog({
 	competition,
-	registeredPhones,
 }: {
 	competition: AdminPhotoCompetitionSummary
-	registeredPhones: Set<string>
 }) {
 	if (competition.winners.length === 0) {
 		return <span className="text-muted-foreground">—</span>
@@ -456,10 +444,6 @@ function WinnersDialog({
 						<WinnerRow
 							key={winner.id}
 							winner={winner}
-							isRecipient={
-								!!winner.userPhone &&
-								registeredPhones.has(normalizePhoneNumber(winner.userPhone))
-							}
 						/>
 					))}
 				</div>
@@ -588,16 +572,6 @@ export default function AdminPhotoCompetitions() {
 	const [page, setPage] = useState(1)
 	const [perPage, setPerPage] = useState(10)
 	const { data: recent } = useAdminRecentPhotoCompetitions(page, perPage)
-	const { data: recipients } = useAdminKopokopoRecipients()
-
-	const registeredPhones = new Set(
-		(recipients ?? [])
-			.filter(
-				(recipient) =>
-					recipient.type === "mobile_wallet" && recipient.phoneNumber
-			)
-			.map((recipient) => recipient.phoneNumber!)
-	)
 
 	const competitionColumns: ColumnDef<AdminPhotoCompetitionSummary>[] = [
 		{
@@ -624,10 +598,7 @@ export default function AdminPhotoCompetitions() {
 			header: "Winners",
 			enableSorting: false,
 			cell: ({ row }) => (
-				<WinnersDialog
-					competition={row.original}
-					registeredPhones={registeredPhones}
-				/>
+				<WinnersDialog competition={row.original} />
 			),
 		},
 	]

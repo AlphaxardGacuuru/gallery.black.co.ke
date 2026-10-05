@@ -103,6 +103,7 @@ export default function Compete() {
 							<PhotoCard
 								key={photo.id}
 								photo={photo}
+								aspect="auto"
 								canDelete={
 									Boolean(activeCompetition) &&
 									String(photo.userId) === String(auth?.id)

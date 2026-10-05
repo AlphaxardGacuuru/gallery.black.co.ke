@@ -2,7 +2,7 @@ import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import Heading from "@/components/heading"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarPreviewDialog } from "@/components/avatar-preview-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -114,13 +114,12 @@ export default function AdminUsers() {
 			enableSorting: false,
 			cell: ({ row }) => (
 				<div className="flex items-center gap-3">
-					<Avatar className="size-9 shrink-0">
-						<AvatarImage
-							src={row.original.avatar ?? undefined}
-							alt={row.original.name}
-						/>
-						<AvatarFallback>{initials(row.original.name)}</AvatarFallback>
-					</Avatar>
+					<AvatarPreviewDialog
+						src={row.original.avatar}
+						alt={row.original.name}
+						fallback={initials(row.original.name)}
+						className="size-9 shrink-0"
+					/>
 					<span className="flex min-w-0 items-center gap-1 font-medium">
 						<span className="min-w-0 truncate">{row.original.name}</span>
 						{row.original.verified && (

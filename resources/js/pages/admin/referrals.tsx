@@ -3,7 +3,7 @@ import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import Heading from "@/components/heading"
 import AdminStatCard from "@/components/admin/AdminStatCard"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarPreviewDialog } from "@/components/avatar-preview-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
@@ -165,13 +165,12 @@ function LeaderboardEntryRow({
 
 	return (
 		<li className="flex items-center gap-3">
-			<Avatar className="size-8 shrink-0">
-				<AvatarImage
-					src={entry.avatar ?? undefined}
-					alt={entry.name}
-				/>
-				<AvatarFallback>{initials(entry.name)}</AvatarFallback>
-			</Avatar>
+			<AvatarPreviewDialog
+				src={entry.avatar}
+				alt={entry.name}
+				fallback={initials(entry.name)}
+				className="size-8 shrink-0"
+			/>
 			<span className="min-w-0 flex-1 truncate text-sm font-medium">
 				{entry.name}
 			</span>

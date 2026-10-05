@@ -2,7 +2,7 @@ import { AlignRight, Heart, Trash2, Trophy } from "lucide-react"
 import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import type { Photo } from "@/types/photo"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarPreviewDialog } from "@/components/avatar-preview-dialog"
 import { Button } from "@/components/ui/button"
 import {
 	Dialog,
@@ -25,8 +25,9 @@ import { useDeletePhoto, useLikePhoto } from "@/queries/photos"
 
 type Props = {
 	photo: Photo
-	/** "square" for the uniform current-challenge grid, "auto" to keep the
-	 *  photo's natural aspect ratio for the masonry-style discover grid. */
+	/** "auto" keeps the photo's natural aspect ratio (used by both the
+	 *  current-challenge grid and the masonry-style discover grid); "square"
+	 *  forces a uniform crop instead. */
 	aspect?: "square" | "auto"
 	/** Only the viewer's own entry in the still-active challenge can be
 	 *  deleted — pass true from compete.tsx, never from discover.tsx. */
@@ -74,15 +75,13 @@ export function PhotoCard({
 			)}>
 			<figcaption className="flex items-center justify-between gap-2 p-2">
 				<div className="flex min-w-0 items-center gap-2">
-					<Avatar className="size-8 shrink-0">
-						<AvatarImage
-							src={photo.userAvatar ?? undefined}
-							alt={photo.userName ?? ""}
-						/>
-						<AvatarFallback className="bg-neutral-200 text-xs text-black dark:bg-neutral-700 dark:text-white">
-							{photo.userName ? getInitials(photo.userName) : "?"}
-						</AvatarFallback>
-					</Avatar>
+					<AvatarPreviewDialog
+						src={photo.userAvatar}
+						alt={photo.userName ?? "Competitor"}
+						fallback={photo.userName ? getInitials(photo.userName) : "?"}
+						className="size-8 shrink-0"
+						fallbackClassName="bg-neutral-200 text-xs text-black dark:bg-neutral-700 dark:text-white"
+					/>
 					<div className="min-w-0">
 						<p className="truncate text-sm font-medium">{photo.userName}</p>
 					</div>
