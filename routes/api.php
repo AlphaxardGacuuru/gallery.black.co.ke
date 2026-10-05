@@ -86,6 +86,7 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::patch('users/{id}/verify', [UserController::class, 'update'])->name('users.verify');
         Route::get('photo-competitions', [AdminPhotoCompetitionController::class, 'index'])->name('photo-competitions.index');
         Route::get('photo-competitions/recent', [AdminPhotoCompetitionController::class, 'recent'])->name('photo-competitions.recent');
+        Route::get('photo-slot-purchases', [AdminPhotoCompetitionController::class, 'slotPurchases'])->name('photo-slot-purchases.index');
         Route::put('photo-competitions/prize-tiers', [AdminPhotoCompetitionController::class, 'updatePrizeTiers'])->name('photo-competitions.prize-tiers');
         Route::put('photo-competitions/extra-slot', [AdminPhotoCompetitionController::class, 'updateExtraSlot'])->name('photo-competitions.extra-slot');
         Route::put('photo-competitions/schedule', [AdminPhotoCompetitionController::class, 'updateSchedule'])->name('photo-competitions.schedule');

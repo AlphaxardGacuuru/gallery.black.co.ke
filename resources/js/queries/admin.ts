@@ -131,6 +131,33 @@ export function useAdminRecentPhotoCompetitions(page = 1, perPage = 10) {
 	})
 }
 
+export type AdminPhotoSlotPurchase = {
+	id: string
+	userName: string | null
+	userPhone: string | null
+	competitionStartsAt: string | null
+	amount: number
+	status: "pending" | "paid" | "failed"
+	createdAt: string
+	paidAt: string | null
+}
+
+type AdminPhotoSlotPurchasesResponse = {
+	data: AdminPhotoSlotPurchase[]
+	meta: { current_page: number; last_page: number; total: number }
+}
+
+export function useAdminPhotoSlotPurchases(page = 1, perPage = 10) {
+	return useQuery({
+		queryKey: ["admin", "photo-slot-purchases", page, perPage],
+		queryFn: () =>
+			Axios.get<AdminPhotoSlotPurchasesResponse>(
+				"api/admin/photo-slot-purchases",
+				{ params: { page, per_page: perPage } }
+			).then((res) => res.data),
+	})
+}
+
 export function usePayCompetitionWinner() {
 	const queryClient = useQueryClient()
 

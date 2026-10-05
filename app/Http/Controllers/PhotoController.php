@@ -8,8 +8,10 @@ use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoSlotPurchase;
 use App\Models\TemporaryUpload;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -60,42 +62,63 @@ class PhotoController extends Controller
             ]);
         }
 
-        $hasPaidExtraSlot = PhotoSlotPurchase::where('competition_id', $competition->id)
-            ->where('user_id', $request->user()->id)
-            ->where('status', PhotoSlotPurchase::STATUS_PAID)
-            ->exists();
+        // The slot-count check below and the insert that follows it aren't
+        // atomic on their own (there's no longer a DB-level unique
+        // constraint to fall back on, see
+        // 2026_09_28_120001_drop_unique_constraint_from_photos_table), so
+        // two requests from the same user (two tabs, a network retry)
+        // could otherwise both pass the check before either row exists.
+        // This lock serializes them per user per competition instead.
+        $lock = Cache::lock("photo-submission:{$competition->id}:{$request->user()->id}", 10);
 
-        $allowedSlots = $hasPaidExtraSlot ? 2 : 1;
-
-        $submittedCount = Photo::where('competition_id', $competition->id)
-            ->where('user_id', $request->user()->id)
-            ->count();
-
-        if ($submittedCount >= $allowedSlots) {
+        try {
+            $lock->block(2);
+        } catch (LockTimeoutException) {
             throw ValidationException::withMessages([
-                'temporaryUploadId' => 'You\'ve already submitted a photo to this week\'s competition.',
+                'temporaryUploadId' => 'Please try again in a moment.',
             ]);
         }
 
-        $temporaryUpload = TemporaryUpload::findOrFail($data['temporaryUploadId']);
+        try {
+            $hasPaidExtraSlot = PhotoSlotPurchase::where('competition_id', $competition->id)
+                ->where('user_id', $request->user()->id)
+                ->where('status', PhotoSlotPurchase::STATUS_PAID)
+                ->exists();
 
-        $path = 'photos/' . basename($temporaryUpload->path);
-        
-        Storage::disk('public')->move($temporaryUpload->path, $path);
+            $allowedSlots = $hasPaidExtraSlot ? 2 : 1;
 
-        [$width, $height] = getimagesize(Storage::disk('public')->path($path)) ?: [null, null];
+            $submittedCount = Photo::where('competition_id', $competition->id)
+                ->where('user_id', $request->user()->id)
+                ->count();
 
-        $photo = Photo::create([
-            'competition_id' => $competition->id,
-            'user_id' => $request->user()->id,
-            'disk' => 'public',
-            'path' => $path,
-            'caption' => $data['caption'] ?? null,
-            'width' => $width,
-            'height' => $height,
-        ]);
+            if ($submittedCount >= $allowedSlots) {
+                throw ValidationException::withMessages([
+                    'temporaryUploadId' => 'You\'ve already submitted a photo to this week\'s competition.',
+                ]);
+            }
 
-        $temporaryUpload->delete();
+            $temporaryUpload = TemporaryUpload::findOrFail($data['temporaryUploadId']);
+
+            $path = 'photos/' . basename($temporaryUpload->path);
+
+            Storage::disk('public')->move($temporaryUpload->path, $path);
+
+            [$width, $height] = getimagesize(Storage::disk('public')->path($path)) ?: [null, null];
+
+            $photo = Photo::create([
+                'competition_id' => $competition->id,
+                'user_id' => $request->user()->id,
+                'disk' => 'public',
+                'path' => $path,
+                'caption' => $data['caption'] ?? null,
+                'width' => $width,
+                'height' => $height,
+            ]);
+
+            $temporaryUpload->delete();
+        } finally {
+            $lock->release();
+        }
 
         GeneratePhotoThumbnailJob::dispatch($photo);
 

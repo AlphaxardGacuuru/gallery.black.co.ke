@@ -21,15 +21,18 @@ import { Link } from "@/components/ui/link"
 import { SelectField, SelectItem } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
+import { cn } from "@/lib/utils"
 import { normalizePhoneNumber } from "@/lib/phone"
 import toast from "@/lib/toast"
 import {
 	type AdminExtraSlotSettings,
 	type AdminPhotoCompetitionSummary,
 	type AdminPhotoCompetitionWinner,
+	type AdminPhotoSlotPurchase,
 	type PhotoCompetitionSchedule,
 	useAdminKopokopoRecipients,
 	useAdminPhotoCompetitions,
+	useAdminPhotoSlotPurchases,
 	useAdminRecentPhotoCompetitions,
 	usePayCompetitionWinner,
 	useUpdateActiveCompetition,
@@ -465,6 +468,121 @@ function WinnersDialog({
 	)
 }
 
+function CompetitionStatusBadge({ status }: { status: string }) {
+	return (
+		<Badge
+			variant="secondary"
+			className={cn(
+				"capitalize",
+				status === "active" &&
+					"border-transparent bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+			)}>
+			{status}
+		</Badge>
+	)
+}
+
+const SLOT_PURCHASE_STATUS_CLASSES: Record<AdminPhotoSlotPurchase["status"], string> =
+	{
+		paid: "border-transparent bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+		pending: "border-transparent bg-amber-500/10 text-amber-600 dark:text-amber-400",
+		failed: "border-transparent bg-red-500/10 text-red-600 dark:text-red-400",
+	}
+
+function SlotPurchaseStatusBadge({
+	status,
+}: {
+	status: AdminPhotoSlotPurchase["status"]
+}) {
+	return (
+		<Badge
+			variant="secondary"
+			className={cn("capitalize", SLOT_PURCHASE_STATUS_CLASSES[status])}>
+			{status}
+		</Badge>
+	)
+}
+
+function SlotPurchasesTable() {
+	const [page, setPage] = useState(1)
+	const [perPage, setPerPage] = useState(10)
+	const { data } = useAdminPhotoSlotPurchases(page, perPage)
+
+	const columns: ColumnDef<AdminPhotoSlotPurchase>[] = [
+		{
+			id: "buyer",
+			header: "Buyer",
+			cell: ({ row }) => (
+				<div>
+					<p className="font-medium">{row.original.userName ?? "—"}</p>
+					{row.original.userPhone && (
+						<p className="text-xs text-muted-foreground">
+							{row.original.userPhone}
+						</p>
+					)}
+				</div>
+			),
+		},
+		{
+			accessorKey: "competitionStartsAt",
+			header: "Week",
+			cell: ({ row }) =>
+				row.original.competitionStartsAt
+					? new Date(row.original.competitionStartsAt).toLocaleDateString()
+					: "—",
+		},
+		{
+			accessorKey: "amount",
+			header: "Amount",
+			cell: ({ row }) => `KES ${row.original.amount}`,
+		},
+		{
+			accessorKey: "status",
+			header: "Status",
+			cell: ({ row }) => <SlotPurchaseStatusBadge status={row.original.status} />,
+		},
+		{
+			accessorKey: "createdAt",
+			header: "Purchased at",
+			cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
+		},
+		{
+			accessorKey: "paidAt",
+			header: "Paid at",
+			cell: ({ row }) =>
+				row.original.paidAt
+					? new Date(row.original.paidAt).toLocaleString()
+					: "—",
+		},
+	]
+
+	return (
+		<Card className="overflow-hidden">
+			<CardHeader className="pb-4">
+				<CardTitle>Extra slot purchases</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<DataTable
+					columns={columns}
+					data={data?.data ?? []}
+					emptyMessage="No one has bought an extra slot yet"
+					pagination={{
+						currentPage: data?.meta.current_page ?? 1,
+						lastPage: data?.meta.last_page ?? 1,
+						total: data?.meta.total ?? 0,
+						pageSize: perPage,
+						onPageChange: setPage,
+						onPageSizeChange: (size) => {
+							setPerPage(size)
+							setPage(1)
+						},
+					}}
+				/>
+			</CardContent>
+		</Card>
+	)
+}
+
 export default function AdminPhotoCompetitions() {
 	const { data, isLoading } = useAdminPhotoCompetitions()
 	const [page, setPage] = useState(1)
@@ -495,9 +613,7 @@ export default function AdminPhotoCompetitions() {
 		{
 			accessorKey: "status",
 			header: "Status",
-			cell: ({ row }) => (
-				<span className="capitalize">{row.original.status}</span>
-			),
+			cell: ({ row }) => <CompetitionStatusBadge status={row.original.status} />,
 		},
 		{
 			accessorKey: "photosCount",
@@ -600,6 +716,8 @@ export default function AdminPhotoCompetitions() {
 								/>
 							</CardContent>
 						</Card>
+
+						<SlotPurchasesTable />
 					</>
 				)}
 			</div>

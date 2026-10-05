@@ -9,6 +9,7 @@ use App\Models\TemporaryUpload;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -49,6 +50,34 @@ class PhotoControllerTest extends TestCase
         ])->assertUnprocessable();
 
         $this->assertSame(1, $competition->photos()->where('user_id', $user->id)->count());
+    }
+
+    public function test_a_concurrent_submission_is_rejected_instead_of_double_submitting(): void
+    {
+        Storage::fake('public');
+
+        $this->artisan('app:start-photo-competition');
+        $competition = PhotoCompetition::first();
+        $user = User::factory()->create(['phone' => '0700123456']);
+
+        // Simulates a second, truly concurrent request (e.g. two open tabs)
+        // already holding the per-user-per-competition lock when this one
+        // arrives, instead of racing it in-process (which PHPUnit can't do).
+        $lock = Cache::lock("photo-submission:{$competition->id}:{$user->id}", 10);
+        $lock->get();
+
+        try {
+            $this->actingAs($user)->postJson('/api/photos', [
+                'temporaryUploadId' => $this->temporaryUpload()->id,
+                'caption' => 'First entry',
+            ])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors('temporaryUploadId');
+        } finally {
+            $lock->release();
+        }
+
+        $this->assertSame(0, $competition->photos()->where('user_id', $user->id)->count());
     }
 
     public function test_second_submission_succeeds_with_a_paid_extra_slot(): void

@@ -5,8 +5,8 @@ namespace Tests\Unit\Notifications;
 use App\Models\User;
 use App\Notifications\AdminNewUserSignupNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Notifications\Messages\MailMessage;
 use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -15,24 +15,22 @@ class AdminNewUserSignupNotificationTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
-    public function it_always_sends_mail_database_and_web_push(): void
+    public function it_always_sends_web_push(): void
     {
-        $admin = User::factory()->create([
-            'settings' => ['competitionWonNotification' => false],
-        ]);
+        $admin = User::factory()->create();
         $newUser = User::factory()->create(['name' => 'Jane', 'email' => 'jane@example.com']);
 
         $notification = new AdminNewUserSignupNotification($newUser, null);
 
-        $this->assertSame(['mail', 'database', WebPushChannel::class], $notification->via($admin));
+        $this->assertSame([WebPushChannel::class], $notification->via($admin));
 
-        $mail = $notification->toMail($admin);
-        $this->assertInstanceOf(MailMessage::class, $mail);
+        $webPush = $notification->toWebPush($admin, $notification);
+        $this->assertInstanceOf(WebPushMessage::class, $webPush);
 
-        $array = $notification->toArray($admin);
-        $this->assertStringContainsString('Jane', $array['message']);
-        $this->assertStringContainsString('jane@example.com', $array['message']);
-        $this->assertStringNotContainsString('Referred by', $array['message']);
+        $body = $webPush->toArray()['body'];
+        $this->assertStringContainsString('Jane', $body);
+        $this->assertStringContainsString('jane@example.com', $body);
+        $this->assertStringNotContainsString('Referred by', $body);
     }
 
     #[Test]
@@ -43,8 +41,8 @@ class AdminNewUserSignupNotificationTest extends TestCase
         $referrer = User::factory()->create(['name' => 'Bob']);
 
         $notification = new AdminNewUserSignupNotification($newUser, $referrer);
-        $array = $notification->toArray($admin);
+        $webPush = $notification->toWebPush($admin, $notification);
 
-        $this->assertStringContainsString('Referred by Bob', $array['message']);
+        $this->assertStringContainsString('Referred by Bob', $webPush->toArray()['body']);
     }
 }

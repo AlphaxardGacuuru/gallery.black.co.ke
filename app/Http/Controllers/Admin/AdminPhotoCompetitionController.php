@@ -9,6 +9,7 @@ use App\Http\Services\Service;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoCompetitionWinner;
+use App\Models\PhotoSlotPurchase;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -83,6 +84,37 @@ class AdminPhotoCompetitionController extends Controller
                 'current_page' => $competitions->currentPage(),
                 'last_page' => $competitions->lastPage(),
                 'total' => $competitions->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Paginated history of extra-slot purchase attempts (pending, paid, and
+     * failed), most recent first, each with the buyer and the week they
+     * bought into.
+     */
+    public function slotPurchases(Request $request): JsonResponse
+    {
+        $purchases = PhotoSlotPurchase::query()
+            ->with(['user', 'competition'])
+            ->latest('created_at')
+            ->paginate($request->integer('per_page', 10));
+
+        return response()->json([
+            'data' => $purchases->getCollection()->map(fn(PhotoSlotPurchase $purchase) => [
+                'id' => $purchase->id,
+                'userName' => $purchase->user?->name,
+                'userPhone' => $purchase->user?->phone,
+                'competitionStartsAt' => $purchase->competition?->starts_at,
+                'amount' => $purchase->amount,
+                'status' => $purchase->status,
+                'createdAt' => $purchase->created_at,
+                'paidAt' => $purchase->paid_at,
+            ])->values(),
+            'meta' => [
+                'current_page' => $purchases->currentPage(),
+                'last_page' => $purchases->lastPage(),
+                'total' => $purchases->total(),
             ],
         ]);
     }
