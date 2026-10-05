@@ -101,7 +101,7 @@ export default function Compete() {
 						<p className="text-sm">Be the first to submit a photo this week.</p>
 					</div>
 				) : (
-					<div className="grid grid-cols-1 gap-1 sm:grid-cols-3 lg:grid-cols-4">
+					<div className="grid grid-cols-1 items-start gap-1 sm:grid-cols-3 lg:grid-cols-4">
 						{competition.photos.map((photo, index) => (
 							<PhotoCard
 								key={photo.id}

@@ -194,7 +194,7 @@ export function PhotoCard({
 					)
 				)}
 			</Link>
-			<figcaption className="flex flex-col gap-1 p-2">
+			<figcaption className="flex flex-col gap-1">
 				<div className="flex items-center">
 					<Button
 						variant="ghost"
@@ -219,7 +219,7 @@ export function PhotoCard({
 					</Button>
 				</div>
 				{photo.caption && (
-					<p className="truncate text-xs text-muted-foreground">
+					<p className="truncate text-xs text-muted-foreground px-2 pb-2">
 						{photo.caption}
 					</p>
 				)}
