@@ -53,7 +53,6 @@ export default function Discover() {
 									className="break-inside-avoid">
 									<PhotoCard
 										photo={photo}
-										aspect="auto"
 										canLike={false}
 									/>
 								</div>

@@ -28,10 +28,6 @@ import { useDeletePhoto, useLikePhoto } from "@/queries/photos"
 
 type Props = {
 	photo: Photo
-	/** "auto" keeps the photo's natural aspect ratio (used by both the
-	 *  current-challenge grid and the masonry-style discover grid); "square"
-	 *  forces a uniform crop instead. */
-	aspect?: "square" | "auto"
 	/** Only the viewer's own entry in the still-active challenge can be
 	 *  deleted — pass true from compete.tsx, never from discover.tsx. */
 	canDelete?: boolean
@@ -52,7 +48,6 @@ type Props = {
 
 export function PhotoCard({
 	photo,
-	aspect = "square",
 	canDelete = false,
 	canLike = true,
 	livePosition,
@@ -179,15 +174,7 @@ export function PhotoCard({
 					src={photo.thumbnailUrl}
 					alt={photo.caption ?? "Competition entry"}
 					loading="lazy"
-					style={
-						aspect === "auto"
-							? { aspectRatio: photo.aspectRatio || 1 }
-							: undefined
-					}
-					className={cn(
-						"w-full object-cover",
-						aspect === "square" && "aspect-square"
-					)}
+					className="h-auto w-full"
 				/>
 				{photo.isWinner ? (
 					<div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-amber-400 px-2 py-1 text-xs font-semibold text-amber-950 shadow">

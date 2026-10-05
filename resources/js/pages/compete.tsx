@@ -44,7 +44,7 @@ export default function Compete() {
 								</span>{" "}
 							</>
 						) : competition ? (
-							"Last week's challenge has ended — here's the winning photo. Check back soon for the next one."
+							"Last week's challenge has ended. Here's the winning photo. Check back soon for the next one."
 						) : (
 							"No challenge is running right now, check back soon for your next shot at the prize."
 						)}
@@ -52,12 +52,15 @@ export default function Compete() {
 					{activeCompetition && runnerUpTiers.length > 0 && (
 						<p className="text-sm text-muted-foreground">
 							Plus runner-up prizes:{" "}
-							{runnerUpTiers
-								.map(
-									(amount, index) =>
-										`${PRIZE_TIER_ORDINALS[index + 1]} place KES ${amount}`
-								)
-								.join(" · ")}
+							{runnerUpTiers.map((amount, index) => (
+								<span key={index}>
+									{index > 0 && " · "}
+									<span className="text-white me-1">
+										{PRIZE_TIER_ORDINALS[index + 1]} place
+									</span>
+									<span className="text-green-500">KES {amount}</span>
+								</span>
+							))}
 						</p>
 					)}
 				</header>
@@ -103,7 +106,6 @@ export default function Compete() {
 							<PhotoCard
 								key={photo.id}
 								photo={photo}
-								aspect="auto"
 								canDelete={
 									Boolean(activeCompetition) &&
 									String(photo.userId) === String(auth?.id)
