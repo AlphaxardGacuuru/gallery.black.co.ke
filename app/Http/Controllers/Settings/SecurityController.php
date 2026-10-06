@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
+use App\Http\Services\UserService;
 use App\Support\Spa;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -11,7 +12,7 @@ use Illuminate\Http\Request;
 
 class SecurityController extends Controller
 {
-    public function __construct()
+    public function __construct(protected UserService $userService)
     {
         $this->middleware('password.confirm')->only('edit');
     }
@@ -37,9 +38,7 @@ class SecurityController extends Controller
      */
     public function update(PasswordUpdateRequest $request): RedirectResponse
     {
-        $request->user()->update([
-            'password' => $request->password,
-        ]);
+        $this->userService->updatePassword($request->user(), $request->password);
 
         $request->session()->flash('flash.toast', ['type' => 'success', 'message' => __('Password updated.')]);
 

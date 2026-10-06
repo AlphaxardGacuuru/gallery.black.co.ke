@@ -42,6 +42,7 @@ class AdminReferralController extends Controller
                     'userId' => $user->id,
                     'name' => $user->name,
                     'avatar' => $user->avatar,
+                    'phone' => $user->phone,
                     'referralsCount' => $user->referrals_made_count,
                     'eligibleAmount' => $payout['totalAmount'],
                 ];

@@ -2,36 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Services\TemporaryUploadService;
+use App\Http\Services\UserService;
 use App\Models\Submission;
-use App\Models\TemporaryUpload;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 
 class FilePondController extends Controller
 {
-    /**
-     * Reusable temporary upload handler for FilePond process endpoint.
-     */
-    private function uploadToTemporaryStore(
-        Request $request,
-        string $inputName,
-        string $directory = 'temporary-uploads'
-    ): TemporaryUpload {
-        $file = $request->file($inputName);
-
-        $path = $file->store($directory, 'public');
-
-        $temporaryUpload = new TemporaryUpload;
-        $temporaryUpload->disk = 'public';
-        $temporaryUpload->path = $path;
-        $temporaryUpload->original_name = $file->getClientOriginalName();
-        $temporaryUpload->mime_type = $file->getClientMimeType();
-        $temporaryUpload->size = $file->getSize();
-        $temporaryUpload->save();
-
-        return $temporaryUpload;
+    public function __construct(
+        protected TemporaryUploadService $temporaryUploadService,
+        protected UserService $userService,
+    ) {
+        //
     }
 
     /*
@@ -44,19 +28,7 @@ class FilePondController extends Controller
 
         $avatar = $request->file('filepond-avatar')->store('avatars', 'public');
 
-        $user = User::findOrFail($id);
-
-        // Delete profile pic if it's not the default one
-        if ($user->avatar != '/storage/avatars/male_avatar.png') {
-
-            // Get old avatar and delete it
-            $oldAvatar = substr($user->avatar, 9);
-
-            Storage::disk("public")->delete($oldAvatar);
-        }
-
-        $user->avatar = $avatar;
-        $user->save();
+        $this->userService->updateAvatar($id, $avatar);
 
         return response("Account updated", 200);
     }
@@ -177,9 +149,8 @@ class FilePondController extends Controller
             'filepond-support-ticket-attachments' => 'required|file|max:10240|mimes:jpg,jpeg,png,pdf,doc,docx',
         ]);
 
-        $temporaryUpload = $this->uploadToTemporaryStore(
-            $request,
-            'filepond-support-ticket-attachments',
+        $temporaryUpload = $this->temporaryUploadService->store(
+            $request->file('filepond-support-ticket-attachments'),
             'temporary-uploads/support-tickets'
         );
 
@@ -189,14 +160,9 @@ class FilePondController extends Controller
 
     public function destroySupportTicketAttachment(int|string $id): Response
     {
-        $temporaryUpload = TemporaryUpload::find($id);
-
-        if (! $temporaryUpload) {
+        if (! $this->temporaryUploadService->destroy($id)) {
             return response('Attachment already removed', 200);
         }
-
-        Storage::disk($temporaryUpload->disk)->delete($temporaryUpload->path);
-        $temporaryUpload->delete();
 
         return response('Attachment deleted', 200);
     }
@@ -211,9 +177,8 @@ class FilePondController extends Controller
             'filepond-photo' => 'required|image|max:25600',
         ]);
 
-        $temporaryUpload = $this->uploadToTemporaryStore(
-            $request,
-            'filepond-photo',
+        $temporaryUpload = $this->temporaryUploadService->store(
+            $request->file('filepond-photo'),
             'temporary-uploads/photos'
         );
 
@@ -222,15 +187,9 @@ class FilePondController extends Controller
 
     public function destroyPhoto(int|string $id): Response
     {
-        $temporaryUpload = TemporaryUpload::find($id);
-
-        if (! $temporaryUpload) {
+        if (! $this->temporaryUploadService->destroy($id)) {
             return response('Upload already removed', 200);
         }
-
-        Storage::disk($temporaryUpload->disk)->delete($temporaryUpload->path);
-
-        $temporaryUpload->delete();
 
         return response('Upload deleted', 200);
     }

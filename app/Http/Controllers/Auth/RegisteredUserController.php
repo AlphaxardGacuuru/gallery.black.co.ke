@@ -4,18 +4,21 @@ namespace App\Http\Controllers\Auth;
 
 use App\Events\UserCreatedEvent;
 use App\Http\Controllers\Controller;
-use App\Models\Referral;
-use App\Models\User;
+use App\Http\Services\AuthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 
 class RegisteredUserController extends Controller
 {
+    public function __construct(protected AuthService $authService)
+    {
+        //
+    }
+
     /**
      * Handle an incoming registration request.
      *
@@ -29,17 +32,12 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user = new User;
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->password = Hash::make($request->password);
-        $user->settings = [
-            'competitionStartedNotification' => true,
-            'competitionWonNotification' => true,
-        ];
-        $user->save();
-
-        Referral::record($request->input('referrerId'), $user);
+        $user = $this->authService->register(
+            $request->name,
+            $request->email,
+            $request->password,
+            $request->input('referrerId'),
+        );
 
         Auth::login($user);
 

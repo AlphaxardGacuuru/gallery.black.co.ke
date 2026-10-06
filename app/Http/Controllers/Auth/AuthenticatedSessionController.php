@@ -4,25 +4,25 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Models\Referral;
-use App\Models\User;
-use App\Notifications\WelcomeNotification;
+use App\Http\Services\AuthService;
 use Exception;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Socialite\Facades\Socialite;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 
 class AuthenticatedSessionController extends Controller
 {
+    public function __construct(protected AuthService $authService)
+    {
+        //
+    }
+
     /*
      * Social Logins*/
     public function redirectToProvider(Request $request, string $website): RedirectResponse
@@ -49,51 +49,7 @@ class AuthenticatedSessionController extends Controller
             return redirect('/login?error=' . urlencode('Authentication failed. Please try again.'));
         }
 
-        $avatarUrl = $socialUser->getAvatar();
-
-        $dbUser = User::query()
-            ->where('google_id', $socialUser->getId())
-            ->orWhere('email', $socialUser->getEmail())
-            ->first();
-
-        if ($dbUser) {
-            $attributes = [];
-
-            if ($dbUser->google_id !== $socialUser->getId()) {
-                $attributes['google_id'] = $socialUser->getId();
-            }
-
-            if ($dbUser->email_verified_at === null) {
-                $attributes['email_verified_at'] = now();
-            }
-
-            $name = $socialUser->getName() ?: null;
-            if ($name && $dbUser->name !== $name) {
-                $attributes['name'] = $name;
-            }
-
-            if (filled($avatarUrl) && $dbUser->avatar !== $avatarUrl) {
-                $attributes['avatar'] = $avatarUrl;
-            }
-
-            if ($attributes !== []) {
-                $dbUser->forceFill($attributes)->save();
-            }
-        } else {
-            $dbUser = new User;
-            $dbUser->name = $socialUser->getName() ?: 'Google User';
-            $dbUser->email = $socialUser->getEmail();
-            $dbUser->google_id = $socialUser->getId();
-            $dbUser->avatar = $avatarUrl;
-            $dbUser->email_verified_at = now();
-            $dbUser->password = Str::random(40);
-            $dbUser->save();
-
-            Referral::record($request->cookie('referral_ref'), $dbUser);
-
-            $dbUser->notify(new WelcomeNotification);
-            event(new Registered($dbUser));
-        }
+        $dbUser = $this->authService->findOrCreateFromSocialite($socialUser, $request->cookie('referral_ref'));
 
         Auth::login($dbUser);
 
@@ -113,19 +69,7 @@ class AuthenticatedSessionController extends Controller
             'device_name' => 'required',
         ]);
 
-        $user = User::query()->where('email', $request->email)->first();
-
-        if (! $user) {
-            throw ValidationException::withMessages([
-                "email" => ["The Provided Email Doesn't Exist."]
-            ]);
-        }
-
-        if (! Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'password' => ['The provided password is incorrect.']
-            ]);
-        }
+        $user = $this->authService->findByCredentials($request->email, $request->password);
 
         if ($user->hasTwoFactorEnabled()) {
             $pendingToken = Str::uuid();

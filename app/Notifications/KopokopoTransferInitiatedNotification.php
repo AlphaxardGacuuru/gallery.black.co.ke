@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Events\KopokopoTransferInitiated;
+use App\Http\Services\Service;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -24,13 +25,25 @@ class KopokopoTransferInitiatedNotification extends Notification implements Shou
 		return ['mail', 'database', WebPushChannel::class];
 	}
 
+	/**
+	 * The destination phone, in the local "0..." format people recognize
+	 * (the event carries Kopokopo's "254..." format), shown so the
+	 * recipient can confirm the money actually landed on their own number.
+	 */
+	protected function bodyLine(): string
+	{
+		$phone = Service::toLocalPhoneNumber($this->event->phoneNumber);
+
+		return "KES {$this->event->amount} has been sent to your Mpesa {$phone}.";
+	}
+
 	public function toMail($notifiable): MailMessage
 	{
 		return (new MailMessage)
 			->from('al@mail.black.co.ke', 'Alphaxard from Black Gallery')
 			->subject('Payment sent! 💸')
 			->greeting('Hello ' . $notifiable->name . ',')
-			->line("KES {$this->event->amount} has been sent to your M-Pesa.")
+			->line($this->bodyLine())
 			->line($this->event->description ?? 'Thank you for being part of Black Gallery!');
 	}
 
@@ -39,7 +52,7 @@ class KopokopoTransferInitiatedNotification extends Notification implements Shou
 		return [
 			'url' => '/',
 			'from' => 'Admin',
-			'message' => "KES {$this->event->amount} has been sent to your M-Pesa.",
+			'message' => $this->bodyLine(),
 		];
 	}
 
@@ -49,7 +62,7 @@ class KopokopoTransferInitiatedNotification extends Notification implements Shou
 			->title('Payment sent! 💸')
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
-			->body("KES {$this->event->amount} has been sent to your M-Pesa.")
+			->body($this->bodyLine())
 			->data(['url' => '/']);
 	}
 }

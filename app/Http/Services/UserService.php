@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Enums\EmailNotificationCategory;
 use App\Http\Resources\UserResource;
 use App\Models\Role;
 use App\Models\User;
@@ -9,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 
 class UserService extends Service
@@ -99,6 +102,78 @@ class UserService extends Service
 		$deleted = $user->delete();
 
 		return [$deleted, $user->name . ' deleted'];
+	}
+
+	/**
+	 * Merge email preferences into the same users.settings blob that also
+	 * holds onboarding progress, leaving the other keys untouched.
+	 *
+	 * @param  array<string, bool>  $preferences
+	 */
+	public function updateNotificationPreferences(User $user, array $preferences): void
+	{
+		$user->settings = array_merge((array) ($user->settings ?? []), $preferences);
+		$user->save();
+	}
+
+	/**
+	 * Turn a single email category off, from a signed unsubscribe link.
+	 */
+	public function unsubscribe(User $user, EmailNotificationCategory $category): void
+	{
+		$settings = (array) ($user->settings ?? []);
+		$settings[$category->settingsKey()] = false;
+		$user->update(['settings' => $settings]);
+	}
+
+	/**
+	 * Update the user's own profile, resetting email verification when the
+	 * email address changes.
+	 *
+	 * @param  array<string, mixed>  $attributes
+	 */
+	public function updateProfile(User $user, array $attributes): void
+	{
+		$user->fill($attributes);
+
+		if ($user->isDirty('email')) {
+			$user->email_verified_at = null;
+		}
+
+		$user->save();
+	}
+
+	public function updatePassword(User $user, string $password): void
+	{
+		$user->update(['password' => $password]);
+	}
+
+	/**
+	 * Set a new password from a reset link, rotating the remember token so
+	 * any "remember me" sessions on other devices are signed out.
+	 */
+	public function resetPassword(User $user, string $password): void
+	{
+		$user->forceFill([
+			'password' => Hash::make($password),
+			'remember_token' => Str::random(60),
+		])->save();
+	}
+
+	/**
+	 * Replace a user's avatar with an already-stored file, deleting the old
+	 * one unless it's the default.
+	 */
+	public function updateAvatar(int|string $id, string $avatarPath): void
+	{
+		$user = User::findOrFail($id);
+
+		if ($user->avatar != '/storage/avatars/male_avatar.png') {
+			Storage::disk('public')->delete(substr($user->avatar, 9));
+		}
+
+		$user->avatar = $avatarPath;
+		$user->save();
 	}
 
 	public function auth(): UserResource|Response

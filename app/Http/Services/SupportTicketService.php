@@ -143,6 +143,23 @@ class SupportTicketService extends Service
     }
 
     /**
+     * Bulk delete by id, for the comma-separated ids the destroy route takes.
+     *
+     * @param  array<int, string>  $ids
+     */
+    public function destroyMany(array $ids): array
+    {
+        $deleted = SupportTicket::whereIn('id', $ids)->delete();
+
+        return [
+            $deleted > 0,
+            count($ids) > 1
+                ? "Support Tickets Deleted Successfully"
+                : "Support Ticket Deleted Successfully",
+        ];
+    }
+
+    /**
      * Search / filter parameters.
      */
     public function search($query, $request)

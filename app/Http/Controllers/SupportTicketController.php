@@ -7,7 +7,6 @@ use App\Enums\SupportTicketPriority;
 use App\Enums\SupportTicketStatus;
 use App\Http\Resources\SupportTicketResource;
 use App\Http\Services\SupportTicketService;
-use App\Models\SupportTicket;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -100,15 +99,11 @@ class SupportTicketController extends Controller
      */
     public function destroy(int|string $id): JsonResponse
     {
-        $ids = explode(",", $id);
-
-        $deleted = SupportTicket::whereIn('id', $ids)->delete();
+        [$deleted, $message] = $this->service->destroyMany(explode(",", $id));
 
         return response()->json([
-            "deleted" => $deleted > 0,
-            "message" => count($ids) > 1
-                ? "Support Tickets Deleted Successfully"
-                : "Support Ticket Deleted Successfully",
+            "deleted" => $deleted,
+            "message" => $message,
         ], 200);
     }
 }

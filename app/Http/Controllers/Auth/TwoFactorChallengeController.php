@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Http\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +12,11 @@ use Illuminate\Validation\ValidationException;
 
 class TwoFactorChallengeController extends Controller
 {
+    public function __construct(protected AuthService $authService)
+    {
+        //
+    }
+
     public function store(Request $request): JsonResponse
     {
         $request->validate([
@@ -27,7 +32,7 @@ class TwoFactorChallengeController extends Controller
             ]);
         }
 
-        $user = User::find($userId);
+        $user = $this->authService->findUser($userId);
 
         if (! $user) {
             Cache::forget("2fa_pending:{$request->pending_token}");

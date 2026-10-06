@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Http\Services\UserService;
 use App\Support\Spa;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\View\View;
@@ -15,6 +16,11 @@ use Illuminate\Support\Facades\Auth;
 
 class ProfileController extends Controller
 {
+    public function __construct(protected UserService $userService)
+    {
+        //
+    }
+
     /**
      * Show the user's profile settings page.
      */
@@ -31,13 +37,7 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): JsonResponse
     {
-        $request->user()->fill($request->validated());
-
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
-
-        $request->user()->save();
+        $this->userService->updateProfile($request->user(), $request->validated());
 
         return response()->json([
             'saved' => true,
@@ -54,7 +54,7 @@ class ProfileController extends Controller
 
         Auth::logout();
 
-        $user->delete();
+        $this->userService->destroy($user->id);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

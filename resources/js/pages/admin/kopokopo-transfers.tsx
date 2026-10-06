@@ -117,7 +117,9 @@ function SendMoneyForm() {
 			},
 			{
 				onSuccess: () => {
-					toast.success("Transfer initiated")
+					toast.success(
+						`KES ${parsedAmount} has been sent to ${recipientName.trim()}'s Mpesa ${phoneNumber.trim()}`
+					)
 					setRecipientName("")
 					setPhoneNumber("")
 					setAmount("")

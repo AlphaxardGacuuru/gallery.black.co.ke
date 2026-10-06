@@ -4,10 +4,16 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\UpdateNotificationPreferencesRequest;
+use App\Http\Services\UserService;
 use Illuminate\Http\JsonResponse;
 
 class NotificationPreferencesController extends Controller
 {
+    public function __construct(protected UserService $userService)
+    {
+        //
+    }
+
     /**
      * Update which emails the user wants to receive — merged into the same
      * users.settings blob that also holds onboarding progress, so this only
@@ -15,9 +21,7 @@ class NotificationPreferencesController extends Controller
      */
     public function update(UpdateNotificationPreferencesRequest $request): JsonResponse
     {
-        $user = $request->user();
-        $user->settings = array_merge((array) ($user->settings ?? []), $request->validated());
-        $user->save();
+        $this->userService->updateNotificationPreferences($request->user(), $request->validated());
 
         return response()->json([
             'saved' => true,

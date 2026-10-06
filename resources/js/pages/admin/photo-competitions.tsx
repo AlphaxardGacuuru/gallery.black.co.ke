@@ -368,7 +368,10 @@ function WinnerRow({ winner }: { winner: AdminPhotoCompetitionWinner }) {
 
 	function handlePay() {
 		payWinner.mutate(winner.id, {
-			onSuccess: () => toast.success(`Prize sent to ${winner.userName}`),
+			onSuccess: () =>
+				toast.success(
+					`KES ${winner.prizeAmount} has been sent to ${winner.userName}'s Mpesa ${winner.userPhone}`
+				),
 			onError: (error) =>
 				toast.error("Couldn't pay the winner", {
 					description: error.message,

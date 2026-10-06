@@ -375,6 +375,7 @@ export type AdminReferralLeaderboardEntry = {
 	userId: string
 	name: string
 	avatar: string | null
+	phone: string | null
 	referralsCount: number
 	eligibleAmount: number
 }
