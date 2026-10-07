@@ -1,5 +1,6 @@
 export type UserSettings = {
 	installOnboardedAt?: string
+	pwaInstalledAt?: string
 	permissionsOnboardedAt?: string
 	referralOnboardedAt?: string
 	competitionStartedNotification?: boolean

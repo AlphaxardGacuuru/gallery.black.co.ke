@@ -44,4 +44,21 @@ class OnboardingServiceTest extends TestCase
 
         $this->assertNull($other->fresh()->settings->permissionsOnboardedAt ?? null);
     }
+
+    public function test_recording_a_pwa_install_sets_a_distinct_timestamp(): void
+    {
+        $user = User::factory()->create([
+            'settings' => ['installOnboardedAt' => '2026-01-01T00:00:00Z'],
+        ]);
+
+        $this->actingAs($user, 'sanctum');
+        [$status, $message, $updated] = (new OnboardingService)->recordPwaInstalled();
+
+        $this->assertTrue($status);
+        $this->assertSame('Onboarding Updated', $message);
+        $this->assertNotEmpty($updated->settings->pwaInstalledAt ?? null);
+        // The onboarding-modal-seen flag is untouched: recording a real
+        // install is a separate signal, not a replacement for it.
+        $this->assertSame('2026-01-01T00:00:00Z', $updated->settings->installOnboardedAt);
+    }
 }

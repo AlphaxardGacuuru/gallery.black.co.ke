@@ -42,6 +42,7 @@ class UserResource extends JsonResource
             "permissions" => $this->getAllPermissions()->pluck('name')->unique()->values(),
             "twoFactorEnabled" => $this->hasTwoFactorEnabled(),
             "referralsCount" => $this->referrals_made_count ?? $this->referralsMade()->count(),
+            "pushSubscriptionsCount" => $this->push_subscriptions_count ?? $this->pushSubscriptions()->count(),
             "createdAt" => $this->created_at,
         ];
     }

@@ -42,4 +42,15 @@ class OnboardingController extends Controller
             'data' => UserResource::make($user),
         ]);
     }
+
+    public function recordPwaInstalled(): JsonResponse
+    {
+        [$status, $message, $user] = $this->service->recordPwaInstalled();
+
+        return response()->json([
+            'status' => $status,
+            'message' => $message,
+            'data' => UserResource::make($user),
+        ]);
+    }
 }

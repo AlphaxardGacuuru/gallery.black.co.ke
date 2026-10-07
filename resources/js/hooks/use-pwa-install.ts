@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react"
+import Axios from "@/lib/axios"
 
 type BeforeInstallPromptEvent = Event & {
 	prompt: () => Promise<void>
@@ -17,6 +18,26 @@ const listeners = new Set<() => void>()
 
 function notify(): void {
 	listeners.forEach((listener) => listener())
+}
+
+// Distinct from the onboarding modal's installOnboardedAt flag (set on
+// dismiss and on "nothing to prompt for" too, not just real installs);
+// this only ever fires from the browser's own appinstalled event or an
+// "accepted" prompt outcome, so the admin users table can trust it as a
+// genuine installed signal. Guarded so a redundant appinstalled-after-
+// accepted firing (common) doesn't send the request twice.
+let hasRecordedInstall = false
+
+function recordInstalled(): void {
+	if (hasRecordedInstall) {
+		return
+	}
+
+	hasRecordedInstall = true
+
+	Axios.post("api/onboarding/pwa-installed").catch(() => {
+		hasRecordedInstall = false
+	})
 }
 
 function computeIsInstalled(): boolean {
@@ -39,6 +60,7 @@ if (typeof window !== "undefined") {
 	window.addEventListener("appinstalled", () => {
 		deferredPrompt = null
 		installed = true
+		recordInstalled()
 		notify()
 	})
 }
@@ -76,6 +98,7 @@ async function install(): Promise<boolean> {
 
 	if (choice.outcome === "accepted") {
 		installed = true
+		recordInstalled()
 	}
 
 	notify()

@@ -30,6 +30,48 @@ function nameParts(name: string): { firstName: string; lastName?: string } {
 	return { firstName, lastName: rest.join(" ") || undefined }
 }
 
+// Matches email-notification-settings.tsx's own labels, so this reads the
+// same way an admin would see it on the user's own settings page. Email
+// categories are opt-out (default on when the settings key is absent),
+// see EmailNotificationCategory/User::wantsEmail().
+const NOTIFICATION_LABELS: {
+	key:
+		| "competitionStartedNotification"
+		| "competitionWonNotification"
+		| "referralSignupNotification"
+	label: string
+}[] = [
+	{ key: "competitionStartedNotification", label: "Challenge announcements" },
+	{ key: "competitionWonNotification", label: "Challenge results" },
+	{ key: "referralSignupNotification", label: "Referral signups" },
+]
+
+function NotificationsCell({ user }: { user: AdminUser }) {
+	const enabled = [
+		...(user.pushSubscriptionsCount > 0 ? ["Push"] : []),
+		...NOTIFICATION_LABELS.filter(
+			({ key }) => (user.settings?.[key] ?? true) === true
+		).map(({ label }) => label),
+	]
+
+	if (enabled.length === 0) {
+		return <span className="text-xs text-muted-foreground">None</span>
+	}
+
+	return (
+		<div className="flex flex-wrap gap-1">
+			{enabled.map((label) => (
+				<Badge
+					key={label}
+					variant="outline"
+					className="whitespace-nowrap text-xs font-normal">
+					{label}
+				</Badge>
+			))}
+		</div>
+	)
+}
+
 function KopokopoRecipientCell({
 	user,
 	isRegistered,
@@ -161,6 +203,27 @@ export default function AdminUsers() {
 			cell: ({ row }) => (
 				<span className="capitalize">{row.original.gender}</span>
 			),
+		},
+		{
+			id: "installed",
+			header: "Installed",
+			enableSorting: false,
+			cell: ({ row }) =>
+				row.original.settings?.pwaInstalledAt ? (
+					<Badge
+						variant="secondary"
+						className="border-transparent bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+						Installed
+					</Badge>
+				) : (
+					<span className="text-xs text-muted-foreground">Not installed</span>
+				),
+		},
+		{
+			id: "notifications",
+			header: "Notifications",
+			enableSorting: false,
+			cell: ({ row }) => <NotificationsCell user={row.original} />,
 		},
 		{
 			accessorKey: "created_at",

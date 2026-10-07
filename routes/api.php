@@ -65,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('onboarding/install', [OnboardingController::class, 'completeInstall']);
     Route::post('onboarding/permissions', [OnboardingController::class, 'completePermissions']);
     Route::post('onboarding/referral', [OnboardingController::class, 'completeReferral']);
+    Route::post('onboarding/pwa-installed', [OnboardingController::class, 'recordPwaInstalled']);
 
     Route::get('photos/{id}', [PhotoController::class, 'show']);
     Route::post('photos', [PhotoController::class, 'store']);

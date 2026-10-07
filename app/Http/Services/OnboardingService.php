@@ -47,4 +47,23 @@ class OnboardingService extends Service
 
         return [true, 'Onboarding Updated', $user];
     }
+
+    /**
+     * Distinct from installOnboardedAt (which just means the install prompt
+     * was shown/resolved, however it was resolved): this is only ever
+     * called from the frontend's real `appinstalled` event or an "accepted"
+     * install-prompt outcome, so its presence genuinely means the PWA is
+     * installed (admin's "Installed" column relies on that distinction).
+     */
+    public function recordPwaInstalled(): array
+    {
+        $user = User::query()->findOrFail($this->id);
+
+        $settings = (array) ($user->settings ?? []);
+        $settings['pwaInstalledAt'] = now()->toIso8601String();
+        $user->settings = $settings;
+        $user->save();
+
+        return [true, 'Onboarding Updated', $user];
+    }
 }

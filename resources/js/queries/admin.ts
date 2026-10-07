@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Axios from "@/lib/axios"
+import type { UserSettings } from "@/types/auth"
 
 export type AdminDashboardData = {
 	totals: {
@@ -29,6 +30,8 @@ export type AdminUser = {
 	gender: "male" | "female" | "other" | null
 	avatar: string | null
 	verified: boolean
+	settings: UserSettings | null
+	pushSubscriptionsCount: number
 	createdAt: string
 }
 
