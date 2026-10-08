@@ -32,6 +32,8 @@ export type AdminUser = {
 	verified: boolean
 	settings: UserSettings | null
 	pushSubscriptionsCount: number
+	/** Who this user is credited to as a referral, if anyone. */
+	referredBy: { id: string; name: string } | null
 	createdAt: string
 }
 
@@ -40,8 +42,14 @@ type AdminUsersResponse = {
 	meta: { current_page: number; last_page: number; total: number }
 }
 
-export function useAdminUsers(search: string, page = 1, perPage = 20) {
+export function useAdminUsers(
+	search: string,
+	page = 1,
+	perPage = 20,
+	enabled = true
+) {
 	return useQuery({
+		enabled,
 		queryKey: ["admin", "users", search, page, perPage],
 		queryFn: () =>
 			Axios.get<AdminUsersResponse>("api/admin/users", {
@@ -58,6 +66,29 @@ export function useToggleUserVerified() {
 			Axios.patch(`api/admin/users/${userId}/verify`, { verified }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
+		},
+	})
+}
+
+/**
+ * Credit a user to a referrer by hand, for someone who signed up without a
+ * referral link. Refreshes both the users table (its "Referred by" column)
+ * and the referrals page's totals/leaderboard.
+ */
+export function useAttachReferrer() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: ({
+			userId,
+			referrerId,
+		}: {
+			userId: string
+			referrerId: string
+		}) => Axios.post(`api/admin/users/${userId}/referrer`, { referrerId }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
+			queryClient.invalidateQueries({ queryKey: ["admin", "referrals"] })
 		},
 	})
 }

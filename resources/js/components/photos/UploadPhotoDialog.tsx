@@ -55,6 +55,35 @@ function errorMessage(error: unknown, fallback: string): string {
 	return error instanceof Error ? error.message : fallback
 }
 
+/** FilePond's own `error()` callback only shows whatever string we pass it,
+ *  so a request that fails before reaching our .catch() (a dropped
+ *  connection, a proxy rejecting an oversized body before Laravel ever
+ *  sees it) needs to be told apart from a real 422 validation message,
+ *  otherwise every failure looks identical and undiagnosable. */
+function filePondErrorMessage(error: unknown, fallback: string): string {
+	if (
+		!isAxiosError<{ message?: string; errors?: Record<string, string[]> }>(
+			error
+		)
+	) {
+		return error instanceof Error ? error.message : fallback
+	}
+
+	if (!error.response) {
+		return "Couldn't reach the server. Check your connection and try again."
+	}
+
+	if (error.response.status === 413) {
+		return "That photo is too large to upload."
+	}
+
+	return (
+		error.response.data.errors?.["filepond-photo"]?.[0] ??
+		error.response.data.message ??
+		`${fallback} (error ${error.response.status})`
+	)
+}
+
 /** Replaces the disabled "Already submitted" pill when the extra-slot
  *  feature is on, walks idle -> buying -> waiting for the STK push to be
  *  approved on the user's phone -> paid (upload dialog takes over) or
@@ -280,7 +309,7 @@ export function UploadPhotoDialog({
 											if (isCancel(requestError)) {
 												return
 											}
-											error("Upload failed")
+											error(filePondErrorMessage(requestError, "Upload failed"))
 										})
 
 									return {
@@ -295,7 +324,14 @@ export function UploadPhotoDialog({
 										FilePondController.destroyPhoto.url(uniqueFileId)
 									)
 										.then(() => load())
-										.catch(() => error("Could not remove upload"))
+										.catch((requestError) =>
+											error(
+												filePondErrorMessage(
+													requestError,
+													"Could not remove upload"
+												)
+											)
+										)
 								},
 							}}
 							onremovefile={() => setTemporaryUploadId(null)}

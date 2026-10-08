@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\URL;
@@ -118,6 +119,14 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     public function referralsMade(): HasMany
     {
         return $this->hasMany(Referral::class, 'referrer_id');
+    }
+
+    /**
+     * Who referred this user, if anyone (a user can only be referred once).
+     */
+    public function referral(): HasOne
+    {
+        return $this->hasOne(Referral::class, 'referred_id');
     }
 
     /*

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\PhotoCompetitionEndedNotification;
 use App\Notifications\PhotoCompetitionStartedNotification;
 use App\Notifications\PhotoCompetitionWonNotification;
+use App\Notifications\PhotoLikedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
@@ -115,6 +116,30 @@ class PhotoCompetitionTest extends TestCase
             ->assertJsonPath('data.isLikedByViewer', false);
 
         $this->assertSame(0, $photo->fresh()->likes_count);
+    }
+
+    public function test_liking_a_photo_notifies_its_owner(): void
+    {
+        Notification::fake();
+        Storage::fake('public');
+
+        $this->artisan('app:start-photo-competition');
+        $competition = PhotoCompetition::first();
+        $author = User::factory()->create();
+        $viewer = User::factory()->create();
+
+        $photo = $competition->photos()->create([
+            'user_id' => $author->id,
+            'disk' => 'public',
+            'path' => 'photos/test.jpg',
+        ]);
+
+        $this->actingAs($viewer)
+            ->postJson("/api/photos/{$photo->id}/like")
+            ->assertOk();
+
+        Notification::assertSentTo($author, PhotoLikedNotification::class);
+        Notification::assertNothingSentTo($viewer);
     }
 
     public function test_end_command_creates_top_ranked_winner_rows(): void

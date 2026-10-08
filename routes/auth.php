@@ -86,6 +86,8 @@ Route::middleware('auth:sanctum')->group(function() {
 /*
  * Social logins */
 Route::get('login/{website}/redirect', [AuthenticatedSessionController::class, 'redirectToProvider'])
-    ->middleware('guest');
+    ->middleware('guest')
+    ->name('login.provider.redirect');
 
-Route::get('login/{website}/callback', [AuthenticatedSessionController::class, 'handleProviderCallback']);
+Route::get('login/{website}/callback', [AuthenticatedSessionController::class, 'handleProviderCallback'])
+    ->name('login.provider.callback');

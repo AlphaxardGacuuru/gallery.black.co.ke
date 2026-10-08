@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Events\PhotoLiked;
+use App\Events\PhotoLikedEvent;
 use App\Http\Controllers\Controller;
 use App\Models\Photo;
 use App\Models\PhotoLike;
@@ -67,7 +67,7 @@ class AdminPhotoLikeController extends Controller
         }
 
         $photo->refresh();
-        broadcast(new PhotoLiked($photo))->toOthers();
+        broadcast(new PhotoLikedEvent($photo, $user, ! $like))->toOthers();
 
         return response()->json([
             'data' => [

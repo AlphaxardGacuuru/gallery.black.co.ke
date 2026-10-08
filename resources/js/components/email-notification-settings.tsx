@@ -11,13 +11,15 @@ type PreferenceKey =
 	| "competitionStartedNotification"
 	| "competitionWonNotification"
 	| "referralSignupNotification"
+	| "photoLikedNotification"
 
 const CATEGORIES: { key: PreferenceKey; label: string; description: string }[] =
 	[
 		{
 			key: "competitionStartedNotification",
 			label: "Challenge announcements",
-			description: "Email me when a weekly challenge opens, reaches its halfway point, or ends.",
+			description:
+				"Email me when a weekly challenge opens, reaches its halfway point, or ends.",
 		},
 		{
 			key: "competitionWonNotification",
@@ -28,6 +30,11 @@ const CATEGORIES: { key: PreferenceKey; label: string; description: string }[] =
 			key: "referralSignupNotification",
 			label: "Referral signups",
 			description: "Email me when someone joins using my referral link.",
+		},
+		{
+			key: "photoLikedNotification",
+			label: "Photo likes",
+			description: "Email me when someone likes one of my photos.",
 		},
 	]
 
@@ -57,6 +64,7 @@ export default function EmailNotificationSettings() {
 					),
 					competitionWonNotification: isEnabled("competitionWonNotification"),
 					referralSignupNotification: isEnabled("referralSignupNotification"),
+					photoLikedNotification: isEnabled("photoLikedNotification"),
 					[key]: checked,
 				},
 			})

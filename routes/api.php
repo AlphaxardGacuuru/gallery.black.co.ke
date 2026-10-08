@@ -102,6 +102,7 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::get('referrals/recent', [AdminReferralController::class, 'recent'])->name('referrals.recent');
         Route::put('referrals/settings', [AdminReferralController::class, 'updateSettings'])->name('referrals.settings');
         Route::post('referrals/{user}/pay', [AdminReferralController::class, 'pay'])->name('referrals.pay');
+        Route::post('users/{user}/referrer', [AdminReferralController::class, 'attach'])->name('users.referrer');
         Route::get('photos/{photo}/likes', [AdminPhotoLikeController::class, 'index'])->name('photos.likes.index');
         Route::post('photos/{photo}/likes/{user}', [AdminPhotoLikeController::class, 'toggle'])->name('photos.likes.toggle');
     });

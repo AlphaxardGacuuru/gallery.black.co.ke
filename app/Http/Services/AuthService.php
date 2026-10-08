@@ -17,8 +17,12 @@ class AuthService extends Service
 	 * Create an account from the email/password signup form and credit the
 	 * referrer, if any.
 	 */
-	public function register(string $name, string $email, string $password, mixed $referrerId): User
-	{
+	public function register(
+		string $name,
+		string $email,
+		string $password,
+		mixed $referrerId
+	): User {
 		$user = new User;
 		$user->name = $name;
 		$user->email = $email;
@@ -38,8 +42,10 @@ class AuthService extends Service
 	 * Find the local account for a social login (by provider id, then by
 	 * email) and sync its details, or create one if this is a new user.
 	 */
-	public function findOrCreateFromSocialite(SocialiteUser $socialUser, mixed $referrerId): User
-	{
+	public function findOrCreateFromSocialite(
+		SocialiteUser $socialUser,
+		mixed $referrerId
+	): User {
 		$avatarUrl = $socialUser->getAvatar();
 
 		$user = User::query()

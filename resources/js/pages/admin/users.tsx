@@ -1,4 +1,5 @@
-import { Loader2 } from "lucide-react"
+import { isAxiosError } from "axios"
+import { Check, Loader2 } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import Heading from "@/components/heading"
@@ -7,10 +8,20 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import VerifiedBadge from "@/components/verified-badge"
 import { normalizePhoneNumber } from "@/lib/phone"
+import { cn } from "@/lib/utils"
 import { Head } from "@/lib/spa"
 import toast from "@/lib/toast"
 import {
@@ -18,6 +29,7 @@ import {
 	useAddKopokopoRecipient,
 	useAdminKopokopoRecipients,
 	useAdminUsers,
+	useAttachReferrer,
 	useToggleUserVerified,
 } from "@/queries/admin"
 
@@ -39,11 +51,13 @@ const NOTIFICATION_LABELS: {
 		| "competitionStartedNotification"
 		| "competitionWonNotification"
 		| "referralSignupNotification"
+		| "photoLikedNotification"
 	label: string
 }[] = [
 	{ key: "competitionStartedNotification", label: "Challenge announcements" },
 	{ key: "competitionWonNotification", label: "Challenge results" },
 	{ key: "referralSignupNotification", label: "Referral signups" },
+	{ key: "photoLikedNotification", label: "Photo likes" },
 ]
 
 function NotificationsCell({ user }: { user: AdminUser }) {
@@ -101,7 +115,8 @@ function KopokopoRecipientCell({
 				phoneNumber: user.phone!,
 			},
 			{
-				onSuccess: () => toast.success(`${user.name} registered as a recipient`),
+				onSuccess: () =>
+					toast.success(`${user.name} registered as a recipient`),
 				onError: (error) =>
 					toast.error("Couldn't register this recipient", {
 						description: error.message,
@@ -122,6 +137,128 @@ function KopokopoRecipientCell({
 	)
 }
 
+/**
+ * "Referred by" cell: the referrer's name, or, for someone who signed up
+ * without a referral link, a dialog to search for and credit a referrer.
+ * A referral can't be changed once set (same as the signup flow).
+ */
+function ReferredByCell({ user }: { user: AdminUser }) {
+	const [open, setOpen] = useState(false)
+	const [search, setSearch] = useState("")
+	const [referrer, setReferrer] = useState<AdminUser | null>(null)
+	const { data, isFetching } = useAdminUsers(search, 1, 8, open)
+	const attachReferrer = useAttachReferrer()
+
+	if (user.referredBy) {
+		return <span>{user.referredBy.name}</span>
+	}
+
+	const candidates = (data?.data ?? []).filter(
+		(candidate) => candidate.id !== user.id
+	)
+
+	function handleOpenChange(nextOpen: boolean) {
+		setOpen(nextOpen)
+
+		if (!nextOpen) {
+			setSearch("")
+			setReferrer(null)
+		}
+	}
+
+	function handleSave() {
+		if (!referrer) return
+
+		attachReferrer.mutate(
+			{ userId: user.id, referrerId: referrer.id },
+			{
+				onSuccess: () => {
+					toast.success(`${user.name} credited to ${referrer.name}`)
+					handleOpenChange(false)
+				},
+				onError: (error) =>
+					toast.error("Couldn't set the referrer", {
+						description: isAxiosError<{ message?: string }>(error)
+							? error.response?.data?.message
+							: undefined,
+					}),
+			}
+		)
+	}
+
+	return (
+		<Dialog
+			open={open}
+			onOpenChange={handleOpenChange}>
+			<DialogTrigger asChild>
+				<Button
+					variant="outline"
+					size="sm">
+					Set referrer
+				</Button>
+			</DialogTrigger>
+			<DialogContent>
+				<DialogTitle>Who referred {user.name}?</DialogTitle>
+				<DialogDescription>
+					Use this for someone who signed up without a referral link. Once set,
+					the referral counts toward the referrer's rewards and can't be changed
+					here.
+				</DialogDescription>
+
+				<Input
+					label="Search by name"
+					value={search}
+					onChange={(event) => setSearch(event.target.value)}
+					autoFocus
+				/>
+
+				<div className="max-h-64 space-y-1 overflow-y-auto">
+					{candidates.length === 0 ? (
+						<p className="py-4 text-center text-sm text-muted-foreground">
+							{isFetching ? "Searching…" : "No users found"}
+						</p>
+					) : (
+						candidates.map((candidate) => (
+							<button
+								key={candidate.id}
+								type="button"
+								onClick={() => setReferrer(candidate)}
+								className={cn(
+									"flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent",
+									referrer?.id === candidate.id && "bg-accent"
+								)}>
+								<span className="min-w-0 flex-1 truncate">
+									<span className="font-medium">{candidate.name}</span>{" "}
+									<span className="text-muted-foreground">
+										{candidate.email}
+									</span>
+								</span>
+								{referrer?.id === candidate.id && (
+									<Check className="size-4 shrink-0" />
+								)}
+							</button>
+						))
+					)}
+				</div>
+
+				<DialogFooter className="gap-2">
+					<DialogClose asChild>
+						<Button variant="secondary">Cancel</Button>
+					</DialogClose>
+					<Button
+						disabled={!referrer || attachReferrer.isPending}
+						onClick={handleSave}>
+						{attachReferrer.isPending && (
+							<Loader2 className="size-3.5 animate-spin" />
+						)}
+						Save
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	)
+}
+
 export default function AdminUsers() {
 	const [search, setSearch] = useState("")
 	const [page, setPage] = useState(1)
@@ -132,7 +269,10 @@ export default function AdminUsers() {
 
 	const registeredPhones = new Set(
 		(recipients ?? [])
-			.filter((recipient) => recipient.type === "mobile_wallet" && recipient.phoneNumber)
+			.filter(
+				(recipient) =>
+					recipient.type === "mobile_wallet" && recipient.phoneNumber
+			)
 			.map((recipient) => recipient.phoneNumber!)
 	)
 
@@ -203,6 +343,12 @@ export default function AdminUsers() {
 			cell: ({ row }) => (
 				<span className="capitalize">{row.original.gender}</span>
 			),
+		},
+		{
+			id: "referredBy",
+			header: "Referred by",
+			enableSorting: false,
+			cell: ({ row }) => <ReferredByCell user={row.original} />,
 		},
 		{
 			id: "installed",

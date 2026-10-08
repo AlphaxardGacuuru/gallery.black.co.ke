@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\PhotoLiked;
+use App\Events\PhotoLikedEvent;
 use App\Http\Services\PhotoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,7 +24,7 @@ class PhotoLikeController extends Controller
         ['photo' => $photo, 'liked' => $liked] = $this->photoService->like($request, $id);
 
         if ($liked) {
-            broadcast(new PhotoLiked($photo))->toOthers();
+            broadcast(new PhotoLikedEvent($photo, $request->user()))->toOthers();
         }
 
         return response()->json([

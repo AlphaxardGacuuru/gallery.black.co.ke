@@ -17,3 +17,7 @@ If `./vendor/bin/sail` or `docker-compose.yml` is missing from a checkout, it ha
 # Writing style
 
 Do not use the em dash character ("—") anywhere in this repo: not in code comments, commit messages, UI copy, or docs. Use a period, comma, or parentheses instead.
+
+# Naming conventions
+
+Events and listeners must carry the matching suffix: an event class ends in `Event` (e.g. `UserCreatedEvent`) and the listener that handles it ends in `Listener` (e.g. `UserCreatedListener`).

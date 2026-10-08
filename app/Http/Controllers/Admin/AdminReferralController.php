@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Events\KopokopoTransferInitiated;
+use App\Events\ReferralAttachedEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Services\KopokopoTransferService;
 use App\Http\Services\Service;
@@ -11,6 +12,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class AdminReferralController extends Controller
 {
@@ -88,6 +90,47 @@ class AdminReferralController extends Controller
                 'total' => $referrals->total(),
             ],
         ]);
+    }
+
+    /**
+     * Credit $user to a referrer by hand, for someone who signed up without
+     * using a referral link. Same rules as Referral::record(): no
+     * self-referral, and a user can only ever be referred once. The
+     * referrer is notified via ReferralAttachedEvent, the same notification as a
+     * signup through their link.
+     */
+    public function attach(Request $request, User $user): JsonResponse
+    {
+        $data = $request->validate([
+            'referrerId' => ['required', 'string', 'exists:users,id'],
+        ]);
+
+        if ($data['referrerId'] === $user->id) {
+            throw ValidationException::withMessages([
+                'referrerId' => 'A user can\'t refer themselves.',
+            ]);
+        }
+
+        if ($user->referral()->exists()) {
+            throw ValidationException::withMessages([
+                'referrerId' => "{$user->name} is already credited to a referrer.",
+            ]);
+        }
+
+        $referral = Referral::query()->create([
+            'referrer_id' => $data['referrerId'],
+            'referred_id' => $user->id,
+        ]);
+
+        ReferralAttachedEvent::dispatch($referral);
+
+        return response()->json([
+            'data' => [
+                'id' => $referral->id,
+                'referrerName' => $referral->referrer?->name,
+                'referredName' => $user->name,
+            ],
+        ], 201);
     }
 
     /**
