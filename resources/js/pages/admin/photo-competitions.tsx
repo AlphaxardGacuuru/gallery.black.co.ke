@@ -370,7 +370,7 @@ function WinnerRow({ winner }: { winner: AdminPhotoCompetitionWinner }) {
 		payWinner.mutate(winner.id, {
 			onSuccess: () =>
 				toast.success(
-					`KES ${winner.prizeAmount} has been sent to ${winner.userName}'s Mpesa ${winner.userPhone}`
+					`Payout to ${winner.userName}'s Mpesa ${winner.userPhone} initiated, awaiting confirmation from Kopokopo`
 				),
 			onError: (error) =>
 				toast.error("Couldn't pay the winner", {
@@ -396,6 +396,8 @@ function WinnerRow({ winner }: { winner: AdminPhotoCompetitionWinner }) {
 			</div>
 			{winner.prizePaidAt ? (
 				<Badge variant="secondary">Paid</Badge>
+			) : winner.kopokopoReference ? (
+				<Badge variant="outline">Awaiting confirmation</Badge>
 			) : winner.userPhone ? (
 				// Kopokopo's sendMoney() call takes the phone number/amount
 				// directly (see KopokopoTransferService::payWinner()), it

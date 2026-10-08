@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Events\KopokopoTransferInitiated;
 use App\Http\Controllers\Controller;
 use App\Http\Services\KopokopoTransferService;
-use App\Http\Services\Service;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoCompetitionWinner;
@@ -78,6 +76,7 @@ class AdminPhotoCompetitionController extends Controller
                     'userPhone' => $winner->user?->phone,
                     'prizeAmount' => $winner->prize_amount,
                     'prizePaidAt' => $winner->prize_paid_at,
+                    'kopokopoReference' => $winner->kopokopo_reference,
                 ])->values(),
             ]),
             'meta' => [
@@ -231,23 +230,10 @@ class AdminPhotoCompetitionController extends Controller
     {
         [$status, $message, $data] = $this->kopokopoTransferService->payWinner($winner);
 
-        if ($status === true) {
-            $user = $winner->user;
-
-            if ($user?->phone) {
-                KopokopoTransferInitiated::dispatch(
-                    Service::normalizePhoneNumber($user->phone),
-                    (float) $winner->prize_amount,
-                    $user->name,
-                    'Black Gallery weekly challenge prize (#' . $winner->position . ')',
-                );
-            }
-        }
-
         return response()->json([
             'status' => $status,
             'message' => $message,
-            'data' => $status ? ['prizePaidAt' => $winner->fresh()->prize_paid_at] : $data,
+            'data' => $status ? ['kopokopoReference' => $winner->fresh()->kopokopo_reference] : $data,
         ]);
     }
 

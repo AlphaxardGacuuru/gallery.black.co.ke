@@ -107,6 +107,7 @@ export type AdminPhotoCompetitionWinner = {
 	userPhone: string | null
 	prizeAmount: number
 	prizePaidAt: string | null
+	kopokopoReference: string | null
 }
 
 export type AdminPhotoCompetitionSummary = {

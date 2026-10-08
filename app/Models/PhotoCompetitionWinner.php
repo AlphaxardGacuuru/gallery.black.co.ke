@@ -19,6 +19,7 @@ class PhotoCompetitionWinner extends Model
         'position',
         'prize_amount',
         'prize_paid_at',
+        'kopokopo_reference',
     ];
 
     protected $casts = [

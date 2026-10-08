@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Events\KopokopoTransferRecordedEvent;
 use App\Http\Resources\KopokopoTransferResource;
 use App\Models\KopokopoTransfer;
 use App\Models\PhotoCompetitionWinner;
@@ -48,6 +49,10 @@ class KopokopoTransferService extends Service
         $kopokopoTransfer->metadata = $attributes["metadata"] ?? null;
         $saved = $kopokopoTransfer->save();
 
+        if ($saved) {
+            KopokopoTransferRecordedEvent::dispatch($kopokopoTransfer);
+        }
+
         return [$saved, "Payment Saved", $kopokopoTransfer];
     }
 
@@ -66,7 +71,11 @@ class KopokopoTransferService extends Service
         $tokenResponse = $K2->TokenService()->getToken();
 
         if (($tokenResponse['status'] ?? null) !== 'success') {
-            return ['error', 'Could not authenticate with Kopokopo', $tokenResponse];
+            return [
+                false,
+                $this->kopokopoErrorMessage($tokenResponse, 'Could not authenticate with Kopokopo'),
+                $tokenResponse,
+            ];
         }
 
         $accessToken = $tokenResponse['data']['accessToken'];
@@ -92,18 +101,46 @@ class KopokopoTransferService extends Service
         ]);
 
         if (($response['status'] ?? null) === 'success') {
-            return [true, 'Transfer Initiated', $response];
+            return [true, 'Transfer initiated, awaiting confirmation from Kopokopo', $response];
         }
 
         Log::error('Kopokopo transfer failed', $response);
 
-        return [false, 'Kopokopo Transfer Failed', $response];
+        return [false, $this->kopokopoErrorMessage($response, 'Kopokopo Transfer Failed'), $response];
     }
 
     /**
-     * Pay one winning position's prize to its submitter via Kopokopo, then
-     * mark that specific position as paid on success. One row = one
-     * recipient = one transfer.
+     * Kopokopo's K2 SDK normalizes every failure (a thrown SDK validation
+     * exception, a rejected HTTP response, or a token-request failure) into
+     * `['status' => 'error', 'data' => ...]`, but `data` itself is shaped
+     * differently depending on which of those it was: a plain string for a
+     * client-side validation exception, `['errorMessage' => ...]` for a
+     * rejected send-money request, or `['errorDescription' => ...]` for a
+     * rejected token request. This picks out whichever one is actually
+     * present instead of a message that can't say what Kopokopo reported.
+     */
+    private function kopokopoErrorMessage(array $response, string $fallback): string
+    {
+        $data = $response['data'] ?? null;
+
+        if (is_string($data)) {
+            return $data;
+        }
+
+        if (is_array($data)) {
+            return $data['errorMessage'] ?? $data['errorDescription'] ?? $fallback;
+        }
+
+        return $fallback;
+    }
+
+    /**
+     * Pay one winning position's prize to its submitter via Kopokopo. A
+     * successful initiation only means Kopokopo accepted the request, not
+     * that the money has arrived, so this records kopokopo_reference
+     * (an in-flight marker) rather than prize_paid_at; that only gets set
+     * once their webhook confirms the transfer actually completed (see
+     * KopokopoTransferRecordedListener). One row = one recipient = one transfer.
      *
      * @return array{0: bool, 1: string, 2: mixed}
      */
@@ -111,6 +148,10 @@ class KopokopoTransferService extends Service
     {
         if ($winner->prize_paid_at) {
             return [false, 'This prize has already been paid', null];
+        }
+
+        if ($winner->kopokopo_reference) {
+            return [false, 'A payout for this winner is already in progress', null];
         }
 
         $user = $winner->user;
@@ -133,7 +174,7 @@ class KopokopoTransferService extends Service
         [$status, $message, $data] = $this->initiateTransfer($request);
 
         if ($status === true) {
-            $winner->update(['prize_paid_at' => now()]);
+            $winner->update(['kopokopo_reference' => $this->locationId($data['location'] ?? '')]);
         }
 
         return [$status === true, $message, $data];
@@ -141,9 +182,12 @@ class KopokopoTransferService extends Service
 
     /**
      * Pay a referrer for however many complete referral-reward batches
-     * they've accumulated (see Referral::eligiblePayout()), in a single
-     * transfer, then mark exactly those referrals paid with their even
-     * split of the reward on success.
+     * they've accumulated (see Referral::eligiblePayout()). As with
+     * payWinner(), a successful initiation only means Kopokopo accepted the
+     * request, so this records kopokopo_reference (and the per-referral
+     * amount they'll be paid) rather than marking the referrals paid
+     * outright; paid_at only gets set once the webhook confirms the
+     * transfer actually completed (see KopokopoTransferRecordedListener).
      *
      * @param  array<int, string>  $referralIds  The specific unpaid referrals this payout covers.
      * @return array{0: bool, 1: string, 2: mixed}
@@ -175,11 +219,27 @@ class KopokopoTransferService extends Service
             Referral::query()
                 ->whereIn('id', $referralIds)
                 ->update([
-                    'paid_at' => now(),
                     'amount_paid' => $perReferralAmount,
+                    'kopokopo_reference' => $this->locationId($data['location'] ?? ''),
                 ]);
         }
 
         return [$status === true, $message, $data];
+    }
+
+    /**
+     * The trailing UUID segment of a Kopokopo Location URL, e.g.
+     * ".../send_money/{this}", the same id that later shows up as the
+     * webhook payload's top-level "data.id".
+     */
+    private function locationId(string $location): ?string
+    {
+        if ($location === '') {
+            return null;
+        }
+
+        $segments = explode('/', rtrim($location, '/'));
+
+        return end($segments) ?: null;
     }
 }

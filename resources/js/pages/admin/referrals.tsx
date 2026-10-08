@@ -157,7 +157,7 @@ function LeaderboardEntryRow({
 		payReferrer.mutate(entry.userId, {
 			onSuccess: () =>
 				toast.success(
-					`KES ${entry.eligibleAmount} has been sent to ${entry.name}'s Mpesa ${entry.phone}`
+					`Payout to ${entry.name}'s Mpesa ${entry.phone} initiated, awaiting confirmation from Kopokopo`
 				),
 			onError: (error) =>
 				toast.error("Couldn't pay this referrer", {

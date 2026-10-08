@@ -58,7 +58,7 @@ class PhotoCompetitionWinnersPayoutTest extends TestCase
         // The real Kopokopo/M-Pesa network call happens inside
         // initiateTransfer() via a fresh K2 SDK client the service builds
         // itself (no DI seam) — partial-mocking just that boundary lets the
-        // rest of payWinner()'s real logic run (guards, the prize_paid_at
+        // rest of payWinner()'s real logic run (guards, the kopokopo_reference
         // update) while asserting the *request it builds* carries the
         // winner's real prize amount, not the KES 20 that was hardcoded
         // before this change.
@@ -66,13 +66,69 @@ class PhotoCompetitionWinnersPayoutTest extends TestCase
             $mock->shouldReceive('initiateTransfer')
                 ->once()
                 ->withArgs(fn($request) => (int) $request->input('amount') === 750)
-                ->andReturn([true, 'Transfer Initiated', []]);
+                ->andReturn([true, 'Transfer initiated, awaiting confirmation from Kopokopo', [
+                    'status' => 'success',
+                    'location' => 'https://api.kopokopo.com/api/v1/send_money/winner-transfer-123',
+                ]]);
         });
 
         $response = $this->actingAs($this->admin(), 'sanctum')
             ->postJson("/api/admin/photo-competition-winners/{$winner->id}/pay");
 
-        $response->assertOk()->assertJsonPath('status', true);
+        $response->assertOk()
+            ->assertJsonPath('status', true)
+            ->assertJsonPath('data.kopokopoReference', 'winner-transfer-123');
+
+        $winner->refresh();
+        $this->assertNull($winner->prize_paid_at);
+        $this->assertSame('winner-transfer-123', $winner->kopokopo_reference);
+
+        // Paying it off is only initiated here, it isn't confirmed paid,
+        // and the recipient isn't notified, until Kopokopo's webhook
+        // confirms the transfer actually completed (see
+        // test_a_confirmed_webhook_marks_the_winner_paid_and_notifies_them
+        // below).
+        Event::assertNotDispatched(KopokopoTransferInitiated::class);
+    }
+
+    public function test_a_second_pay_attempt_is_rejected_while_one_is_already_in_progress(): void
+    {
+        $winner = PhotoCompetitionWinner::factory()->create([
+            'user_id' => User::factory()->create(['phone' => '0700123456'])->id,
+            'kopokopo_reference' => 'already-in-flight',
+        ]);
+
+        $service = app(KopokopoTransferService::class);
+        [$status, $message] = $service->payWinner($winner);
+
+        $this->assertFalse($status);
+        $this->assertStringContainsString('already in progress', $message);
+    }
+
+    public function test_a_confirmed_webhook_marks_the_winner_paid_and_notifies_them(): void
+    {
+        Event::fake([KopokopoTransferInitiated::class]);
+
+        $user = User::factory()->create(['phone' => '0700123456']);
+        $winner = PhotoCompetitionWinner::factory()->create([
+            'user_id' => $user->id,
+            'prize_amount' => 750,
+            'kopokopo_reference' => 'winner-transfer-123',
+        ]);
+
+        $this->postJson('/api/kopokopo-transfers', [
+            'data' => [
+                'id' => 'winner-transfer-123',
+                'attributes' => [
+                    'status' => 'Processed',
+                    'created_at' => now()->toIso8601String(),
+                    'currency' => 'KES',
+                    'destinations' => [['amount' => 750]],
+                    'transfer_batches' => [['status' => 'Transferred']],
+                    'metadata' => [],
+                ],
+            ],
+        ])->assertOk();
 
         $this->assertNotNull($winner->fresh()->prize_paid_at);
 
@@ -80,6 +136,31 @@ class PhotoCompetitionWinnersPayoutTest extends TestCase
             KopokopoTransferInitiated::class,
             fn(KopokopoTransferInitiated $event): bool => $event->amount === 750.0,
         );
+    }
+
+    public function test_a_failed_webhook_clears_the_reference_so_the_winner_can_be_retried(): void
+    {
+        $winner = PhotoCompetitionWinner::factory()->create([
+            'user_id' => User::factory()->create(['phone' => '0700123456'])->id,
+            'kopokopo_reference' => 'winner-transfer-456',
+        ]);
+
+        $this->postJson('/api/kopokopo-transfers', [
+            'data' => [
+                'id' => 'winner-transfer-456',
+                'attributes' => [
+                    'status' => 'Failed',
+                    'created_at' => now()->toIso8601String(),
+                    'currency' => 'KES',
+                    'destinations' => [['amount' => 750]],
+                    'metadata' => [],
+                ],
+            ],
+        ])->assertOk();
+
+        $winner->refresh();
+        $this->assertNull($winner->prize_paid_at);
+        $this->assertNull($winner->kopokopo_reference);
     }
 
     public function test_paying_an_already_paid_winner_fails_without_a_transfer(): void

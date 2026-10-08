@@ -17,6 +17,7 @@ class Referral extends Model
         'referred_id',
         'paid_at',
         'amount_paid',
+        'kopokopo_reference',
     ];
 
     protected $casts = [
@@ -34,9 +35,16 @@ class Referral extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Not yet paid, and not already in the middle of a payout attempt
+     * (kopokopo_reference is set between initiating a transfer and
+     * Kopokopo's webhook confirming it, see
+     * KopokopoTransferService::payReferrer()), otherwise the same batch
+     * could be paid out twice while the first transfer is still pending.
+     */
     public function scopeUnpaid(Builder $query): Builder
     {
-        return $query->whereNull('paid_at');
+        return $query->whereNull('paid_at')->whereNull('kopokopo_reference');
     }
 
     /**

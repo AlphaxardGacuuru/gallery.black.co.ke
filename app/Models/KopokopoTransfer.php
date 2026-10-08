@@ -54,4 +54,20 @@ class KopokopoTransfer extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Kopokopo's send-money status isn't a fixed enum we can exhaustively
+     * match (no failure-case sample ships with the SDK), so these bucket
+     * by keyword rather than an exact-value comparison. Mirrors the admin
+     * UI's own badge-coloring heuristic in kopokopo-transfers.tsx.
+     */
+    public function isConfirmedSuccess(): bool
+    {
+        return (bool) preg_match('/process|transfer|complet|success/i', (string) $this->status);
+    }
+
+    public function isConfirmedFailure(): bool
+    {
+        return (bool) preg_match('/fail|reject|declin|error/i', (string) $this->status);
+    }
 }

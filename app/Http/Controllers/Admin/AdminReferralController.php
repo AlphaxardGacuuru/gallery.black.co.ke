@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Events\KopokopoTransferInitiated;
 use App\Events\ReferralAttachedEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Services\KopokopoTransferService;
-use App\Http\Services\Service;
 use App\Models\Referral;
 use App\Models\Setting;
 use App\Models\User;
@@ -173,15 +171,6 @@ class AdminReferralController extends Controller
             $payout['referralIds'],
             $payout['perReferralAmount'],
         );
-
-        if ($status === true) {
-            KopokopoTransferInitiated::dispatch(
-                Service::normalizePhoneNumber($user->phone),
-                (float) $payout['totalAmount'],
-                $user->name,
-                'Black Gallery referral reward',
-            );
-        }
 
         return response()->json([
             'status' => $status,
