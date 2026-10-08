@@ -278,6 +278,8 @@ export type AdminKopokopoTransfer = {
 	kopokopoCreatedAt: string | null
 	amount: string
 	currency: string | null
+	status: string | null
+	errors: unknown
 	transferBatches: unknown
 	metadata: unknown
 	createdAt: string

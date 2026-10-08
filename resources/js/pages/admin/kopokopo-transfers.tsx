@@ -3,6 +3,7 @@ import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Head } from "@/lib/spa"
 import Heading from "@/components/heading"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
@@ -26,6 +27,23 @@ const RECIPIENT_TYPES: { value: KopokopoRecipientType; label: string }[] = [
 
 function recipientTypeLabel(type: KopokopoRecipientType): string {
 	return RECIPIENT_TYPES.find((option) => option.value === type)?.label ?? type
+}
+
+/** Kopokopo's send-money status strings (e.g. "Processed", "Transferred",
+ *  "Failed", "Pending") aren't a fixed enum we can exhaustively match, so
+ *  this buckets by keyword rather than an exact-value switch. */
+function statusBadgeClassName(status: string | null): string {
+	const normalized = status?.toLowerCase() ?? ""
+
+	if (/fail|reject|declin|error/.test(normalized)) {
+		return "border-transparent bg-destructive/10 text-destructive"
+	}
+
+	if (/process|transfer|complet|success/.test(normalized)) {
+		return "border-transparent bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+	}
+
+	return ""
 }
 
 function recipientSummary(recipient: AdminKopokopoRecipient): string {
@@ -80,6 +98,33 @@ const transferColumns: ColumnDef<AdminKopokopoTransfer>[] = [
 				{row.original.kopokopoId ?? "—"}
 			</span>
 		),
+	},
+	{
+		accessorKey: "status",
+		header: "Status",
+		enableSorting: false,
+		cell: ({ row }) => {
+			const { status, errors } = row.original
+
+			if (!status) {
+				return <span className="text-xs text-muted-foreground">Unknown</span>
+			}
+
+			return (
+				<div className="space-y-1">
+					<Badge
+						variant="outline"
+						className={statusBadgeClassName(status)}>
+						{status}
+					</Badge>
+					{errors != null && (
+						<p className="max-w-xs text-xs text-destructive">
+							{typeof errors === "string" ? errors : JSON.stringify(errors)}
+						</p>
+					)}
+				</div>
+			)
+		},
 	},
 ]
 

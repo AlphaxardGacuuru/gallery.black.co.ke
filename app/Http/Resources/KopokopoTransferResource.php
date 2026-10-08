@@ -23,6 +23,8 @@ class KopokopoTransferResource extends JsonResource
             "kopokopoCreatedAt" => $this->kopokopo_created_at,
             "amount" => number_format($this->amount),
             "currency" => $this->currency,
+            "status" => $this->status,
+            "errors" => $this->errors,
             "transferBatches" => $this->transfer_batches,
             "metadata" => $this->metadata,
             "updateAt" => $this->update_at,

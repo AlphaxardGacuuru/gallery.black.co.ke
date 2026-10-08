@@ -19,6 +19,7 @@ class KopokopoTransfer extends Model
      */
     protected $casts = [
         'transfer_batches' => 'array',
+        'errors' => 'array',
         'metadata' => 'array',
         'updated_at' => 'datetime:d M Y',
         'created_at' => 'datetime:d M Y',

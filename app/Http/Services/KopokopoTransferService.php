@@ -42,8 +42,10 @@ class KopokopoTransferService extends Service
         $kopokopoTransfer->kopokopo_created_at = $attributes["created_at"];
         $kopokopoTransfer->amount = $destination["amount"] ?? null;
         $kopokopoTransfer->currency = $attributes["currency"] ?? null;
-        $kopokopoTransfer->transfer_batches = $attributes["transfer_batches"];
-        $kopokopoTransfer->metadata = $attributes["metadata"];
+        $kopokopoTransfer->status = $attributes["status"] ?? null;
+        $kopokopoTransfer->errors = $attributes["errors"] ?? null;
+        $kopokopoTransfer->transfer_batches = $attributes["transfer_batches"] ?? null;
+        $kopokopoTransfer->metadata = $attributes["metadata"] ?? null;
         $saved = $kopokopoTransfer->save();
 
         return [$saved, "Payment Saved", $kopokopoTransfer];
