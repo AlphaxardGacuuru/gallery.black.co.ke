@@ -96,7 +96,7 @@ class KopokopoTransferService extends Service
                 'userId' => $this->id,
                 'notes' => 'Transfer at ' . Carbon::now(),
             ],
-            'callbackUrl' => rtrim(env('APP_URL'), '/') . '/api/kopokopo-transfers',
+            'callbackUrl' => url('/api/kopokopo-transfers'),
             'accessToken' => $accessToken,
         ]);
 
