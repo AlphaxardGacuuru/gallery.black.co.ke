@@ -1,5 +1,5 @@
 import { Bell } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useIsInstallStepSettled } from "@/components/install-app-onboarding-modal"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { useApp } from "@/contexts/AppContext"
+import { usePwaInstall } from "@/hooks/use-pwa-install"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
@@ -23,8 +24,18 @@ import toast from "@/lib/toast"
 // no longer permanently hides the modal.
 const DISMISSED_KEY = "notifications-prompt-dismissed"
 
+// sessionStorage writes don't notify the current tab, so dismissing fires
+// this event to let useIsPermissionsStepSettled() subscribers (the referral
+// modal) re-render and open right after "Not now".
+const DISMISSED_EVENT = "notifications-prompt-dismissed"
+
 function wasDismissedThisSession(): boolean {
 	return sessionStorage.getItem(DISMISSED_KEY) === "1"
+}
+
+function subscribeToDismissal(callback: () => void): () => void {
+	window.addEventListener(DISMISSED_EVENT, callback)
+	return () => window.removeEventListener(DISMISSED_EVENT, callback)
 }
 
 // Mirrors useIsInstallStepSettled() — the referral onboarding modal waits on
@@ -32,23 +43,29 @@ function wasDismissedThisSession(): boolean {
 // notifications prompt.
 export function useIsPermissionsStepSettled(): boolean {
 	const { isSupported, permission } = usePushNotifications()
+	const { isInstalled } = usePwaInstall()
 	const installStepSettled = useIsInstallStepSettled()
+	const dismissed = useSyncExternalStore(
+		subscribeToDismissal,
+		wasDismissedThisSession,
+	)
 
 	if (!installStepSettled) {
 		return false
 	}
 
-	if (!isSupported || permission === "granted") {
+	if (!isInstalled || !isSupported || permission === "granted") {
 		return true
 	}
 
-	return wasDismissedThisSession()
+	return dismissed
 }
 
 export default function PermissionsOnboardingModal() {
 	const { auth } = useApp()
 	const queryClient = useQueryClient()
 	const { isSupported, permission, subscribe } = usePushNotifications()
+	const { isInstalled } = usePwaInstall()
 	const installStepSettled = useIsInstallStepSettled()
 
 	const [open, setOpen] = useState(false)
@@ -69,7 +86,14 @@ export default function PermissionsOnboardingModal() {
 	}
 
 	useEffect(() => {
-		if (!auth || wasDismissedThisSession() || !installStepSettled) {
+		if (
+			!auth ||
+			wasDismissedThisSession() ||
+			!installStepSettled ||
+			// Only ask once the app is actually installed and running
+			// standalone — never prompt for this in a regular browser tab.
+			!isInstalled
+		) {
 			return
 		}
 
@@ -90,7 +114,14 @@ export default function PermissionsOnboardingModal() {
 		}
 
 		setOpen(true)
-	}, [auth, onboardedAt, isSupported, permission, installStepSettled])
+	}, [
+		auth,
+		onboardedAt,
+		isSupported,
+		permission,
+		installStepSettled,
+		isInstalled,
+	])
 
 	async function handleEnable() {
 		setProcessing(true)
@@ -120,6 +151,7 @@ export default function PermissionsOnboardingModal() {
 
 	function handleSkip() {
 		sessionStorage.setItem(DISMISSED_KEY, "1")
+		window.dispatchEvent(new Event(DISMISSED_EVENT))
 		setOpen(false)
 	}
 
