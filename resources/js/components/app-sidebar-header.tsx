@@ -1,7 +1,7 @@
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useSidebar } from "@/components/ui/sidebar"
-import VerifiedBadge from "@/components/verified-badge"
+import { VerifiedAvatar } from "@/components/verified-badge"
 import { useApp } from "@/contexts/AppContext"
 import { useInitials } from "@/hooks/use-initials"
 import { cn } from "@/lib/utils"
@@ -39,18 +39,19 @@ export function AppSidebarHeader({
 				onClick={toggleSidebar}
 				aria-label="Toggle sidebar"
 				className="relative -mr-1 flex size-7 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80 ms-2">
-				<Avatar className="size-10">
-					<AvatarImage
-						src={auth?.avatar}
-						alt={auth?.name}
-					/>
-					<AvatarFallback className="text-xs">
-						{getInitials(auth?.name ?? "")}
-					</AvatarFallback>
-				</Avatar>
-				{auth?.verified && (
-					<VerifiedBadge className="absolute -right-0.5 -bottom-0.5 size-3" />
-				)}
+				<VerifiedAvatar
+					verified={auth?.verified}
+					badgeClassName="size-3">
+					<Avatar className="size-10">
+						<AvatarImage
+							src={auth?.avatar}
+							alt={auth?.name}
+						/>
+						<AvatarFallback className="text-xs">
+							{getInitials(auth?.name ?? "")}
+						</AvatarFallback>
+					</Avatar>
+				</VerifiedAvatar>
 			</button>
 		</header>
 	)

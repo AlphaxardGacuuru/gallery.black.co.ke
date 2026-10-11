@@ -53,6 +53,25 @@ class GrantPhotoSlotListenerTest extends TestCase
         $this->assertNull($purchase->mpesa_transaction_id);
     }
 
+    public function test_it_marks_a_matching_extra_photo_purchase_as_paid(): void
+    {
+        $purchase = PhotoSlotPurchase::factory()->extraPhoto()->create([
+            'status' => PhotoSlotPurchase::STATUS_PENDING,
+            'kopokopo_reference' => 'photo-abc',
+        ]);
+        $mpesaTransaction = MPESATransaction::factory()->create([
+            'user_id' => User::factory()->create()->id,
+            'kopokopo_id' => 'photo-abc',
+        ]);
+
+        (new GrantPhotoSlotListener)
+            ->handle(new MpesaTransactionCreatedEvent($mpesaTransaction));
+
+        $purchase->refresh();
+        $this->assertSame(PhotoSlotPurchase::STATUS_PAID, $purchase->status);
+        $this->assertSame($mpesaTransaction->id, $purchase->mpesa_transaction_id);
+    }
+
     public function test_it_ignores_a_purchase_that_is_already_paid(): void
     {
         $purchase = PhotoSlotPurchase::factory()->paid()->create([

@@ -27,6 +27,7 @@ class PhotoCompetitionController extends Controller
             'nextStartsAt' => $state['nextStartsAt'],
             'prizeTiers' => $state['prizeTiers'],
             'extraSlot' => $state['extraSlot'],
+            'extraPhoto' => $state['extraPhoto'],
         ]);
     }
 

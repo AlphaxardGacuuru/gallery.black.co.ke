@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query"
 import PhotoCompetitionController from "@/actions/App/Http/Controllers/PhotoCompetitionController"
 import PhotoController from "@/actions/App/Http/Controllers/PhotoController"
+import ExtraPhotoPurchaseController from "@/actions/App/Http/Controllers/ExtraPhotoPurchaseController"
 import PhotoLikeController from "@/actions/App/Http/Controllers/PhotoLikeController"
 import PhotoSlotPurchaseController from "@/actions/App/Http/Controllers/PhotoSlotPurchaseController"
 import Axios from "@/lib/axios"
@@ -19,11 +20,21 @@ export type ExtraSlotState = {
 	pendingPurchaseId: string | null
 }
 
+export type ExtraPhotoState = {
+	enabled: boolean
+	price: number
+	paidPhotoSlotsCount: number
+	pendingPurchaseId: string | null
+	maxPhotos: number
+	maxPhotosCap: number
+}
+
 type CurrentCompetitionData = {
 	competition: PhotoCompetition | null
 	nextStartsAt: string | null
 	prizeTiers: number[]
 	extraSlot: ExtraSlotState
+	extraPhoto: ExtraPhotoState
 }
 
 export function useCurrentCompetition() {
@@ -35,18 +46,44 @@ export function useCurrentCompetition() {
 				nextStartsAt: string | null
 				prizeTiers: number[]
 				extraSlot: ExtraSlotState
+				extraPhoto: ExtraPhotoState
 			}>(PhotoCompetitionController.current.url()).then(
 				(res): CurrentCompetitionData => ({
 					competition: res.data.data,
 					nextStartsAt: res.data.nextStartsAt,
 					prizeTiers: res.data.prizeTiers,
 					extraSlot: res.data.extraSlot,
+					extraPhoto: res.data.extraPhoto,
 				})
 			),
 		// Likes and the countdown both move without any action from this
 		// viewer, so keep the leaderboard fresh without requiring a reload.
 		refetchInterval: 20_000,
 	})
+}
+
+/**
+ * Whether the viewer has used every entry slot in the active competition
+ * (one by default, two once they've paid for an extra slot). Shared by the
+ * compete page's floating button and the create-post page so the two can't
+ * disagree about whether another entry is allowed.
+ */
+export function hasReachedEntryLimit(
+	data: CurrentCompetitionData | undefined,
+	userId: string | number | undefined
+): boolean {
+	const competition = data?.competition
+
+	if (competition?.status !== "active") {
+		return false
+	}
+
+	const mySubmissionCount = competition.photos.filter(
+		(photo) => String(photo.userId) === String(userId)
+	).length
+	const allowedSlots = data?.extraSlot?.hasPaidExtraSlot ? 2 : 1
+
+	return mySubmissionCount >= allowedSlots
 }
 
 // Both the mutation's optimistic update and its rollback need to reach into
@@ -155,7 +192,7 @@ export function useSubmitPhoto() {
 	const queryClient = useQueryClient()
 
 	return useMutation({
-		mutationFn: (payload: { temporaryUploadId: number; caption: string }) =>
+		mutationFn: (payload: { temporaryUploadIds: number[]; caption: string }) =>
 			Axios.post<{ data: Photo }>(PhotoController.store.url(), payload).then(
 				(res) => res.data.data
 			),
@@ -164,6 +201,31 @@ export function useSubmitPhoto() {
 			// background refetch below to land.
 			updateCachedPhotos(queryClient, (photos) => [...photos, photo])
 
+			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
+		},
+	})
+}
+
+/**
+ * Add more photos to an already-submitted entry (e.g. after buying an
+ * extra slot without wanting to delete and resubmit it).
+ */
+export function useAddPhotos(photoId: string) {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (temporaryUploadIds: number[]) =>
+			Axios.post<{ data: Photo }>(PhotoController.storeImages.url(photoId), {
+				temporaryUploadIds,
+			}).then((res) => res.data.data),
+		onSuccess: (photo) => {
+			updateCachedPhotos(queryClient, (photos) =>
+				photos.map((existing) => (existing.id === photo.id ? photo : existing))
+			)
+			queryClient.setQueryData<PhotoDetail>(
+				["photos", "show", photoId],
+				(current) => (current ? { ...current, photo } : current)
+			)
 			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
 		},
 	})
@@ -269,6 +331,34 @@ export function useBuyExtraSlot() {
 				message: string
 				data: { purchaseId: string }
 			}>(PhotoSlotPurchaseController.store.url()).then((res) => {
+				if (res.data.status !== true) {
+					throw new Error(res.data.message)
+				}
+
+				return res.data.data
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
+		},
+	})
+}
+
+/**
+ * Buy one additional photo slot (see Photo::maxImagesFor()), unlike
+ * useBuyExtraSlot(), this is repeatable: each call buys one more slot, up
+ * to extraPhoto.maxPhotosCap. Confirmation is polled the same way via
+ * usePollSlotPurchase(), which is generic by purchase id regardless of type.
+ */
+export function useBuyExtraPhotoSlot() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: () =>
+			Axios.post<{
+				status: boolean
+				message: string
+				data: { purchaseId: string }
+			}>(ExtraPhotoPurchaseController.store.url()).then((res) => {
 				if (res.data.status !== true) {
 					throw new Error(res.data.message)
 				}

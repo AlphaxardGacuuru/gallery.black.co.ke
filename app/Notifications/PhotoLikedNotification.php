@@ -47,7 +47,7 @@ class PhotoLikedNotification extends Notification implements ShouldQueue
 			->subject('Someone liked your photo! ❤️')
 			->greeting('Hello ' . $notifiable->name . ',')
 			->line($this->bodyLine())
-			->action('View your photo', url('/photos/' . $this->photo->id))
+			->action('View your photo', url('/photos/' . $this->photo->id . '/show'))
 			->markdown('notifications::email', [
 				'unsubscribeUrl' => $notifiable->unsubscribeUrlFor(EmailNotificationCategory::PHOTO_LIKED),
 			]);
@@ -56,7 +56,7 @@ class PhotoLikedNotification extends Notification implements ShouldQueue
 	public function toArray($notifiable): array
 	{
 		return [
-			'url' => '/photos/' . $this->photo->id,
+			'url' => '/photos/' . $this->photo->id . '/show',
 			'from' => 'Admin',
 			'message' => $this->bodyLine(),
 		];
@@ -69,6 +69,6 @@ class PhotoLikedNotification extends Notification implements ShouldQueue
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
 			->body($this->bodyLine())
-			->data(['url' => '/photos/' . $this->photo->id]);
+			->data(['url' => '/photos/' . $this->photo->id . '/show']);
 	}
 }

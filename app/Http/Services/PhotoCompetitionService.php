@@ -15,7 +15,7 @@ class PhotoCompetitionService extends Service
 	 * the latest ended one with winners), when the next one starts if none
 	 * is running, the prize tiers, and this viewer's extra-slot state.
 	 *
-	 * @return array{competition: ?PhotoCompetition, nextStartsAt: ?string, prizeTiers: array, extraSlot: array}
+	 * @return array{competition: ?PhotoCompetition, nextStartsAt: ?string, prizeTiers: array, extraSlot: array, extraPhoto: array}
 	 */
 	public function currentState(Request $request): array
 	{
@@ -27,6 +27,7 @@ class PhotoCompetitionService extends Service
 			'nextStartsAt' => $isActive ? null : PhotoCompetition::nextScheduledStart()->toIso8601String(),
 			'prizeTiers' => PhotoCompetition::prizeTiers(),
 			'extraSlot' => $this->extraSlotState($isActive ? $competition : null, $request),
+			'extraPhoto' => $this->extraPhotoState($isActive ? $competition : null, $request),
 		];
 	}
 
@@ -34,7 +35,7 @@ class PhotoCompetitionService extends Service
 	{
 		$active = PhotoCompetition::active()
 			->with(['photos' => function ($query) use ($request) {
-				$query->with('user')
+				$query->with(['user', 'images'])
 					->withLikedByViewer($request->user())
 					->orderByDesc('likes_count')
 					->orderBy('created_at');
@@ -82,7 +83,7 @@ class PhotoCompetitionService extends Service
 
 		$photos = Photo::query()
 			->whereIn('id', $winnerPhotoIds)
-			->with('user')
+			->with(['user', 'images'])
 			->withLikedByViewer($request->user())
 			->withIsWinner()
 			->get()
@@ -113,7 +114,8 @@ class PhotoCompetitionService extends Service
 			return $state;
 		}
 
-		$purchase = PhotoSlotPurchase::where('competition_id', $activeCompetition->id)
+		$purchase = PhotoSlotPurchase::ofType(PhotoSlotPurchase::TYPE_EXTRA_ENTRY)
+			->where('competition_id', $activeCompetition->id)
 			->where('user_id', $request->user()->id)
 			->latest('created_at')
 			->first();
@@ -121,9 +123,49 @@ class PhotoCompetitionService extends Service
 		if ($purchase) {
 			$state['hasPaidExtraSlot'] = $purchase->status === PhotoSlotPurchase::STATUS_PAID;
 			$state['pendingPurchaseId'] = $purchase->status === PhotoSlotPurchase::STATUS_PENDING
+				&& $purchase->created_at->greaterThanOrEqualTo(now()->subMinutes(PhotoSlotPurchase::PENDING_TTL_MINUTES))
 				? $purchase->id
 				: null;
 		}
+
+		return $state;
+	}
+
+	/**
+	 * The extra-photo feature's global on/off + price, plus (only once a
+	 * competition is active) how many slots this viewer has already paid
+	 * for and the resulting cap on how many photos they can attach.
+	 */
+	protected function extraPhotoState(?PhotoCompetition $activeCompetition, Request $request): array
+	{
+		$settings = PhotoCompetition::extraPhotoSettings();
+
+		$state = [
+			'enabled' => $settings['enabled'],
+			'price' => $settings['price'],
+			'paidPhotoSlotsCount' => 0,
+			'pendingPurchaseId' => null,
+			'maxPhotos' => 1,
+			'maxPhotosCap' => Photo::MAX_IMAGES_PER_ENTRY,
+		];
+
+		if (! $activeCompetition) {
+			return $state;
+		}
+
+		$userId = $request->user()->id;
+
+		$state['paidPhotoSlotsCount'] = PhotoSlotPurchase::paidExtraPhotoCount($activeCompetition->id, $userId);
+		$state['maxPhotos'] = Photo::maxImagesFor($activeCompetition->id, $userId);
+
+		$pendingPurchase = PhotoSlotPurchase::ofType(PhotoSlotPurchase::TYPE_EXTRA_PHOTO)
+			->where('competition_id', $activeCompetition->id)
+			->where('user_id', $userId)
+			->freshPending()
+			->latest('created_at')
+			->first();
+
+		$state['pendingPurchaseId'] = $pendingPurchase?->id;
 
 		return $state;
 	}
@@ -135,7 +177,7 @@ class PhotoCompetitionService extends Service
 	{
 		$photos = Photo::query()
 			->whereHas('competition', fn($query) => $query->where('status', PhotoCompetition::STATUS_ENDED))
-			->with('user')
+			->with(['user', 'images'])
 			->withLikedByViewer($request->user())
 			->withIsWinner()
 			->latest('created_at')

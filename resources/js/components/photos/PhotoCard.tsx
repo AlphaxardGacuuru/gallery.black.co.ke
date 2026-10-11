@@ -1,8 +1,9 @@
-import { AlignRight, Heart, Trash2, Trophy, Users } from "lucide-react"
+import { AlignRight, Copy, Heart, Trash2, Trophy, Users } from "lucide-react"
 import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import type { Photo } from "@/types/photo"
 import { AvatarPreviewDialog } from "@/components/avatar-preview-dialog"
+import VerifiedBadge from "@/components/verified-badge"
 import { ManageLikesDialog } from "@/components/photos/ManageLikesDialog"
 import { Button } from "@/components/ui/button"
 import {
@@ -82,9 +83,11 @@ export function PhotoCard({
 						fallback={photo.userName ? getInitials(photo.userName) : "?"}
 						className="size-8 shrink-0"
 						fallbackClassName="bg-neutral-200 text-xs text-black dark:bg-neutral-700 dark:text-white"
+						verified={photo.userVerified}
 					/>
-					<div className="min-w-0">
+					<div className="flex min-w-0 items-center gap-1">
 						<p className="truncate text-sm font-medium">{photo.userName}</p>
+						{photo.userVerified && <VerifiedBadge className="size-3.5 shrink-0" />}
 					</div>
 				</div>
 				<div className="flex justify-between items-center gap-1">
@@ -167,7 +170,7 @@ export function PhotoCard({
 				</div>
 			</figcaption>
 			<Link
-				to={`/photos/${photo.id}` as never}
+				to={`/photos/${photo.id}/show` as never}
 				aria-label="View full photo"
 				className="relative block w-full">
 				<img
@@ -192,6 +195,13 @@ export function PhotoCard({
 							#{livePosition} · KES {livePrizeAmount}
 						</div>
 					)
+				)}
+				{photo.images.length > 0 && (
+					<div
+						className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white shadow"
+						aria-label={`${photo.images.length + 1} photos`}>
+						<Copy className="size-3.5" />
+					</div>
 				)}
 			</Link>
 			<figcaption className="flex flex-col gap-1">

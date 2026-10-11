@@ -22,6 +22,7 @@ class PhotoSlotPurchaseFactory extends Factory
         return [
             'user_id' => User::factory(),
             'competition_id' => PhotoCompetition::factory(),
+            'type' => PhotoSlotPurchase::TYPE_EXTRA_ENTRY,
             'amount' => 50,
             'status' => PhotoSlotPurchase::STATUS_PENDING,
             'kopokopo_reference' => null,
@@ -36,5 +37,10 @@ class PhotoSlotPurchaseFactory extends Factory
             'status' => PhotoSlotPurchase::STATUS_PAID,
             'paid_at' => now(),
         ]);
+    }
+
+    public function extraPhoto(): static
+    {
+        return $this->state(fn() => ['type' => PhotoSlotPurchase::TYPE_EXTRA_PHOTO]);
     }
 }

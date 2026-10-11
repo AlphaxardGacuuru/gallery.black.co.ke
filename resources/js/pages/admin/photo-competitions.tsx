@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import toast from "@/lib/toast"
 import {
+	type AdminExtraPhotoSettings,
 	type AdminExtraSlotSettings,
 	type AdminPhotoCompetitionSummary,
 	type AdminPhotoCompetitionWinner,
@@ -33,6 +34,7 @@ import {
 	useAdminRecentPhotoCompetitions,
 	usePayCompetitionWinner,
 	useUpdateActiveCompetition,
+	useUpdateExtraPhoto,
 	useUpdateExtraSlot,
 	useUpdatePhotoCompetitionSchedule,
 	useUpdatePrizeTiers,
@@ -278,6 +280,68 @@ function ExtraSlotSettings({
 	)
 }
 
+function ExtraPhotoSettings({
+	extraPhoto,
+}: {
+	extraPhoto: AdminExtraPhotoSettings
+}) {
+	const updateExtraPhoto = useUpdateExtraPhoto()
+	const [enabled, setEnabled] = useState(extraPhoto.enabled)
+	const [price, setPrice] = useState(String(extraPhoto.price))
+
+	function handleSave() {
+		const parsedPrice = Number(price)
+
+		if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+			toast.error("Enter a valid price")
+			return
+		}
+
+		updateExtraPhoto.mutate(
+			{ enabled, price: parsedPrice },
+			{
+				onSuccess: () => toast.success("Extra photo settings updated"),
+				onError: () => toast.error("Couldn't update the extra photo settings"),
+			}
+		)
+	}
+
+	return (
+		<div className="w-full space-y-3 sm:max-w-sm sm:flex-1 rounded-lg border p-4">
+			<Heading
+				variant="small"
+				title="Buy extra photos per entry"
+				description="Let entrants pay per additional photo slot on a single entry's carousel, up to 5 photos total."
+			/>
+			<div className="flex items-center justify-between gap-4">
+				<p className="text-sm font-medium">Enabled</p>
+				<Switch
+					checked={enabled}
+					onCheckedChange={setEnabled}
+					aria-label="Toggle buy-extra-photos"
+				/>
+			</div>
+			<Input
+				type="number"
+				min={0}
+				label="Price per photo slot (KES)"
+				value={price}
+				onChange={(event) => setPrice(event.target.value)}
+			/>
+			<div className="flex justify-end">
+				<Button
+					disabled={updateExtraPhoto.isPending}
+					onClick={handleSave}>
+					{updateExtraPhoto.isPending && (
+						<Loader2 className="size-3.5 animate-spin" />
+					)}
+					Save
+				</Button>
+			</div>
+		</div>
+	)
+}
+
 function ScheduleSettings({
 	schedule,
 }: {
@@ -472,12 +536,15 @@ function CompetitionStatusBadge({ status }: { status: string }) {
 	)
 }
 
-const SLOT_PURCHASE_STATUS_CLASSES: Record<AdminPhotoSlotPurchase["status"], string> =
-	{
-		paid: "border-transparent bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-		pending: "border-transparent bg-amber-500/10 text-amber-600 dark:text-amber-400",
-		failed: "border-transparent bg-red-500/10 text-red-600 dark:text-red-400",
-	}
+const SLOT_PURCHASE_STATUS_CLASSES: Record<
+	AdminPhotoSlotPurchase["status"],
+	string
+> = {
+	paid: "border-transparent bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+	pending:
+		"border-transparent bg-amber-500/10 text-amber-600 dark:text-amber-400",
+	failed: "border-transparent bg-red-500/10 text-red-600 dark:text-red-400",
+}
 
 function SlotPurchaseStatusBadge({
 	status,
@@ -522,6 +589,12 @@ function SlotPurchasesTable() {
 					: "—",
 		},
 		{
+			accessorKey: "type",
+			header: "Type",
+			cell: ({ row }) =>
+				row.original.type === "extra_entry" ? "Extra entry" : "Extra photo",
+		},
+		{
 			accessorKey: "amount",
 			header: "Amount",
 			cell: ({ row }) => `KES ${row.original.amount}`,
@@ -529,7 +602,9 @@ function SlotPurchasesTable() {
 		{
 			accessorKey: "status",
 			header: "Status",
-			cell: ({ row }) => <SlotPurchaseStatusBadge status={row.original.status} />,
+			cell: ({ row }) => (
+				<SlotPurchaseStatusBadge status={row.original.status} />
+			),
 		},
 		{
 			accessorKey: "createdAt",
@@ -549,7 +624,7 @@ function SlotPurchasesTable() {
 	return (
 		<Card className="overflow-hidden">
 			<CardHeader className="pb-4">
-				<CardTitle>Extra slot purchases</CardTitle>
+				<CardTitle>Slot & photo purchases</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<DataTable
@@ -593,7 +668,9 @@ export default function AdminPhotoCompetitions() {
 		{
 			accessorKey: "status",
 			header: "Status",
-			cell: ({ row }) => <CompetitionStatusBadge status={row.original.status} />,
+			cell: ({ row }) => (
+				<CompetitionStatusBadge status={row.original.status} />
+			),
 		},
 		{
 			accessorKey: "photosCount",
@@ -603,9 +680,7 @@ export default function AdminPhotoCompetitions() {
 			id: "winners",
 			header: "Winners",
 			enableSorting: false,
-			cell: ({ row }) => (
-				<WinnersDialog competition={row.original} />
-			),
+			cell: ({ row }) => <WinnersDialog competition={row.original} />,
 		},
 	]
 
@@ -667,6 +742,7 @@ export default function AdminPhotoCompetitions() {
 						<div className="flex flex-wrap gap-4">
 							<PrizeTiersSettings prizeTiers={data.prizeTiers} />
 							<ExtraSlotSettings extraSlot={data.extraSlot} />
+							<ExtraPhotoSettings extraPhoto={data.extraPhoto} />
 							<ScheduleSettings schedule={data.schedule} />
 						</div>
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\PhotoResource;
 use App\Http\Services\PhotoService;
+use App\Models\Photo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -36,11 +37,30 @@ class PhotoController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'temporaryUploadId' => 'required|exists:temporary_uploads,id',
+            'temporaryUploadIds' => 'required|array|min:1|max:' . Photo::MAX_IMAGES_PER_ENTRY,
+            'temporaryUploadIds.*' => 'integer|distinct|exists:temporary_uploads,id',
             'caption' => 'required|string|max:280',
         ]);
 
         $photo = $this->photoService->store($request, $data);
+
+        return response()->json([
+            'data' => new PhotoResource($photo),
+        ], 201);
+    }
+
+    /**
+     * Add more photos to an already-submitted entry (e.g. after buying an
+     * extra slot), while its competition is still active.
+     */
+    public function storeImages(Request $request, Photo $photo): JsonResponse
+    {
+        $data = $request->validate([
+            'temporaryUploadIds' => 'required|array|min:1|max:' . Photo::MAX_IMAGES_PER_ENTRY,
+            'temporaryUploadIds.*' => 'integer|distinct|exists:temporary_uploads,id',
+        ]);
+
+        $photo = $this->photoService->addImages($request, $photo, $data['temporaryUploadIds']);
 
         return response()->json([
             'data' => new PhotoResource($photo),

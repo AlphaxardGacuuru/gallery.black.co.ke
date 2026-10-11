@@ -251,6 +251,44 @@ class PhotoCompetitionWinnersPayoutTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_admin_can_update_extra_photo_settings(): void
+    {
+        $response = $this->actingAs($this->admin(), 'sanctum')
+            ->putJson('/api/admin/photo-competitions/extra-photo', [
+                'enabled' => true,
+                'price' => 20,
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.enabled', true)
+            ->assertJsonPath('data.price', 20);
+
+        $this->assertEqualsCanonicalizing(
+            ['enabled' => true, 'price' => 20],
+            Setting::query()->where('key', 'photo_extra_photo')->value('value')
+        );
+    }
+
+    public function test_extra_photo_validation_rejects_a_negative_price(): void
+    {
+        $this->actingAs($this->admin(), 'sanctum')
+            ->putJson('/api/admin/photo-competitions/extra-photo', [
+                'enabled' => true,
+                'price' => -1,
+            ])
+            ->assertUnprocessable();
+    }
+
+    public function test_non_admins_cannot_update_extra_photo_settings(): void
+    {
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->putJson('/api/admin/photo-competitions/extra-photo', [
+                'enabled' => true,
+                'price' => 20,
+            ])
+            ->assertForbidden();
+    }
+
     public function test_admin_can_update_active_competition_end_time_without_a_prize_field(): void
     {
         $competition = PhotoCompetition::factory()->create([

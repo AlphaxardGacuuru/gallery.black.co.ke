@@ -2,14 +2,17 @@
 
 namespace App\Http\Services;
 
+use App\Jobs\GeneratePhotoImageThumbnailJob;
 use App\Jobs\GeneratePhotoThumbnailJob;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
+use App\Models\PhotoImage;
 use App\Models\PhotoSlotPurchase;
 use App\Models\TemporaryUpload;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -24,7 +27,7 @@ class PhotoService extends Service
 	 */
 	public function show(Request $request, string $id): array
 	{
-		$photo = Photo::with(['user', 'competition'])
+		$photo = Photo::with(['user', 'competition', 'images'])
 			->withLikedByViewer($request->user())
 			->withIsWinner()
 			->findOrFail($id);
@@ -39,9 +42,12 @@ class PhotoService extends Service
 	}
 
 	/**
-	 * Submit a photo (already uploaded via FilePond) into the active competition.
+	 * Submit a photo (already uploaded via FilePond) into the active
+	 * competition. The first id becomes the entry's cover image (the one
+	 * stored directly on Photo); any remaining ids become PhotoImage rows
+	 * for the carousel, capped by Photo::maxImagesFor().
 	 *
-	 * @param  array{temporaryUploadId: string, caption: string}  $data
+	 * @param  array{temporaryUploadIds: array<int, int|string>, caption: string}  $data
 	 */
 	public function store(Request $request, array $data): Photo
 	{
@@ -49,13 +55,13 @@ class PhotoService extends Service
 
 		if (! $competition) {
 			throw ValidationException::withMessages([
-				'temporaryUploadId' => 'There is no active competition right now.',
+				'temporaryUploadIds' => 'There is no active competition right now.',
 			]);
 		}
 
 		if (! $request->user()->phone) {
 			throw ValidationException::withMessages([
-				'temporaryUploadId' => 'Add your M-Pesa phone number in your profile before submitting a photo.',
+				'temporaryUploadIds' => 'Add your M-Pesa phone number in your profile before submitting a photo.',
 			]);
 		}
 
@@ -72,12 +78,13 @@ class PhotoService extends Service
 			$lock->block(2);
 		} catch (LockTimeoutException) {
 			throw ValidationException::withMessages([
-				'temporaryUploadId' => 'Please try again in a moment.',
+				'temporaryUploadIds' => 'Please try again in a moment.',
 			]);
 		}
 
 		try {
-			$hasPaidExtraSlot = PhotoSlotPurchase::where('competition_id', $competition->id)
+			$hasPaidExtraSlot = PhotoSlotPurchase::ofType(PhotoSlotPurchase::TYPE_EXTRA_ENTRY)
+				->where('competition_id', $competition->id)
 				->where('user_id', $request->user()->id)
 				->where('status', PhotoSlotPurchase::STATUS_PAID)
 				->exists();
@@ -90,36 +97,159 @@ class PhotoService extends Service
 
 			if ($submittedCount >= $allowedSlots) {
 				throw ValidationException::withMessages([
-					'temporaryUploadId' => 'You\'ve already submitted a photo to this week\'s competition.',
+					'temporaryUploadIds' => 'You\'ve already submitted a photo to this week\'s competition.',
 				]);
 			}
 
-			$temporaryUpload = TemporaryUpload::findOrFail($data['temporaryUploadId']);
+			$ids = $data['temporaryUploadIds'];
+			$maxImages = Photo::maxImagesFor($competition->id, $request->user()->id);
 
-			$path = 'photos/' . basename($temporaryUpload->path);
+			if (count($ids) > $maxImages) {
+				throw ValidationException::withMessages([
+					'temporaryUploadIds' => "You can attach up to {$maxImages} photo(s). Buy another photo slot to add more.",
+				]);
+			}
 
-			Storage::disk('public')->move($temporaryUpload->path, $path);
+			$temporaryUploads = TemporaryUpload::whereIn('id', $ids)->get()->keyBy('id');
 
-			[$width, $height] = getimagesize(Storage::disk('public')->path($path)) ?: [null, null];
+			if ($temporaryUploads->count() !== count($ids)) {
+				throw ValidationException::withMessages([
+					'temporaryUploadIds' => 'One of these uploads could not be found.',
+				]);
+			}
 
-			$photo = Photo::create([
-				'competition_id' => $competition->id,
-				'user_id' => $request->user()->id,
-				'disk' => 'public',
-				'path' => $path,
-				'caption' => $data['caption'] ?? null,
-				'width' => $width,
-				'height' => $height,
-			]);
+			$photo = DB::transaction(function () use ($ids, $temporaryUploads, $competition, $request, $data) {
+				$coverUpload = $temporaryUploads[$ids[0]];
+				$coverPath = $this->moveTemporaryUpload($coverUpload);
+				[$width, $height] = $this->imageDimensions($coverPath);
 
-			$temporaryUpload->delete();
+				$photo = Photo::create([
+					'competition_id' => $competition->id,
+					'user_id' => $request->user()->id,
+					'disk' => 'public',
+					'path' => $coverPath,
+					'caption' => $data['caption'] ?? null,
+					'width' => $width,
+					'height' => $height,
+				]);
+
+				foreach (array_slice($ids, 1) as $index => $id) {
+					$this->attachImage($photo, $temporaryUploads[$id], $index + 1);
+				}
+
+				foreach ($temporaryUploads as $temporaryUpload) {
+					$temporaryUpload->delete();
+				}
+
+				return $photo;
+			});
 		} finally {
 			$lock->release();
 		}
 
+		// If a file move above succeeds but the transaction later rolls
+		// back for an unrelated reason, the moved file(s) are orphaned
+		// rather than cleaned up, acceptable here since it only risks a
+		// stray file, never a dangling/inconsistent database row.
 		GeneratePhotoThumbnailJob::dispatch($photo);
 
-		return $photo->load('user');
+		foreach ($photo->images as $image) {
+			GeneratePhotoImageThumbnailJob::dispatch($image);
+		}
+
+		return $photo->load(['user', 'images']);
+	}
+
+	/**
+	 * Add more photos to an already-submitted entry (e.g. after buying an
+	 * extra slot without wanting to delete and resubmit), while the
+	 * competition is still active and within the owner's current
+	 * Photo::maxImagesFor() cap.
+	 *
+	 * @param  array<int, int|string>  $ids
+	 */
+	public function addImages(Request $request, Photo $photo, array $ids): Photo
+	{
+		abort_unless($photo->user_id === $request->user()->id, 403);
+
+		$photo->loadMissing('competition');
+
+		if ($photo->competition->status !== PhotoCompetition::STATUS_ACTIVE) {
+			throw ValidationException::withMessages([
+				'temporaryUploadIds' => 'You can only add photos while the challenge is still active.',
+			]);
+		}
+
+		$maxImages = Photo::maxImagesFor($photo->competition_id, $request->user()->id);
+		$currentCount = 1 + $photo->images()->count();
+
+		if ($currentCount + count($ids) > $maxImages) {
+			throw ValidationException::withMessages([
+				'temporaryUploadIds' => "You can attach up to {$maxImages} photo(s) total to this entry.",
+			]);
+		}
+
+		$temporaryUploads = TemporaryUpload::whereIn('id', $ids)->get()->keyBy('id');
+
+		if ($temporaryUploads->count() !== count($ids)) {
+			throw ValidationException::withMessages([
+				'temporaryUploadIds' => 'One of these uploads could not be found.',
+			]);
+		}
+
+		$newImages = DB::transaction(function () use ($photo, $ids, $temporaryUploads) {
+			$nextPosition = ($photo->images()->max('position') ?? 0) + 1;
+			$created = [];
+
+			foreach ($ids as $id) {
+				$created[] = $this->attachImage($photo, $temporaryUploads[$id], $nextPosition);
+				$nextPosition++;
+			}
+
+			foreach ($temporaryUploads as $temporaryUpload) {
+				$temporaryUpload->delete();
+			}
+
+			return $created;
+		});
+
+		foreach ($newImages as $image) {
+			GeneratePhotoImageThumbnailJob::dispatch($image);
+		}
+
+		return $photo->fresh(['user', 'images']);
+	}
+
+	private function attachImage(Photo $photo, TemporaryUpload $temporaryUpload, int $position): PhotoImage
+	{
+		$path = $this->moveTemporaryUpload($temporaryUpload);
+		[$width, $height] = $this->imageDimensions($path);
+
+		return PhotoImage::create([
+			'photo_id' => $photo->id,
+			'disk' => 'public',
+			'path' => $path,
+			'width' => $width,
+			'height' => $height,
+			'position' => $position,
+		]);
+	}
+
+	private function moveTemporaryUpload(TemporaryUpload $temporaryUpload): string
+	{
+		$path = 'photos/' . basename($temporaryUpload->path);
+
+		Storage::disk('public')->move($temporaryUpload->path, $path);
+
+		return $path;
+	}
+
+	/**
+	 * @return array{0: ?int, 1: ?int}
+	 */
+	private function imageDimensions(string $path): array
+	{
+		return getimagesize(Storage::disk('public')->path($path)) ?: [null, null];
 	}
 
 	/**
@@ -128,13 +258,17 @@ class PhotoService extends Service
 	public function destroy(Request $request, string $id): void
 	{
 		$photo = Photo::where('user_id', $request->user()->id)
-			->with('competition')
+			->with(['competition', 'images'])
 			->findOrFail($id);
 
 		if ($photo->competition->status !== PhotoCompetition::STATUS_ACTIVE) {
 			throw ValidationException::withMessages([
 				'id' => 'You can only delete a photo while its challenge is still active.',
 			]);
+		}
+
+		foreach ($photo->images as $image) {
+			Storage::disk($image->disk)->delete(array_filter([$image->path, $image->thumbnail_path]));
 		}
 
 		Storage::disk($photo->disk)->delete(array_filter([$photo->path, $photo->thumbnail_path]));

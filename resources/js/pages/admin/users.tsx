@@ -301,6 +301,7 @@ export default function AdminUsers() {
 						alt={row.original.name}
 						fallback={initials(row.original.name)}
 						className="size-9 shrink-0"
+						verified={row.original.verified}
 					/>
 					<span className="flex min-w-0 items-center gap-1 font-medium">
 						<span className="min-w-0 truncate">{row.original.name}</span>

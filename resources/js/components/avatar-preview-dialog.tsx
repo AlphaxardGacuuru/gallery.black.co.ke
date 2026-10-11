@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { VerifiedAvatar } from "@/components/verified-badge"
 
 type Props = {
 	src?: string | null
@@ -8,6 +9,7 @@ type Props = {
 	fallback: ReactNode
 	className?: string
 	fallbackClassName?: string
+	verified?: boolean
 }
 
 /** A small avatar that opens its full-size image in a dialog when clicked.
@@ -19,15 +21,18 @@ export function AvatarPreviewDialog({
 	fallback,
 	className,
 	fallbackClassName,
+	verified = false,
 }: Props) {
 	const avatar = (
-		<Avatar className={className}>
-			<AvatarImage
-				src={src ?? undefined}
-				alt={alt}
-			/>
-			<AvatarFallback className={fallbackClassName}>{fallback}</AvatarFallback>
-		</Avatar>
+		<VerifiedAvatar verified={verified}>
+			<Avatar className={className}>
+				<AvatarImage
+					src={src ?? undefined}
+					alt={alt}
+				/>
+				<AvatarFallback className={fallbackClassName}>{fallback}</AvatarFallback>
+			</Avatar>
+		</VerifiedAvatar>
 	)
 
 	if (!src) {

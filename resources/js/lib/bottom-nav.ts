@@ -2,5 +2,5 @@
 // the sidebar header out of the way, since neither leaves enough room for
 // an edge-to-edge image.
 export function isFullScreenRoute(): boolean {
-	return /^\/photos\/[^/]+$/.test(window.location.pathname)
+	return /^\/photos\/[^/]+\/show$/.test(window.location.pathname)
 }

@@ -134,6 +134,24 @@ class PhotoCompetition extends Model
     }
 
     /**
+     * Whether users can buy additional photo slots on a single entry (see
+     * Photo::maxImagesFor()), and the KES price per slot.
+     *
+     * @return array{enabled: bool, price: int}
+     */
+    public static function extraPhotoSettings(): array
+    {
+        $value = Setting::query()
+            ->where('key', 'photo_extra_photo')
+            ->value('value') ?? [];
+
+        return [
+            'enabled' => (bool) ($value['enabled'] ?? false),
+            'price' => (int) ($value['price'] ?? 0),
+        ];
+    }
+
+    /**
      * The exact starts_at/ends_at instants for the week containing $anchor,
      * derived from schedule(). Anchored to a fixed Sunday-starting week (not
      * the app's configured week start) so the day-of-week offsets above are

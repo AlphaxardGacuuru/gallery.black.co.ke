@@ -40,6 +40,7 @@ class AdminPhotoLikeController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'avatar' => $user->avatar,
+                'verified' => (bool) $user->verified,
                 'likesPhoto' => (bool) $user->likes_photo,
             ]),
         ]);

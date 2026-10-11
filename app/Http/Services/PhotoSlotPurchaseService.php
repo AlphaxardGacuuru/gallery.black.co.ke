@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Http\Services\Concerns\ParsesKopokopoLocation;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoSlotPurchase;
@@ -10,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 
 class PhotoSlotPurchaseService extends Service
 {
+	use ParsesKopokopoLocation;
+
 	public function __construct(protected MPESATransactionService $mpesaTransactionService)
 	{
 		parent::__construct();
@@ -65,9 +68,12 @@ class PhotoSlotPurchaseService extends Service
 			]);
 		}
 
-		$hasOpenPurchase = PhotoSlotPurchase::where('competition_id', $competition->id)
+		$hasOpenPurchase = PhotoSlotPurchase::ofType(PhotoSlotPurchase::TYPE_EXTRA_ENTRY)
+			->where('competition_id', $competition->id)
 			->where('user_id', $user->id)
-			->whereIn('status', [PhotoSlotPurchase::STATUS_PENDING, PhotoSlotPurchase::STATUS_PAID])
+			->where(fn($query) => $query
+				->where('status', PhotoSlotPurchase::STATUS_PAID)
+				->orWhere(fn($query) => $query->freshPending()))
 			->exists();
 
 		if ($hasOpenPurchase) {
@@ -79,6 +85,7 @@ class PhotoSlotPurchaseService extends Service
 		$purchase = PhotoSlotPurchase::create([
 			'user_id' => $user->id,
 			'competition_id' => $competition->id,
+			'type' => PhotoSlotPurchase::TYPE_EXTRA_ENTRY,
 			'amount' => $extraSlot['price'],
 			'status' => PhotoSlotPurchase::STATUS_PENDING,
 		]);
@@ -96,21 +103,5 @@ class PhotoSlotPurchaseService extends Service
 		$purchase->update(['kopokopo_reference' => $this->locationId($data['location'] ?? '')]);
 
 		return [true, $message, $purchase];
-	}
-
-	/**
-	 * The trailing UUID segment of a Kopokopo Location URL, e.g.
-	 * ".../incoming_payments/{this}", the same id that later shows up as
-	 * the webhook payload's top-level "data.id".
-	 */
-	protected function locationId(string $location): ?string
-	{
-		if ($location === '') {
-			return null;
-		}
-
-		$segments = explode('/', rtrim($location, '/'));
-
-		return end($segments) ?: null;
 	}
 }

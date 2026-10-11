@@ -181,6 +181,52 @@ class PhotoSlotPurchaseControllerTest extends TestCase
         $this->assertSame(PhotoSlotPurchase::STATUS_FAILED, $purchase->status);
     }
 
+    public function test_a_paid_extra_photo_purchase_does_not_block_buying_an_extra_entry(): void
+    {
+        $this->enableExtraSlot(75);
+        $competition = PhotoCompetition::factory()->create();
+        $user = User::factory()->create(['phone' => '0700123456']);
+        $this->submitPhoto($user, $competition);
+        PhotoSlotPurchase::factory()->paid()->extraPhoto()->create([
+            'user_id' => $user->id,
+            'competition_id' => $competition->id,
+        ]);
+
+        $this->partialMock(MPESATransactionService::class, function ($mock) {
+            $mock->shouldReceive('stkPush')->once()->andReturn([
+                'success',
+                'Request Sent to Your Phone',
+                ['location' => 'https://sandbox.kopokopo.com/api/v1/incoming_payments/entry-1'],
+            ]);
+        });
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/photo-slot-purchases')
+            ->assertOk()
+            ->assertJsonPath('status', true);
+    }
+
+    public function test_new_purchases_store_the_extra_entry_type(): void
+    {
+        $this->enableExtraSlot();
+        $competition = PhotoCompetition::factory()->create();
+        $user = User::factory()->create(['phone' => '0700123456']);
+        $this->submitPhoto($user, $competition);
+
+        $this->partialMock(MPESATransactionService::class, function ($mock) {
+            $mock->shouldReceive('stkPush')->once()->andReturn([
+                'success',
+                'Request Sent to Your Phone',
+                ['location' => 'https://sandbox.kopokopo.com/api/v1/incoming_payments/entry-2'],
+            ]);
+        });
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/photo-slot-purchases')->assertOk();
+
+        $purchase = PhotoSlotPurchase::where('user_id', $user->id)->firstOrFail();
+        $this->assertSame(PhotoSlotPurchase::TYPE_EXTRA_ENTRY, $purchase->type);
+    }
+
     public function test_a_user_can_only_view_their_own_purchase(): void
     {
         $owner = User::factory()->create();

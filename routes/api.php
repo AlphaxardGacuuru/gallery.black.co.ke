@@ -13,6 +13,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PhotoCompetitionController;
 use App\Http\Controllers\PhotoController;
+use App\Http\Controllers\ExtraPhotoPurchaseController;
 use App\Http\Controllers\PhotoLikeController;
 use App\Http\Controllers\PhotoSlotPurchaseController;
 use App\Http\Controllers\PushSubscriptionController;
@@ -71,9 +72,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('photos', [PhotoController::class, 'store']);
     Route::delete('photos/{id}', [PhotoController::class, 'destroy']);
     Route::post('photos/{id}/like', [PhotoLikeController::class, 'store']);
+    Route::post('photos/{photo}/images', [PhotoController::class, 'storeImages']);
 
     Route::post('photo-slot-purchases', [PhotoSlotPurchaseController::class, 'store']);
     Route::get('photo-slot-purchases/{purchase}', [PhotoSlotPurchaseController::class, 'show']);
+    Route::post('extra-photo-purchases', [ExtraPhotoPurchaseController::class, 'store']);
 
     Route::get('referrals/settings', [ReferralController::class, 'settings'])->name('referrals.settings');
     Route::get('referrals/mine', [ReferralController::class, 'mine'])->name('referrals.mine');
@@ -91,6 +94,7 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::get('photo-slot-purchases', [AdminPhotoCompetitionController::class, 'slotPurchases'])->name('photo-slot-purchases.index');
         Route::put('photo-competitions/prize-tiers', [AdminPhotoCompetitionController::class, 'updatePrizeTiers'])->name('photo-competitions.prize-tiers');
         Route::put('photo-competitions/extra-slot', [AdminPhotoCompetitionController::class, 'updateExtraSlot'])->name('photo-competitions.extra-slot');
+        Route::put('photo-competitions/extra-photo', [AdminPhotoCompetitionController::class, 'updateExtraPhoto'])->name('photo-competitions.extra-photo');
         Route::put('photo-competitions/schedule', [AdminPhotoCompetitionController::class, 'updateSchedule'])->name('photo-competitions.schedule');
         Route::put('photo-competitions/active', [AdminPhotoCompetitionController::class, 'updateActive'])->name('photo-competitions.update-active');
         Route::post('photo-competition-winners/{winner}/pay', [AdminPhotoCompetitionController::class, 'payWinner'])->name('photo-competition-winners.pay');

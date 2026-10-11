@@ -46,6 +46,7 @@ class AdminPhotoCompetitionController extends Controller
                 'prizeTiers' => PhotoCompetition::prizeTiers(),
                 'schedule' => PhotoCompetition::schedule(),
                 'extraSlot' => PhotoCompetition::extraSlotSettings(),
+                'extraPhoto' => PhotoCompetition::extraPhotoSettings(),
             ],
         ]);
     }
@@ -105,6 +106,7 @@ class AdminPhotoCompetitionController extends Controller
                 'userName' => $purchase->user?->name,
                 'userPhone' => $purchase->user?->phone,
                 'competitionStartsAt' => $purchase->competition?->starts_at,
+                'type' => $purchase->type,
                 'amount' => $purchase->amount,
                 'status' => $purchase->status,
                 'createdAt' => $purchase->created_at,
@@ -152,6 +154,25 @@ class AdminPhotoCompetitionController extends Controller
 
         Setting::query()->updateOrCreate(
             ['key' => 'photo_extra_slot'],
+            ['value' => $data]
+        );
+
+        return response()->json(['data' => $data]);
+    }
+
+    /**
+     * Toggle whether users can buy additional photo slots on a single
+     * entry, and set the KES price per slot.
+     */
+    public function updateExtraPhoto(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'enabled' => 'required|boolean',
+            'price' => 'required|integer|min:0',
+        ]);
+
+        Setting::query()->updateOrCreate(
+            ['key' => 'photo_extra_photo'],
             ['value' => $data]
         );
 

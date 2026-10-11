@@ -31,7 +31,7 @@ class PhotoLikedNotificationTest extends TestCase
 
         $array = $notification->toArray($owner);
         $this->assertStringContainsString('Bob', $array['message']);
-        $this->assertSame('/photos/' . $photo->id, $array['url']);
+        $this->assertSame('/photos/' . $photo->id . '/show', $array['url']);
 
         $webPush = $notification->toWebPush($owner, $notification);
         $this->assertStringContainsString('Bob', $webPush->toArray()['body']);

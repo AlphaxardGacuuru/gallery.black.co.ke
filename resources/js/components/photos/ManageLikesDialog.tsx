@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
+import { VerifiedAvatar } from "@/components/verified-badge"
 import { useInitials } from "@/hooks/use-initials"
 import { cn } from "@/lib/utils"
 import { useAdminPhotoLikers, useToggleAdminPhotoLike } from "@/queries/admin"
@@ -59,15 +60,17 @@ export function ManageLikesDialog({
 								disabled={toggleLike.isPending}
 								onClick={() => toggleLike.mutate(user.id)}
 								className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-60">
-								<Avatar className="size-8 shrink-0">
-									<AvatarImage
-										src={user.avatar ?? undefined}
-										alt={user.name}
-									/>
-									<AvatarFallback className="text-xs">
-										{getInitials(user.name)}
-									</AvatarFallback>
-								</Avatar>
+								<VerifiedAvatar verified={user.verified}>
+									<Avatar className="size-8 shrink-0">
+										<AvatarImage
+											src={user.avatar ?? undefined}
+											alt={user.name}
+										/>
+										<AvatarFallback className="text-xs">
+											{getInitials(user.name)}
+										</AvatarFallback>
+									</Avatar>
+								</VerifiedAvatar>
 								<span className="min-w-0 flex-1 truncate font-medium">
 									{user.name}
 								</span>

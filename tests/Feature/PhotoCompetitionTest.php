@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Events\PhotoCompetitionStarted;
 use App\Models\PhotoCompetition;
+use App\Models\PhotoSlotPurchase;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\PhotoCompetitionEndedNotification;
@@ -84,6 +85,76 @@ class PhotoCompetitionTest extends TestCase
             'prizeTiers',
             [750, 250, 0, 0, 0, 0, 0, 0, 0, 0]
         );
+    }
+
+    public function test_current_endpoint_exposes_extra_photo_state(): void
+    {
+        Setting::query()->updateOrCreate(
+            ['key' => 'photo_extra_photo'],
+            ['value' => ['enabled' => true, 'price' => 20]]
+        );
+        $this->artisan('app:start-photo-competition');
+        $competition = PhotoCompetition::first();
+        $user = User::factory()->create();
+        PhotoSlotPurchase::factory()->paid()->extraPhoto()->count(2)->create([
+            'user_id' => $user->id,
+            'competition_id' => $competition->id,
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/photos/current');
+
+        $response->assertOk()
+            ->assertJsonPath('extraPhoto.enabled', true)
+            ->assertJsonPath('extraPhoto.price', 20)
+            ->assertJsonPath('extraPhoto.paidPhotoSlotsCount', 2)
+            ->assertJsonPath('extraPhoto.maxPhotos', 3);
+    }
+
+    public function test_extra_photo_max_is_capped_at_five(): void
+    {
+        $this->artisan('app:start-photo-competition');
+        $competition = PhotoCompetition::first();
+        $user = User::factory()->create();
+        PhotoSlotPurchase::factory()->paid()->extraPhoto()->count(6)->create([
+            'user_id' => $user->id,
+            'competition_id' => $competition->id,
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/photos/current');
+
+        $response->assertOk()->assertJsonPath('extraPhoto.maxPhotos', 5);
+    }
+
+    public function test_extra_photo_pending_purchase_id_is_null_once_stale(): void
+    {
+        $this->artisan('app:start-photo-competition');
+        $competition = PhotoCompetition::first();
+        $user = User::factory()->create();
+        PhotoSlotPurchase::factory()->extraPhoto()->create([
+            'user_id' => $user->id,
+            'competition_id' => $competition->id,
+            'status' => PhotoSlotPurchase::STATUS_PENDING,
+            'created_at' => now()->subMinutes(PhotoSlotPurchase::PENDING_TTL_MINUTES + 1),
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/photos/current');
+
+        $response->assertOk()->assertJsonPath('extraPhoto.pendingPurchaseId', null);
+    }
+
+    public function test_extra_slot_state_is_unaffected_by_a_paid_extra_photo_purchase(): void
+    {
+        $this->artisan('app:start-photo-competition');
+        $competition = PhotoCompetition::first();
+        $user = User::factory()->create();
+        PhotoSlotPurchase::factory()->paid()->extraPhoto()->create([
+            'user_id' => $user->id,
+            'competition_id' => $competition->id,
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/photos/current');
+
+        $response->assertOk()->assertJsonPath('extraSlot.hasPaidExtraSlot', false);
     }
 
     public function test_authenticated_user_can_like_and_unlike_a_photo(): void
@@ -255,6 +326,43 @@ class PhotoCompetitionTest extends TestCase
         $competition->refresh();
         $this->assertSame(PhotoCompetition::STATUS_ENDED, $competition->status);
         $this->assertCount(0, $competition->winners);
+    }
+
+    public function test_end_command_verifies_winners_but_not_other_entrants(): void
+    {
+        Setting::query()->updateOrCreate(
+            ['key' => 'photo_prize_tiers'],
+            ['value' => [500]]
+        );
+
+        $this->artisan('app:start-photo-competition');
+        $competition = PhotoCompetition::first();
+
+        $winner = User::factory()->create();
+        $runnerUp = User::factory()->create();
+        $competition->photos()->create([
+            'user_id' => $winner->id,
+            'disk' => 'public',
+            'path' => 'photos/winner.jpg',
+            'likes_count' => 5,
+        ]);
+        $competition->photos()->create([
+            'user_id' => $runnerUp->id,
+            'disk' => 'public',
+            'path' => 'photos/runner-up.jpg',
+            'likes_count' => 1,
+        ]);
+
+        $this->artisan('app:end-photo-competition')->assertSuccessful();
+
+        $this->assertTrue((bool) $winner->fresh()->verified);
+        $this->assertFalse((bool) $runnerUp->fresh()->verified);
+
+        $winningPhotoId = $competition->photos()->where('user_id', $winner->id)->value('id');
+        $this->actingAs($runnerUp)
+            ->getJson("/api/photos/{$winningPhotoId}")
+            ->assertOk()
+            ->assertJsonPath('data.userVerified', true);
     }
 
     public function test_end_command_notifies_all_participants_and_winners_separately(): void

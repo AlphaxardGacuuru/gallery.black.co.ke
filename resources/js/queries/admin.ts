@@ -124,6 +124,11 @@ export type AdminExtraSlotSettings = {
 	price: number
 }
 
+export type AdminExtraPhotoSettings = {
+	enabled: boolean
+	price: number
+}
+
 export type AdminPhotoCompetitionsData = {
 	current: {
 		id: string
@@ -138,6 +143,7 @@ export type AdminPhotoCompetitionsData = {
 	prizeTiers: number[]
 	schedule: PhotoCompetitionSchedule
 	extraSlot: AdminExtraSlotSettings
+	extraPhoto: AdminExtraPhotoSettings
 }
 
 export function useAdminPhotoCompetitions() {
@@ -171,6 +177,7 @@ export type AdminPhotoSlotPurchase = {
 	userName: string | null
 	userPhone: string | null
 	competitionStartsAt: string | null
+	type: "extra_entry" | "extra_photo"
 	amount: number
 	status: "pending" | "paid" | "failed"
 	createdAt: string
@@ -236,6 +243,20 @@ export function useUpdateExtraSlot() {
 	return useMutation({
 		mutationFn: (payload: AdminExtraSlotSettings) =>
 			Axios.put("api/admin/photo-competitions/extra-slot", payload),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "photo-competitions"],
+			})
+		},
+	})
+}
+
+export function useUpdateExtraPhoto() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (payload: AdminExtraPhotoSettings) =>
+			Axios.put("api/admin/photo-competitions/extra-photo", payload),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				queryKey: ["admin", "photo-competitions"],
@@ -412,6 +433,7 @@ export type AdminReferralLeaderboardEntry = {
 	userId: string
 	name: string
 	avatar: string | null
+	verified: boolean
 	phone: string | null
 	referralsCount: number
 	eligibleAmount: number
@@ -496,6 +518,7 @@ export type AdminPhotoLiker = {
 	id: string
 	name: string
 	avatar: string | null
+	verified: boolean
 	likesPhoto: boolean
 }
 

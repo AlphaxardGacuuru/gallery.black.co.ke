@@ -16,6 +16,12 @@ class Photo extends Model
     /** @use HasFactory<\Database\Factories\PhotoFactory> */
     use HasFactory, HasUuids;
 
+    /**
+     * 1 free cover image + up to 4 purchased extra slots (see
+     * PhotoSlotPurchase::TYPE_EXTRA_PHOTO).
+     */
+    public const MAX_IMAGES_PER_ENTRY = 5;
+
     protected $fillable = [
         'competition_id',
         'user_id',
@@ -47,6 +53,29 @@ class Photo extends Model
     public function likes(): HasMany
     {
         return $this->hasMany(PhotoLike::class);
+    }
+
+    /**
+     * Images beyond the cover (this entry's own path/thumbnail_path),
+     * ordered for the carousel.
+     */
+    public function images(): HasMany
+    {
+        return $this->hasMany(PhotoImage::class)->orderBy('position');
+    }
+
+    /**
+     * How many images this user is allowed to attach to an entry in this
+     * competition: 1 free + however many extra-photo slots they've paid
+     * for, capped at MAX_IMAGES_PER_ENTRY. Shared by the purchase service,
+     * submission, and the frontend state endpoint so they can't drift.
+     */
+    public static function maxImagesFor(string $competitionId, string $userId): int
+    {
+        return min(
+            1 + PhotoSlotPurchase::paidExtraPhotoCount($competitionId, $userId),
+            self::MAX_IMAGES_PER_ENTRY
+        );
     }
 
     /**

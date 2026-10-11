@@ -3,11 +3,11 @@ import { Head } from "@/lib/spa"
 import { CompetitionCountdown } from "@/components/photos/CompetitionCountdown"
 import { NextCompetitionCountdown } from "@/components/photos/NextCompetitionCountdown"
 import { PhotoCard } from "@/components/photos/PhotoCard"
-import { UploadPhotoDialog } from "@/components/photos/UploadPhotoDialog"
+import { SubmitPhotoButton } from "@/components/photos/SubmitPhotoButton"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useApp } from "@/contexts/AppContext"
 import { activePrizeTiers, PRIZE_TIER_ORDINALS } from "@/lib/prize-tiers"
-import { useCurrentCompetition } from "@/queries/photos"
+import { hasReachedEntryLimit, useCurrentCompetition } from "@/queries/photos"
 
 export default function Compete() {
 	const { auth } = useApp()
@@ -15,12 +15,7 @@ export default function Compete() {
 	const competition = data?.competition
 	const activeCompetition =
 		competition?.status === "active" ? competition : undefined
-	const mySubmissionCount =
-		activeCompetition?.photos.filter(
-			(photo) => String(photo.userId) === String(auth?.id)
-		).length ?? 0
-	const allowedSlots = data?.extraSlot?.hasPaidExtraSlot ? 2 : 1
-	const hasReachedSlotLimit = mySubmissionCount >= allowedSlots
+	const hasReachedSlotLimit = hasReachedEntryLimit(data, auth?.id)
 	const prizeTiers = activePrizeTiers(data?.prizeTiers ?? [])
 	const runnerUpTiers = prizeTiers.slice(1)
 
@@ -127,10 +122,8 @@ export default function Compete() {
 				)}
 			</div>
 
-			<UploadPhotoDialog
+			<SubmitPhotoButton
 				disabled={hasReachedSlotLimit}
-				hasActiveCompetition={Boolean(activeCompetition)}
-				hasPhoneNumber={Boolean(auth?.phone)}
 				extraSlot={activeCompetition ? data?.extraSlot : undefined}
 			/>
 		</>

@@ -5,6 +5,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { UserMenuContent } from "@/components/user-menu-content"
+import { VerifiedAvatar } from "@/components/verified-badge"
 import { useInitials } from "@/hooks/use-initials"
 import { useApp } from "@/contexts/AppContext"
 
@@ -24,15 +25,17 @@ export function FloatingUserAvatar() {
 						type="button"
 						className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/50 bg-background/90 p-1 shadow-lg backdrop-blur-sm transition-transform duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 						aria-label="Open user menu">
-						<Avatar className="h-10 w-10 overflow-hidden rounded-full">
-							<AvatarImage
-								src={auth.avatar}
-								alt={auth.name}
-							/>
-							<AvatarFallback className="rounded-full bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
-								{getInitials(auth.name)}
-							</AvatarFallback>
-						</Avatar>
+						<VerifiedAvatar verified={auth.verified}>
+							<Avatar className="h-10 w-10 overflow-hidden rounded-full">
+								<AvatarImage
+									src={auth.avatar}
+									alt={auth.name}
+								/>
+								<AvatarFallback className="rounded-full bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
+									{getInitials(auth.name)}
+								</AvatarFallback>
+							</Avatar>
+						</VerifiedAvatar>
 					</button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent

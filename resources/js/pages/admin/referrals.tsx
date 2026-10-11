@@ -173,6 +173,7 @@ function LeaderboardEntryRow({
 				alt={entry.name}
 				fallback={initials(entry.name)}
 				className="size-8 shrink-0"
+				verified={entry.verified}
 			/>
 			<span className="min-w-0 flex-1 truncate text-sm font-medium">
 				{entry.name}
