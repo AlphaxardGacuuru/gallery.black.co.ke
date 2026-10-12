@@ -6,6 +6,8 @@ type Props = {
 	label: string
 	value: number
 	icon: LucideIcon
+	/** Shown before the number, e.g. "KES". */
+	prefix?: string
 	tone?: "default" | "success" | "danger" | "warning"
 }
 
@@ -20,6 +22,7 @@ export default function AdminStatCard({
 	label,
 	value,
 	icon: Icon,
+	prefix,
 	tone = "default",
 }: Props) {
 	return (
@@ -27,6 +30,7 @@ export default function AdminStatCard({
 			<CardContent className="flex justify-between items-center gap-4">
 				<div className="min-w-0">
 					<p className="text-2xl font-semibold tracking-tight">
+						{prefix && `${prefix} `}
 						{value.toLocaleString()}
 					</p>
 					<p className="text-sm leading-tight text-muted-foreground">{label}</p>

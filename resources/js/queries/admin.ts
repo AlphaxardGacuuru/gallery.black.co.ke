@@ -10,6 +10,17 @@ export type AdminDashboardData = {
 		totalLikes: number
 	}
 	dailyVolume: { date: string; submitted: number }[]
+	finance: {
+		revenue: number
+		payouts: number
+		net: number
+		revenueBreakdown: { extraEntries: number; extraPhotos: number }
+		payoutsBreakdown: {
+			prizes: number
+			referralRewards: number
+			otherTransfers: number
+		}
+	}
 }
 
 export function useAdminDashboard() {

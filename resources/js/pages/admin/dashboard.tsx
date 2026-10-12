@@ -1,8 +1,17 @@
-import { Images, ThumbsUp, Trophy, Users } from "lucide-react"
+import {
+	Banknote,
+	HandCoins,
+	Images,
+	Scale,
+	ThumbsUp,
+	Trophy,
+	Users,
+} from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { Head } from "@/lib/spa"
 import AdminStatCard from "@/components/admin/AdminStatCard"
 import Heading from "@/components/heading"
+import { Card, CardContent } from "@/components/ui/card"
 import {
 	ChartContainer,
 	ChartTooltip,
@@ -65,6 +74,69 @@ export default function AdminDashboard() {
 							/>
 						</div>
 
+						<div className="space-y-4">
+							<Heading
+								variant="small"
+								title="Money"
+								description="Paid slot purchases against payouts Kopokopo has confirmed"
+							/>
+							<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+								<AdminStatCard
+									label="Revenue"
+									value={data.finance.revenue}
+									prefix="KES"
+									icon={Banknote}
+									tone="success"
+								/>
+								<AdminStatCard
+									label="Paid out"
+									value={data.finance.payouts}
+									prefix="KES"
+									icon={HandCoins}
+									tone="warning"
+								/>
+								<AdminStatCard
+									label={data.finance.net < 0 ? "Net loss" : "Net"}
+									value={Math.abs(data.finance.net)}
+									prefix="KES"
+									icon={Scale}
+									tone={data.finance.net < 0 ? "danger" : "success"}
+								/>
+							</div>
+							<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+								<BreakdownCard
+									title="Revenue by source"
+									rows={[
+										{
+											label: "Extra entries",
+											amount: data.finance.revenueBreakdown.extraEntries,
+										},
+										{
+											label: "Extra photos",
+											amount: data.finance.revenueBreakdown.extraPhotos,
+										},
+									]}
+								/>
+								<BreakdownCard
+									title="Payouts by type"
+									rows={[
+										{
+											label: "Competition prizes",
+											amount: data.finance.payoutsBreakdown.prizes,
+										},
+										{
+											label: "Referral rewards",
+											amount: data.finance.payoutsBreakdown.referralRewards,
+										},
+										{
+											label: "Other transfers",
+											amount: data.finance.payoutsBreakdown.otherTransfers,
+										},
+									]}
+								/>
+							</div>
+						</div>
+
 						<div className="rounded-lg border p-4">
 							<Heading
 								variant="small"
@@ -107,5 +179,33 @@ export default function AdminDashboard() {
 				)}
 			</div>
 		</>
+	)
+}
+
+function BreakdownCard({
+	title,
+	rows,
+}: {
+	title: string
+	rows: { label: string; amount: number }[]
+}) {
+	return (
+		<Card>
+			<CardContent className="space-y-3">
+				<p className="text-sm font-medium">{title}</p>
+				<dl className="space-y-2 text-sm">
+					{rows.map((row) => (
+						<div
+							key={row.label}
+							className="flex items-center justify-between gap-4">
+							<dt className="text-muted-foreground">{row.label}</dt>
+							<dd className="font-medium tabular-nums">
+								KES {row.amount.toLocaleString()}
+							</dd>
+						</div>
+					))}
+				</dl>
+			</CardContent>
+		</Card>
 	)
 }

@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\KopokopoTransfer;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
+use App\Models\PhotoCompetitionWinner;
+use App\Models\PhotoSlotPurchase;
+use App\Models\Referral;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 
@@ -37,7 +41,79 @@ class AdminDashboardController extends Controller
             'data' => [
                 'totals' => $totals,
                 'dailyVolume' => $dailyVolume,
+                'finance' => $this->finance(),
             ],
         ]);
+    }
+
+    /**
+     * Money in (paid slot purchases) against money out (payouts Kopokopo
+     * has confirmed). Prizes and referral rewards only count once their
+     * transfer's webhook confirms it (prize_paid_at / paid_at), never at
+     * initiation, so in-flight or failed payouts aren't counted as spent.
+     */
+    private function finance(): array
+    {
+        $revenueByType = PhotoSlotPurchase::query()
+            ->where('status', PhotoSlotPurchase::STATUS_PAID)
+            ->selectRaw('type, sum(amount) as aggregate')
+            ->groupBy('type')
+            ->pluck('aggregate', 'type');
+
+        $extraEntries = (int) ($revenueByType[PhotoSlotPurchase::TYPE_EXTRA_ENTRY] ?? 0);
+        $extraPhotos = (int) ($revenueByType[PhotoSlotPurchase::TYPE_EXTRA_PHOTO] ?? 0);
+
+        $prizes = (int) PhotoCompetitionWinner::query()
+            ->whereNotNull('prize_paid_at')
+            ->sum('prize_amount');
+
+        $referralRewards = (int) round((float) Referral::query()
+            ->whereNotNull('paid_at')
+            ->sum('amount_paid'));
+
+        $otherTransfers = $this->otherConfirmedTransfers();
+
+        $revenue = $extraEntries + $extraPhotos;
+        $payouts = $prizes + $referralRewards + $otherTransfers;
+
+        return [
+            'revenue' => $revenue,
+            'payouts' => $payouts,
+            'net' => $revenue - $payouts,
+            'revenueBreakdown' => [
+                'extraEntries' => $extraEntries,
+                'extraPhotos' => $extraPhotos,
+            ],
+            'payoutsBreakdown' => [
+                'prizes' => $prizes,
+                'referralRewards' => $referralRewards,
+                'otherTransfers' => $otherTransfers,
+            ],
+        ];
+    }
+
+    /**
+     * Confirmed transfers sent from the admin "send money" form, i.e. any
+     * successful transfer that isn't a prize or referral reward (those are
+     * already counted above, via the kopokopo_reference they share). Kopokopo
+     * statuses aren't a fixed enum, so success is matched in PHP with the
+     * model's own heuristic rather than in SQL, and a webhook delivered
+     * twice for the same transfer is only counted once.
+     */
+    private function otherConfirmedTransfers(): int
+    {
+        $linkedReferences = PhotoCompetitionWinner::query()
+            ->whereNotNull('kopokopo_reference')
+            ->pluck('kopokopo_reference')
+            ->merge(Referral::query()->whereNotNull('kopokopo_reference')->pluck('kopokopo_reference'))
+            ->flip();
+
+        return (int) round(KopokopoTransfer::query()
+            ->whereNotNull('kopokopo_id')
+            ->get(['kopokopo_id', 'amount', 'status'])
+            ->filter(fn(KopokopoTransfer $transfer) => $transfer->isConfirmedSuccess())
+            ->reject(fn(KopokopoTransfer $transfer) => $linkedReferences->has($transfer->kopokopo_id))
+            ->unique('kopokopo_id')
+            ->sum(fn(KopokopoTransfer $transfer) => (float) $transfer->amount));
     }
 }
