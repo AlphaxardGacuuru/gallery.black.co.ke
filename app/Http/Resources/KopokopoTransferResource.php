@@ -18,11 +18,13 @@ class KopokopoTransferResource extends JsonResource
     {
         return [
             "id" => $this->id,
-            "user" => $this->user->name,
+            "user" => $this->user?->name,
             "kopokopoId" => $this->kopokopo_id,
             "kopokopoCreatedAt" => $this->kopokopo_created_at,
             "amount" => number_format($this->amount),
             "currency" => $this->currency,
+            "recipientName" => $this->recipient_name,
+            "recipientPhone" => $this->recipient_phone,
             "status" => $this->status,
             "errors" => $this->errors,
             "transferBatches" => $this->transfer_batches,

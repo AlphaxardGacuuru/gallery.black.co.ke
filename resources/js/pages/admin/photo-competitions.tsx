@@ -453,6 +453,11 @@ function WinnerRow({ winner }: { winner: AdminPhotoCompetitionWinner }) {
 				</Badge>
 				<div>
 					<p className="text-sm font-medium">{winner.userName ?? "—"}</p>
+					{winner.userPhone && (
+						<p className="text-xs text-muted-foreground">
+							{winner.userPhone}
+						</p>
+					)}
 					<p className="text-xs text-muted-foreground">
 						KES {winner.prizeAmount}
 					</p>

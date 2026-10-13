@@ -36,12 +36,18 @@ class KopokopoTransferService extends Service
         $data = $request->input("data");
         $attributes = $data["attributes"];
         $destination = $attributes["destinations"][0] ?? [];
+        // Every transfer this app sends has a single destination, and its
+        // disbursement repeats the same recipient, a fallback for payloads
+        // that leave destinations out.
+        $disbursement = $attributes["transfer_batches"][0]["disbursements"][0] ?? [];
 
         $kopokopoTransfer = new KopokopoTransfer;
         $kopokopoTransfer->user_id = $attributes["metadata"]["userId"] ?? null;
         $kopokopoTransfer->kopokopo_id = $data["id"];
         $kopokopoTransfer->kopokopo_created_at = $attributes["created_at"];
         $kopokopoTransfer->amount = $destination["amount"] ?? null;
+        $kopokopoTransfer->recipient_name = $destination["nickname"] ?? $disbursement["nickname"] ?? null;
+        $kopokopoTransfer->recipient_phone = $destination["phone_number"] ?? $disbursement["phone_number"] ?? null;
         $kopokopoTransfer->currency = $attributes["currency"] ?? null;
         $kopokopoTransfer->status = $attributes["status"] ?? null;
         $kopokopoTransfer->errors = $attributes["errors"] ?? null;

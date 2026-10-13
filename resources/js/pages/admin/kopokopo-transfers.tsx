@@ -79,6 +79,28 @@ const transferColumns: ColumnDef<AdminKopokopoTransfer>[] = [
 		header: "Sent",
 	},
 	{
+		accessorKey: "recipientName",
+		header: "Recipient",
+		cell: ({ row }) => {
+			const { recipientName, recipientPhone } = row.original
+
+			if (!recipientName && !recipientPhone) {
+				return <span className="text-muted-foreground">Unknown</span>
+			}
+
+			return (
+				<div className="space-y-0.5">
+					<p className="font-medium">{recipientName ?? "Unnamed"}</p>
+					{recipientPhone && (
+						<p className="text-xs tabular-nums text-muted-foreground">
+							{recipientPhone}
+						</p>
+					)}
+				</div>
+			)
+		},
+	},
+	{
 		accessorKey: "user",
 		header: "Recorded by",
 		cell: ({ row }) => row.original.user ?? "—",

@@ -311,6 +311,8 @@ export type AdminKopokopoTransfer = {
 	kopokopoCreatedAt: string | null
 	amount: string
 	currency: string | null
+	recipientName: string | null
+	recipientPhone: string | null
 	status: string | null
 	errors: unknown
 	transferBatches: unknown
