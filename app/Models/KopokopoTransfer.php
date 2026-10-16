@@ -12,6 +12,21 @@ class KopokopoTransfer extends Model
 {
     use HasFactory, HasUuids;
 
+    protected $fillable = [
+        'user_id',
+        'kopokopo_id',
+        'kopokopo_location',
+        'kopokopo_created_at',
+        'amount',
+        'recipient_name',
+        'recipient_phone',
+        'currency',
+        'status',
+        'errors',
+        'transfer_batches',
+        'metadata',
+    ];
+
     /**
      * The attributes that should be cast.
      *
@@ -57,17 +72,38 @@ class KopokopoTransfer extends Model
 
     /**
      * Kopokopo's send-money status isn't a fixed enum we can exhaustively
-     * match (no failure-case sample ships with the SDK), so these bucket
-     * by keyword rather than an exact-value comparison. Mirrors the admin
-     * UI's own badge-coloring heuristic in kopokopo-transfers.tsx.
+     * match, so this also checks the per-disbursement status.
      */
     public function isConfirmedSuccess(): bool
     {
-        return (bool) preg_match('/process|transfer|complet|success/i', (string) $this->status);
+        return (bool) preg_match('/process|transfer|complet|success/i', (string) $this->status)
+            || $this->hasOnlyTransferredDisbursements();
     }
 
     public function isConfirmedFailure(): bool
     {
-        return (bool) preg_match('/fail|reject|declin|error/i', (string) $this->status);
+        if ($this->hasOnlyTransferredDisbursements()) {
+            return false;
+        }
+
+        return $this->hasOnlyFailedDisbursements();
+    }
+
+    public function hasOnlyTransferredDisbursements(): bool
+    {
+        $disbursements = collect($this->transfer_batches ?? [])
+            ->flatMap(fn ($batch) => $batch['disbursements'] ?? []);
+
+        return $disbursements->isNotEmpty()
+            && $disbursements->every(fn ($disbursement) => strcasecmp((string) ($disbursement['status'] ?? ''), 'Transferred') === 0);
+    }
+
+    private function hasOnlyFailedDisbursements(): bool
+    {
+        $disbursements = collect($this->transfer_batches ?? [])
+            ->flatMap(fn ($batch) => $batch['disbursements'] ?? []);
+
+        return $disbursements->isNotEmpty()
+            && $disbursements->every(fn ($disbursement) => (bool) preg_match('/fail|reject|declin|error/i', (string) ($disbursement['status'] ?? '')));
     }
 }

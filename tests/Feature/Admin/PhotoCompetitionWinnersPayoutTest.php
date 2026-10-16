@@ -154,6 +154,9 @@ class PhotoCompetitionWinnersPayoutTest extends TestCase
                     'currency' => 'KES',
                     'destinations' => [['amount' => 750]],
                     'metadata' => [],
+                    'transfer_batches' => [[
+                        'disbursements' => [['status' => 'Failed']],
+                    ]],
                 ],
             ],
         ])->assertOk();

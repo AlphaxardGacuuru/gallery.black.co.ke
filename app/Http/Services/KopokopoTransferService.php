@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Kopokopo\SDK\K2;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class KopokopoTransferService extends Service
 {
@@ -33,33 +34,203 @@ class KopokopoTransferService extends Service
     public function store(Request $request)
     {
         // Get Data
-        $data = $request->input("data");
-        $attributes = $data["attributes"];
-        $destination = $attributes["destinations"][0] ?? [];
-        // Every transfer this app sends has a single destination, and its
-        // disbursement repeats the same recipient, a fallback for payloads
-        // that leave destinations out.
-        $disbursement = $attributes["transfer_batches"][0]["disbursements"][0] ?? [];
+        $kopokopoTransfer = $this->saveTransferPayload($request->input('data'));
 
-        $kopokopoTransfer = new KopokopoTransfer;
-        $kopokopoTransfer->user_id = $attributes["metadata"]["userId"] ?? null;
-        $kopokopoTransfer->kopokopo_id = $data["id"];
-        $kopokopoTransfer->kopokopo_created_at = $attributes["created_at"];
-        $kopokopoTransfer->amount = $destination["amount"] ?? null;
-        $kopokopoTransfer->recipient_name = $destination["nickname"] ?? $disbursement["nickname"] ?? null;
-        $kopokopoTransfer->recipient_phone = $destination["phone_number"] ?? $disbursement["phone_number"] ?? null;
-        $kopokopoTransfer->currency = $attributes["currency"] ?? null;
-        $kopokopoTransfer->status = $attributes["status"] ?? null;
-        $kopokopoTransfer->errors = $attributes["errors"] ?? null;
-        $kopokopoTransfer->transfer_batches = $attributes["transfer_batches"] ?? null;
-        $kopokopoTransfer->metadata = $attributes["metadata"] ?? null;
-        $saved = $kopokopoTransfer->save();
+        KopokopoTransferRecordedEvent::dispatch($kopokopoTransfer);
 
-        if ($saved) {
-            KopokopoTransferRecordedEvent::dispatch($kopokopoTransfer);
+        return [true, "Payment Saved", $kopokopoTransfer];
+    }
+
+    /**
+     * Reconcile unfinished transfers with Kopokopo and re-run settlement
+     * handling for completed transfers already saved by a webhook.
+     *
+     * @return array{checked: int, polled: int, confirmed: int, errors: int}
+     */
+    public function reconcileTransfers(): array
+    {
+        $stats = ['checked' => 0, 'polled' => 0, 'confirmed' => 0, 'errors' => 0];
+        $K2 = null;
+        $accessToken = null;
+        $authenticationFailed = false;
+
+        KopokopoTransfer::query()
+            ->whereNotNull('kopokopo_id')
+            ->chunkById(100, function ($transfers) use (&$stats, &$K2, &$accessToken, &$authenticationFailed): void {
+                foreach ($transfers as $transfer) {
+                    if ($authenticationFailed) {
+                        return;
+                    }
+
+                    $stats['checked']++;
+
+                    if ($transfer->isConfirmedSuccess()) {
+                        $this->normalizeTransferredStatus($transfer);
+                        KopokopoTransferRecordedEvent::dispatch($transfer);
+                        $stats['confirmed']++;
+
+                        continue;
+                    }
+
+                    if ($transfer->isConfirmedFailure()) {
+                        KopokopoTransferRecordedEvent::dispatch($transfer);
+
+                        continue;
+                    }
+
+                    if ($K2 === null) {
+                        $K2 = new K2(MPESATransactionService::config());
+                        $tokenResponse = $K2->TokenService()->getToken();
+
+                        if (($tokenResponse['status'] ?? null) !== 'success') {
+                            Log::error('Could not authenticate with Kopokopo while reconciling transfers', $tokenResponse);
+                            $stats['errors']++;
+                            $authenticationFailed = true;
+
+                            return;
+                        }
+
+                        $accessToken = $tokenResponse['data']['accessToken'];
+                    }
+
+                    $location = $transfer->kopokopo_location
+                        ?: rtrim($K2->baseUrl, '/') . '/api/v2/send_money/' . rawurlencode($transfer->kopokopo_id);
+                    $response = $K2->SendMoneyService()->getStatus([
+                        'location' => $location,
+                        'accessToken' => $accessToken,
+                    ]);
+                    $stats['polled']++;
+
+                    if (($response['status'] ?? null) !== 'success' || ! is_array($response['data'] ?? null)) {
+                        Log::warning('Kopokopo transfer status check failed', [
+                            'kopokopo_id' => $transfer->kopokopo_id,
+                            'response' => $response,
+                        ]);
+                        $stats['errors']++;
+
+                        continue;
+                    }
+
+                    $statusData = $response['data'];
+                    $attributes = $this->snakeCaseKeys($statusData);
+                    $attributes['created_at'] ??= $transfer->kopokopo_created_at;
+                    $attributes['metadata'] ??= $transfer->metadata ?? [];
+                    $attributes['status'] ??= $transfer->status;
+                    $attributes['transfer_batches'] ??= $transfer->transfer_batches ?? [];
+
+                    $updatedTransfer = $this->saveTransferPayload(
+                        ['id' => $statusData['id'] ?? $transfer->kopokopo_id, 'attributes' => $attributes],
+                        $statusData['linkSelf'] ?? $location,
+                    );
+
+                    if ($updatedTransfer->isConfirmedSuccess()) {
+                        KopokopoTransferRecordedEvent::dispatch($updatedTransfer);
+                        $stats['confirmed']++;
+                    } elseif ($updatedTransfer->isConfirmedFailure()) {
+                        KopokopoTransferRecordedEvent::dispatch($updatedTransfer);
+                    }
+                }
+            });
+
+        return $stats;
+    }
+
+    /**
+     * Persist the original Kopokopo status URL at initiation time so webhook
+     * outages don't prevent the scheduled reconciler from checking it.
+     */
+    private function recordInitiatedTransfer(Request $request, string $location): void
+    {
+        $kopokopoId = $this->locationId($location);
+
+        if ($kopokopoId === null) {
+            Log::error('Kopokopo returned a transfer location without an ID', ['location' => $location]);
+
+            return;
         }
 
-        return [$saved, "Payment Saved", $kopokopoTransfer];
+        $transfer = KopokopoTransfer::firstOrNew(['kopokopo_id' => $kopokopoId]);
+        $transfer->kopokopo_location = $location;
+
+        if (! $transfer->exists) {
+            $transfer->user_id = $this->id;
+            $transfer->kopokopo_created_at = Carbon::now()->toIso8601String();
+            $transfer->amount = $request->input('amount');
+            $transfer->recipient_name = $request->input('recipientName');
+            $transfer->recipient_phone = $this->normalizePhoneNumber($request->input('destinationReference'));
+            $transfer->currency = 'KES';
+            $transfer->status = 'Scheduled';
+            $transfer->metadata = [
+                'userId' => $this->id,
+                'notes' => 'Transfer at ' . Carbon::now(),
+            ];
+        }
+
+        $transfer->save();
+    }
+
+    /**
+     * Save a common shape for webhook and polling payloads.
+     *
+     * @param  array{id: string, attributes: array<string, mixed>}  $payload
+     */
+    private function saveTransferPayload(array $payload, ?string $location = null): KopokopoTransfer
+    {
+        $attributes = $payload['attributes'];
+        $destination = $attributes['destinations'][0] ?? [];
+        $disbursement = $attributes['transfer_batches'][0]['disbursements'][0] ?? [];
+        $values = [
+            'user_id' => $attributes['metadata']['user_id'] ?? $attributes['metadata']['userId'] ?? null,
+            'kopokopo_created_at' => $attributes['created_at'] ?? null,
+            'amount' => $destination['amount'] ?? $disbursement['amount'] ?? null,
+            'recipient_name' => $destination['nickname'] ?? $disbursement['nickname'] ?? null,
+            'recipient_phone' => $destination['phone_number'] ?? $disbursement['phone_number'] ?? null,
+            'currency' => $attributes['currency'] ?? null,
+            'status' => $attributes['status'] ?? null,
+            'errors' => $attributes['errors'] ?? null,
+            'transfer_batches' => $attributes['transfer_batches'] ?? null,
+            'metadata' => $attributes['metadata'] ?? null,
+        ];
+
+        if ($location !== null) {
+            $values['kopokopo_location'] = $location;
+        }
+
+        $transfer = KopokopoTransfer::updateOrCreate(
+            ['kopokopo_id' => $payload['id']],
+            $values,
+        );
+
+        $this->normalizeTransferredStatus($transfer);
+
+        return $transfer;
+    }
+
+    private function normalizeTransferredStatus(KopokopoTransfer $transfer): void
+    {
+        if ($transfer->hasOnlyTransferredDisbursements() && $transfer->status !== 'Transferred') {
+            $transfer->status = 'Transferred';
+            $transfer->save();
+        }
+    }
+
+    /**
+     * Convert SDK camelCase response keys into the webhook's snake_case shape.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function snakeCaseKeys(array $data): array
+    {
+        $result = [];
+
+        foreach ($data as $key => $value) {
+            $result[Str::snake((string) $key)] = is_array($value)
+                ? (array_is_list($value) ? array_map(fn ($item) => is_array($item) ? $this->snakeCaseKeys($item) : $item, $value) : $this->snakeCaseKeys($value))
+                : $value;
+        }
+
+        return $result;
     }
 
     /**
@@ -107,6 +278,8 @@ class KopokopoTransferService extends Service
         ]);
 
         if (($response['status'] ?? null) === 'success') {
+            $this->recordInitiatedTransfer($request, $response['location']);
+
             return [true, 'Transfer initiated, awaiting confirmation from Kopokopo', $response];
         }
 

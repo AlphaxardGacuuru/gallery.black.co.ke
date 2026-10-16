@@ -208,6 +208,9 @@ class AdminReferralControllerTest extends TestCase
                     'currency' => 'KES',
                     'destinations' => [['amount' => 50]],
                     'metadata' => [],
+                    'transfer_batches' => [[
+                        'disbursements' => [['status' => 'Failed']],
+                    ]],
                 ],
             ],
         ])->assertOk();

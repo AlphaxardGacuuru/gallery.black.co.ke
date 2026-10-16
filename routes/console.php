@@ -43,3 +43,7 @@ Schedule::command('app:end-photo-competition')
 Schedule::command('app:send-photo-competition-reminder')
     ->everyMinute()
     ->withoutOverlapping();
+
+Schedule::command('app:reconcile-kopokopo-transfers')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
