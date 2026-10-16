@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Events\MpesaPaymentFailedEvent;
 use App\Http\Resources\MPESATransactionResource;
 use App\Models\Integration;
 use App\Models\MPESATransaction;
@@ -60,7 +61,17 @@ class MPESATransactionService extends Service
         // Shorten event
         $event = $attributes['event'];
         // Shorten resource
-        $resource = $event['resource'];
+        $resource = $event['resource'] ?? null;
+
+        // A cancelled, timed-out or otherwise failed STK push arrives with
+        // status "Failed" and no resource, since no money moved.
+        if (! $resource) {
+            Log::info("Kopokopo Payment Failed. Id: {$data['id']}", $event['errors'] ?? []);
+
+            MpesaPaymentFailedEvent::dispatch($data['id'], $event['errors'] ?? []);
+
+            return [false, "Payment Not Completed", null, null];
+        }
 
         $betterPhone = substr_replace($resource['sender_phone_number'], '0', 0, -9);
 
@@ -69,7 +80,9 @@ class MPESATransactionService extends Service
         if (!$user) {
             Log::info("User Not Found. Reference: " . $resource['reference']);
 
-            return [true, "User Not Found", null, null];
+            // Nothing was saved, so there's no transaction for
+            // MpesaTransactionCreatedEvent to carry.
+            return [false, "User Not Found", null, null];
         }
 
         $amount = is_numeric($resource['amount']) ? round($resource['amount'], 0) : 0;

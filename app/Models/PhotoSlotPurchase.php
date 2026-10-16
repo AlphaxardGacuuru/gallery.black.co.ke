@@ -26,10 +26,11 @@ class PhotoSlotPurchase extends Model
     public const TYPE_EXTRA_PHOTO = 'extra_photo';
 
     /**
-     * Nothing ever flips a purchase to "failed" once Kopokopo accepts the
-     * STK push, even if the user ignores or cancels the phone prompt (only
-     * GrantPhotoSlotListener, on a later webhook, ever moves it to "paid").
-     * Without this, a single cancelled prompt would block every future
+     * A purchase only leaves "pending" when a webhook says so: "paid" via
+     * GrantPhotoSlotListener, or "failed" via MpesaPaymentFailedListener
+     * when Kopokopo reports the prompt was cancelled or failed. If neither
+     * webhook ever arrives (the user ignores the prompt and Kopokopo stays
+     * silent), a single abandoned prompt would otherwise block every future
      * purchase attempt forever. Stale pending rows are never themselves
      * marked failed, only ignored, since a late webhook would otherwise
      * confirm a payment that was already written off.
