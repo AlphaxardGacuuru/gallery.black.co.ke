@@ -21,6 +21,12 @@ export type AdminDashboardData = {
 			otherTransfers: number
 		}
 	}
+	referrals: {
+		totalReferrals: number
+		totalReferrers: number
+		totalPaidOut: number
+		totalPendingPayout: number
+	}
 }
 
 export function useAdminDashboard() {
@@ -455,6 +461,8 @@ export type AdminReferralLeaderboardEntry = {
 export type AdminReferralsData = {
 	totalReferrals: number
 	totalReferrers: number
+	totalPaidOut: number
+	totalPendingPayout: number
 	threshold: number
 	rewardAmount: number
 	leaderboard: AdminReferralLeaderboardEntry[]

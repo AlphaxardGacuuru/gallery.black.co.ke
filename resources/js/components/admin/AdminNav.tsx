@@ -1,8 +1,10 @@
 import {
+	Activity,
 	ChevronRight,
 	LayoutDashboard,
 	Send,
 	ShieldCheck,
+	Telescope,
 	Trophy,
 	UserPlus,
 	Users,
@@ -30,6 +32,8 @@ const ADMIN_ITEMS = [
 	{ title: "Photo challenge", href: "/admin/photo-competitions", icon: Trophy },
 	{ title: "Payouts", href: "/admin/kopokopo-transfers", icon: Send },
 	{ title: "Referrals", href: "/admin/referrals", icon: UserPlus },
+	{ title: "Telescope", href: "/telescope", icon: Telescope },
+	{ title: "Horizon", href: "/horizon", icon: Activity },
 ]
 
 export function AdminNav() {

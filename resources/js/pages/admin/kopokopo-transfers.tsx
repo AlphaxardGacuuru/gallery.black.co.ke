@@ -1,18 +1,21 @@
-import { Loader2 } from "lucide-react"
+import { Gift, Loader2, Trophy } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Head } from "@/lib/spa"
+import AdminStatCard from "@/components/admin/AdminStatCard"
 import Heading from "@/components/heading"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import toast from "@/lib/toast"
 import {
 	type AdminKopokopoRecipient,
 	type AdminKopokopoTransfer,
 	type KopokopoRecipientType,
+	useAdminDashboard,
 	useAdminKopokopoRecipients,
 	useAdminKopokopoTransfers,
 	useSendKopokopoTransfer,
@@ -313,6 +316,8 @@ function TransferHistory() {
 }
 
 export default function AdminKopokopoTransfers() {
+	const { data: dashboard } = useAdminDashboard()
+
 	return (
 		<>
 			<Head title="Payouts" />
@@ -323,6 +328,34 @@ export default function AdminKopokopoTransfers() {
 					title="Payouts"
 					description="Send money via M-Pesa and review past transfers"
 				/>
+
+				<div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+					{dashboard ? (
+						<>
+							<AdminStatCard
+								label="Winnings paid"
+								value={dashboard.finance.payoutsBreakdown.prizes}
+								prefix="KES"
+								icon={Trophy}
+								tone="warning"
+							/>
+							<AdminStatCard
+								label="Referral rewards paid"
+								value={dashboard.finance.payoutsBreakdown.referralRewards}
+								prefix="KES"
+								icon={Gift}
+								tone="warning"
+							/>
+						</>
+					) : (
+						Array.from({ length: 2 }).map((_, index) => (
+							<Skeleton
+								key={index}
+								className="h-20"
+							/>
+						))
+					)}
+				</div>
 
 				<div className="flex flex-wrap gap-6">
 					<SendMoneyForm />

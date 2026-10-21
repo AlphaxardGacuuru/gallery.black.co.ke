@@ -1,7 +1,8 @@
 import { isAxiosError } from "axios"
-import { Check, Loader2 } from "lucide-react"
+import { Check, Loader2, Users } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
+import AdminStatCard from "@/components/admin/AdminStatCard"
 import Heading from "@/components/heading"
 import { AvatarPreviewDialog } from "@/components/avatar-preview-dialog"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +19,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import VerifiedBadge from "@/components/verified-badge"
 import { normalizePhoneNumber } from "@/lib/phone"
@@ -27,6 +29,7 @@ import toast from "@/lib/toast"
 import {
 	type AdminUser,
 	useAddKopokopoRecipient,
+	useAdminDashboard,
 	useAdminKopokopoRecipients,
 	useAdminUsers,
 	useAttachReferrer,
@@ -264,6 +267,9 @@ export default function AdminUsers() {
 	const [page, setPage] = useState(1)
 	const [perPage, setPerPage] = useState(20)
 	const { data, isLoading } = useAdminUsers(search, page, perPage)
+	// The table's own total shrinks while searching, so the card reads the
+	// unfiltered count the dashboard already computes.
+	const { data: dashboard } = useAdminDashboard()
 	const toggleVerified = useToggleUserVerified()
 	const { data: recipients } = useAdminKopokopoRecipients()
 
@@ -411,6 +417,18 @@ export default function AdminUsers() {
 					title="Users"
 					description="Grant or revoke the verified badge shown next to a user's avatar"
 				/>
+
+				<div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+					{dashboard ? (
+						<AdminStatCard
+							label="Total users"
+							value={dashboard.totals.totalUsers}
+							icon={Users}
+						/>
+					) : (
+						<Skeleton className="h-20" />
+					)}
+				</div>
 
 				<Card>
 					<CardContent className="flex flex-wrap items-center gap-4">

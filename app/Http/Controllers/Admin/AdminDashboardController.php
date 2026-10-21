@@ -42,6 +42,7 @@ class AdminDashboardController extends Controller
                 'totals' => $totals,
                 'dailyVolume' => $dailyVolume,
                 'finance' => $this->finance(),
+                'referrals' => Referral::summary(),
             ],
         ]);
     }

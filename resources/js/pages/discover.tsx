@@ -1,7 +1,7 @@
-import { Compass } from "lucide-react"
+import { Compass, Copy } from "lucide-react"
+import { Link } from "@tanstack/react-router"
 import { Head } from "@/lib/spa"
 import Heading from "@/components/heading"
-import { PhotoCard } from "@/components/photos/PhotoCard"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useDiscoverPhotos } from "@/queries/photos"
@@ -24,12 +24,11 @@ export default function Discover() {
 				/>
 
 				{isLoading ? (
-					<div className="columns-2 gap-4 sm:columns-3 lg:columns-4 *:mb-4">
+					<div className="grid grid-cols-3 gap-1 lg:grid-cols-4">
 						{Array.from({ length: 12 }).map((_, index) => (
 							<Skeleton
 								key={index}
-								className="mb-4 break-inside-avoid"
-								style={{ height: `${180 + (index % 3) * 60}px` }}
+								className="aspect-square rounded-none"
 							/>
 						))}
 					</div>
@@ -43,19 +42,30 @@ export default function Discover() {
 					</div>
 				) : (
 					<>
-						{/* CSS columns give each photo its own natural aspect ratio,
-						    the same "masonry" effect Instagram's discovery grid uses —
-						    ordering across columns is a tradeoff we accept for it. */}
-						<div className="columns-2 gap-1 sm:columns-3 lg:columns-4 *:mb-1">
+						{/* A uniform square grid keeps discovery symmetrical. Each tile
+						    is just the cropped image, and tapping it opens the photo's
+						    own page with the full image and its details. */}
+						<div className="grid grid-cols-3 gap-1 lg:grid-cols-4">
 							{photos.map((photo) => (
-								<div
+								<Link
 									key={photo.id}
-									className="break-inside-avoid">
-									<PhotoCard
-										photo={photo}
-										canLike={false}
+									to={`/photos/${photo.id}/show` as never}
+									aria-label="View full photo"
+									className="relative block aspect-square overflow-hidden bg-muted">
+									<img
+										src={photo.thumbnailUrl}
+										alt={photo.caption ?? "Competition entry"}
+										loading="lazy"
+										className="size-full object-cover"
 									/>
-								</div>
+									{photo.images.length > 0 && (
+										<div
+											className="absolute right-1.5 top-1.5 text-white drop-shadow"
+											aria-label={`${photo.images.length + 1} photos`}>
+											<Copy className="size-4" />
+										</div>
+									)}
+								</Link>
 							))}
 						</div>
 

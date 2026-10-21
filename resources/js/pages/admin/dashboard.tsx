@@ -1,10 +1,14 @@
 import {
 	Banknote,
+	Gift,
 	HandCoins,
+	Hourglass,
 	Images,
 	Scale,
+	Send,
 	ThumbsUp,
 	Trophy,
+	UserPlus,
 	Users,
 } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
@@ -117,22 +121,58 @@ export default function AdminDashboard() {
 										},
 									]}
 								/>
-								<BreakdownCard
-									title="Payouts by type"
-									rows={[
-										{
-											label: "Competition prizes",
-											amount: data.finance.payoutsBreakdown.prizes,
-										},
-										{
-											label: "Referral rewards",
-											amount: data.finance.payoutsBreakdown.referralRewards,
-										},
-										{
-											label: "Other transfers",
-											amount: data.finance.payoutsBreakdown.otherTransfers,
-										},
-									]}
+							</div>
+							<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+								<AdminStatCard
+									label="Winnings paid"
+									value={data.finance.payoutsBreakdown.prizes}
+									prefix="KES"
+									icon={Trophy}
+									tone="warning"
+								/>
+								<AdminStatCard
+									label="Referral rewards paid"
+									value={data.finance.payoutsBreakdown.referralRewards}
+									prefix="KES"
+									icon={Gift}
+									tone="warning"
+								/>
+								<AdminStatCard
+									label="Other transfers"
+									value={data.finance.payoutsBreakdown.otherTransfers}
+									prefix="KES"
+									icon={Send}
+									tone="warning"
+								/>
+							</div>
+						</div>
+
+						<div className="space-y-4">
+							<Heading
+								variant="small"
+								title="Referrals"
+								description="Sign-ups through referral links and their rewards"
+							/>
+							{/* "Paid out to referrers" from the referrals page is the
+							    same figure as "Referral rewards paid" above. */}
+							<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+								<AdminStatCard
+									label="Total referrals"
+									value={data.referrals.totalReferrals}
+									icon={UserPlus}
+									tone="success"
+								/>
+								<AdminStatCard
+									label="Users who've referred someone"
+									value={data.referrals.totalReferrers}
+									icon={Users}
+								/>
+								<AdminStatCard
+									label="Pending payouts"
+									value={data.referrals.totalPendingPayout}
+									prefix="KES"
+									icon={Hourglass}
+									tone="warning"
 								/>
 							</div>
 						</div>

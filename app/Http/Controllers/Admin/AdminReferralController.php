@@ -51,10 +51,7 @@ class AdminReferralController extends Controller
 
         return response()->json([
             'data' => [
-                'totalReferrals' => Referral::query()->count(),
-                'totalReferrers' => $leaderboard->count() === 20
-                    ? User::query()->whereHas('referralsMade')->count()
-                    : $leaderboard->count(),
+                ...Referral::summary(),
                 'threshold' => $threshold,
                 'rewardAmount' => $rewardAmount,
                 'leaderboard' => $leaderboard,

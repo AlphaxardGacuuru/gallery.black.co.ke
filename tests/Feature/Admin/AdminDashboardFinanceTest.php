@@ -67,7 +67,11 @@ class AdminDashboardFinanceTest extends TestCase
             ->assertJsonPath('data.finance.payoutsBreakdown.referralRewards', 100)
             ->assertJsonPath('data.finance.payoutsBreakdown.otherTransfers', 250)
             ->assertJsonPath('data.finance.payouts', 850)
-            ->assertJsonPath('data.finance.net', -760);
+            ->assertJsonPath('data.finance.net', -760)
+            ->assertJsonPath('data.referrals.totalReferrals', 2)
+            ->assertJsonPath('data.referrals.totalReferrers', 2)
+            ->assertJsonPath('data.referrals.totalPaidOut', 100)
+            ->assertJsonPath('data.referrals.totalPendingPayout', 0);
     }
 
     private function transfer(string $reference, int $amount, string $status): void

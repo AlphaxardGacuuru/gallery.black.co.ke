@@ -105,4 +105,27 @@ class Referral extends Model
             ['referrer_id' => $referrerId]
         );
     }
+
+    /**
+     * Headline referral numbers, shared by the admin referrals page and the
+     * admin dashboard so the two can't disagree. Payouts only count as paid
+     * once Kopokopo's webhook confirms them (paid_at); ones initiated but
+     * not yet confirmed are "pending".
+     *
+     * @return array{totalReferrals: int, totalReferrers: int, totalPaidOut: int, totalPendingPayout: int}
+     */
+    public static function summary(): array
+    {
+        return [
+            'totalReferrals' => static::query()->count(),
+            'totalReferrers' => static::query()->distinct()->count('referrer_id'),
+            'totalPaidOut' => (int) round((float) static::query()
+                ->whereNotNull('paid_at')
+                ->sum('amount_paid')),
+            'totalPendingPayout' => (int) round((float) static::query()
+                ->whereNull('paid_at')
+                ->whereNotNull('kopokopo_reference')
+                ->sum('amount_paid')),
+        ];
+    }
 }

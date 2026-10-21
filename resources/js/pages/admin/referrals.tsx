@@ -1,4 +1,4 @@
-import { Loader2, Trophy, UserPlus, Users } from "lucide-react"
+import { HandCoins, Hourglass, Loader2, Trophy, UserPlus, Users } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import Heading from "@/components/heading"
@@ -241,8 +241,8 @@ export default function AdminReferrals() {
 				/>
 
 				{isLoading || !data ? (
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						{Array.from({ length: 2 }).map((_, index) => (
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+						{Array.from({ length: 4 }).map((_, index) => (
 							<Skeleton
 								key={index}
 								className="h-20"
@@ -250,7 +250,7 @@ export default function AdminReferrals() {
 						))}
 					</div>
 				) : (
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 						<AdminStatCard
 							label="Total referrals"
 							value={data.totalReferrals}
@@ -261,6 +261,19 @@ export default function AdminReferrals() {
 							label="Users who've referred someone"
 							value={data.totalReferrers}
 							icon={Users}
+						/>
+						<AdminStatCard
+							label="Paid out to referrers"
+							value={data.totalPaidOut}
+							prefix="KES"
+							icon={HandCoins}
+						/>
+						<AdminStatCard
+							label="Pending payouts"
+							value={data.totalPendingPayout}
+							prefix="KES"
+							icon={Hourglass}
+							tone="warning"
 						/>
 					</div>
 				)}
