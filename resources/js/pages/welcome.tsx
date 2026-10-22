@@ -11,6 +11,7 @@ import { useApp } from "@/contexts/AppContext"
 import { activePrizeTiers, PRIZE_TIER_ORDINALS } from "@/lib/prize-tiers"
 import { cn } from "@/lib/utils"
 import { useCurrentCompetition } from "@/queries/photos"
+import { ScrollToTopButton } from "@/components/scroll-to-top-button"
 
 const howItWorks = [
 	{
@@ -45,6 +46,7 @@ export default function Welcome() {
 
 	return (
 		<div className="relative isolate min-h-screen overflow-hidden bg-background text-foreground">
+			<ScrollToTopButton />
 			<BackdropLines />
 
 			<div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
