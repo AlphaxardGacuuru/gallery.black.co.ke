@@ -32,17 +32,22 @@ class AdminPhotoLikeController extends Controller
                     ->limit(1),
             ])
             ->orderBy('name')
-            ->limit(20)
-            ->get();
+            ->orderBy('id')
+            ->paginate($request->integer('per_page', 30));
 
         return response()->json([
-            'data' => $users->map(fn(User $user) => [
+            'data' => $users->getCollection()->map(fn(User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'avatar' => $user->avatar,
                 'verified' => (bool) $user->verified,
                 'likesPhoto' => (bool) $user->likes_photo,
             ]),
+            'meta' => [
+                'current_page' => $users->currentPage(),
+                'last_page' => $users->lastPage(),
+                'total' => $users->total(),
+            ],
         ]);
     }
 

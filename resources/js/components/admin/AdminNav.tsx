@@ -1,6 +1,7 @@
 import {
 	Activity,
 	ChevronRight,
+	Gauge,
 	LayoutDashboard,
 	Send,
 	ShieldCheck,
@@ -34,6 +35,7 @@ const ADMIN_ITEMS = [
 	{ title: "Referrals", href: "/admin/referrals", icon: UserPlus },
 	{ title: "Telescope", href: "/telescope", icon: Telescope },
 	{ title: "Horizon", href: "/horizon", icon: Activity },
+	{ title: "Pulse", href: "/pulse", icon: Gauge },
 ]
 
 export function AdminNav() {

@@ -62,6 +62,31 @@ class AdminPhotoLikeControllerTest extends TestCase
         $this->assertSame('Alice Liker', $response->json('data.0.name'));
     }
 
+    public function test_admin_can_page_through_every_user(): void
+    {
+        $photo = Photo::factory()->create();
+        $admin = $this->admin();
+        User::factory()->count(34)->create();
+        $total = User::count();
+
+        $first = $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/admin/photos/{$photo->id}/likes?per_page=30");
+
+        $first->assertOk()
+            ->assertJsonCount(30, 'data')
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.last_page', 2)
+            ->assertJsonPath('meta.total', $total);
+
+        $second = $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/admin/photos/{$photo->id}/likes?per_page=30&page=2");
+
+        $second->assertOk()->assertJsonCount($total - 30, 'data');
+
+        $ids = collect($first->json('data'))->merge($second->json('data'))->pluck('id');
+        $this->assertCount($total, $ids->unique());
+    }
+
     public function test_admin_can_add_a_like_on_behalf_of_a_user(): void
     {
         $photo = Photo::factory()->create(['likes_count' => 0]);

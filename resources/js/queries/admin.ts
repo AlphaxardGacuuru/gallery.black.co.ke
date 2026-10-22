@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+	type InfiniteData,
+	useInfiniteQuery,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query"
 import Axios from "@/lib/axios"
 import type { UserSettings } from "@/types/auth"
 
@@ -543,14 +549,27 @@ export type AdminPhotoLiker = {
 	likesPhoto: boolean
 }
 
+type AdminPhotoLikersPage = {
+	data: AdminPhotoLiker[]
+	meta: { current_page: number; last_page: number; total: number }
+}
+
+// Only mounted while the dialog is open, and gcTime 0 drops the pages as
+// soon as it closes, so every open starts from page 1 with fresh like state
+// instead of flashing whatever was cached from the last time.
 export function useAdminPhotoLikers(photoId: string, search: string) {
-	return useQuery({
+	return useInfiniteQuery({
 		queryKey: ["admin", "photo-likes", photoId, search],
-		queryFn: () =>
-			Axios.get<{ data: AdminPhotoLiker[] }>(
-				`api/admin/photos/${photoId}/likes`,
-				{ params: { name: search || undefined } }
-			).then((res) => res.data.data),
+		queryFn: ({ pageParam }) =>
+			Axios.get<AdminPhotoLikersPage>(`api/admin/photos/${photoId}/likes`, {
+				params: { name: search || undefined, page: pageParam },
+			}).then((res) => res.data),
+		initialPageParam: 1,
+		getNextPageParam: (lastPage) =>
+			lastPage.meta.current_page < lastPage.meta.last_page
+				? lastPage.meta.current_page + 1
+				: undefined,
+		gcTime: 0,
 	})
 }
 
@@ -564,10 +583,22 @@ export function useToggleAdminPhotoLike(photoId: string) {
 			}>(`api/admin/photos/${photoId}/likes/${userId}`).then(
 				(res) => res.data.data
 			),
-		onSuccess: () => {
-			queryClient.invalidateQueries({
-				queryKey: ["admin", "photo-likes", photoId],
-			})
+		onSuccess: ({ userId, liked }) => {
+			// Patch the one row in place rather than refetching every loaded
+			// page, which would reset the list under the admin's scroll.
+			queryClient.setQueriesData<InfiniteData<AdminPhotoLikersPage>>(
+				{ queryKey: ["admin", "photo-likes", photoId] },
+				(current) =>
+					current && {
+						...current,
+						pages: current.pages.map((page) => ({
+							...page,
+							data: page.data.map((user) =>
+								user.id === userId ? { ...user, likesPhoto: liked } : user
+							),
+						})),
+					}
+			)
 			queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
 			queryClient.invalidateQueries({ queryKey: ["photos", "discover"] })
 			queryClient.invalidateQueries({ queryKey: ["photos", "show", photoId] })

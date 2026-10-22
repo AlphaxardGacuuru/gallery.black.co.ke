@@ -13,6 +13,7 @@
         "barryvdh/laravel-dompdf": "^3.1",
         "cknow/laravel-money": "^8.5",
         "ezyang/htmlpurifier": "^4.19",
+        "fakerphp/faker": "^1.24",
         "inertiajs/inertia-laravel": "^3.0",
         "intervention/image": "^4.3",
         "kopokopo/k2-connect-php": "^2.0",
@@ -22,6 +23,7 @@
         "laravel/fortify": "^1.37",
         "laravel/framework": "^13.0",
         "laravel/horizon": "^5.48",
+        "laravel/pulse": "^1.8",
         "laravel/reverb": "^1.0",
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.26",
@@ -30,8 +32,7 @@
         "laravel/wayfinder": "^0.1.14",
         "spatie/laravel-permission": "^7.4",
         "symfony/http-client": "^8.0",
-        "symfony/mailgun-mailer": "^8.0",
-        "fakerphp/faker": "^1.24"
+        "symfony/mailgun-mailer": "^8.0"
     },
     "require-dev": {
         "laravel/boost": "^2.2",
