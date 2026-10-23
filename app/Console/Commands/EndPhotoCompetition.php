@@ -27,7 +27,10 @@ class EndPhotoCompetition extends Command
             return;
         }
 
+        // Seed photos compete for likes like any other entry, but never
+        // take a prize: their accounts aren't real people to pay.
         $topPhotos = $competition->photos()
+            // ->whereHas('user', fn($query) => $query->real())
             ->orderByDesc('likes_count')
             ->orderBy('created_at')
             ->limit(10)

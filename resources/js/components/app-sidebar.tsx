@@ -1,5 +1,5 @@
 import { Link } from "@/components/ui/link"
-import { Compass, Download, Image as ImageIcon } from "lucide-react"
+import { Compass, Download, Image as ImageIcon, Trophy } from "lucide-react"
 import { AdminNav } from "@/components/admin/AdminNav"
 import AppLogo from "@/components/app-logo"
 import { NavFooter } from "@/components/nav-footer"
@@ -34,6 +34,11 @@ export const mainNavItems: NavItem[] = [
 		title: "Discover",
 		href: "/discover",
 		icon: Compass,
+	},
+	{
+		title: "Leaderboard",
+		href: "/leaderboard",
+		icon: Trophy,
 	},
 ]
 

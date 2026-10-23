@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -58,6 +59,7 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         'settings' => 'object',
         'email_verified_at' => 'datetime',
         'verified' => 'boolean',
+        'is_seed' => 'boolean',
         'updated_at' => 'datetime:d M Y',
         'created_at' => 'datetime:d M Y h:i:s',
     ];
@@ -111,6 +113,21 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         return Attribute::make(
             get: fn($value) => Carbon::parse($value)->format('d M Y h:i:s'),
         );
+    }
+
+    /**
+     * Real people only, leaving out the seed accounts that post Unsplash
+     * photos into each competition (see PostSeedPhotos). Their emails
+     * aren't real inboxes, so anything that notifies users should use this.
+     */
+    public function scopeReal(Builder $query): Builder
+    {
+        return $query->where('is_seed', false);
+    }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(Photo::class);
     }
 
     /**

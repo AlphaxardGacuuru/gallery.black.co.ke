@@ -12,12 +12,14 @@ class DatabaseSeeder extends Seeder
             $this->call([
                 RoleSeeder::class,
                 AdminUserSeeder::class,
+                SeedUserSeeder::class,
             ]);
         } else {
             $this->call([
                 RoleSeeder::class,
                 AdminUserSeeder::class,
                 UserSeeder::class,
+                SeedUserSeeder::class,
                 PhotoCompetitionSeeder::class,
                 ReferralSeeder::class,
             ]);

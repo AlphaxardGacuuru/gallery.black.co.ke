@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\LeaderboardEntryResource;
 use App\Http\Resources\PhotoCompetitionResource;
 use App\Http\Resources\PhotoResource;
 use App\Http\Services\PhotoCompetitionService;
@@ -43,6 +44,24 @@ class PhotoCompetitionController extends Controller
             'meta' => [
                 'current_page' => $photos->currentPage(),
                 'last_page' => $photos->lastPage(),
+            ],
+        ]);
+    }
+
+    /**
+     * Users who have posted, ranked by how often they placed 1st, then 2nd, etc.
+     */
+    public function leaderboard(): JsonResponse
+    {
+        $users = $this->photoCompetitionService->leaderboard();
+
+        return response()->json([
+            'data' => $users->getCollection()->values()->map(
+                fn($user, int $index) => new LeaderboardEntryResource($user, $users->firstItem() + $index)
+            ),
+            'meta' => [
+                'current_page' => $users->currentPage(),
+                'last_page' => $users->lastPage(),
             ],
         ]);
     }

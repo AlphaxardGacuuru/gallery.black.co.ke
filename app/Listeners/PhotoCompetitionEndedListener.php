@@ -62,7 +62,7 @@ class PhotoCompetitionEndedListener
             ->competition
             ->photos
             ->pluck('user')
-            ->filter()
+            ->filter(fn($user) => $user && ! $user->is_seed)
             ->unique('id')
             ->each(fn($user) => $user->notify(
                 new PhotoCompetitionEndedNotification($event->competition)

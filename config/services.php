@@ -54,6 +54,24 @@ return [
         'sms_from' => env('VONAGE_SMS_FROM', '254700364446'),
     ],
 
+    'unsplash' => [
+        'access_key' => env('UNSPLASH_ACCESS_KEY'),
+        'base_url' => 'https://api.unsplash.com',
+        // Seed photos (see PostSeedPhotos) rotate through these searches.
+        'queries' => [
+            'nairobi',
+            'nairobi city',
+            'nairobi street',
+            'kenya',
+            'kenya landscape',
+            'kenya wildlife',
+            'maasai mara',
+            'mombasa',
+            'kenyan people',
+            'lamu kenya',
+        ],
+    ],
+
     'kopokopo' => [
         'environment' => env('KOPOKOPO_ENV', 'live'),
         // The till/paybill number this app receives payments into (e.g. the

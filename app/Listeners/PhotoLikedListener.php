@@ -35,7 +35,7 @@ class PhotoLikedListener
 
         $owner = $event->photo->user;
 
-        if (! $owner || $owner->is($event->likedBy)) {
+        if (! $owner || $owner->is_seed || $owner->is($event->likedBy)) {
             return;
         }
 

@@ -1,4 +1,4 @@
-import { Compass, Copy } from "lucide-react"
+import { Compass, Copy, Trophy } from "lucide-react"
 import { Link } from "@tanstack/react-router"
 import { Head } from "@/lib/spa"
 import Heading from "@/components/heading"
@@ -58,6 +58,20 @@ export default function Discover() {
 										loading="lazy"
 										className="size-full object-cover"
 									/>
+									{photo.isWinner ? (
+										<div
+											className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[11px] font-semibold text-amber-950 shadow"
+											aria-label="Winner">
+											<Trophy className="size-3" />
+											<span className="hidden sm:inline">Winner</span>
+										</div>
+									) : (
+										photo.position && (
+											<div className="absolute left-1.5 top-1.5 rounded-full bg-neutral-900/80 px-1.5 py-0.5 text-[11px] font-semibold text-white shadow dark:bg-neutral-100/90 dark:text-neutral-900">
+												#{photo.position}
+											</div>
+										)
+									)}
 									{photo.images.length > 0 && (
 										<div
 											className="absolute right-1.5 top-1.5 text-white drop-shadow"

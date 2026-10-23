@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Events\PhotoCompetitionStarted;
+use App\Models\Photo;
 use App\Models\PhotoCompetition;
+use App\Models\PhotoCompetitionWinner;
 use App\Models\PhotoSlotPurchase;
 use App\Models\Setting;
 use App\Models\User;
@@ -512,5 +514,51 @@ class PhotoCompetitionTest extends TestCase
         $response->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $endedPhoto->id);
+    }
+
+    public function test_leaderboard_ranks_users_by_first_places_then_second_places(): void
+    {
+        $viewer = User::factory()->create();
+        $oneFirst = User::factory()->create();
+        $oneFirstTwoSeconds = User::factory()->create();
+        $oneFirstOneSecond = User::factory()->create();
+        $twoFirsts = User::factory()->create();
+        $neverPlaced = User::factory()->create();
+        $seed = User::factory()->create(['is_seed' => true]);
+
+        foreach ([$oneFirst, $oneFirstTwoSeconds, $oneFirstOneSecond, $twoFirsts, $neverPlaced, $seed] as $user) {
+            Photo::factory()->create(['user_id' => $user->id]);
+        }
+
+        $place = fn(User $user, int $position) => PhotoCompetitionWinner::factory()->create([
+            'user_id' => $user->id,
+            'photo_id' => $user->photos()->value('id'),
+            'position' => $position,
+        ]);
+
+        $place($oneFirst, 1);
+        $place($oneFirstTwoSeconds, 1);
+        $place($oneFirstTwoSeconds, 2);
+        $place($oneFirstTwoSeconds, 2);
+        $place($oneFirstOneSecond, 1);
+        $place($oneFirstOneSecond, 2);
+        $place($twoFirsts, 1);
+        $place($twoFirsts, 1);
+
+        $response = $this->actingAs($viewer)->getJson('/api/leaderboard');
+
+        // The viewer never posted and seed accounts are not real people, so
+        // neither appears.
+        $response->assertOk()
+            ->assertJsonCount(5, 'data')
+            ->assertJsonPath('data.0.userId', $twoFirsts->id)
+            ->assertJsonPath('data.1.userId', $oneFirstTwoSeconds->id)
+            ->assertJsonPath('data.2.userId', $oneFirstOneSecond->id)
+            ->assertJsonPath('data.3.userId', $oneFirst->id)
+            ->assertJsonPath('data.4.userId', $neverPlaced->id)
+            ->assertJsonPath('data.0.rank', 1)
+            ->assertJsonPath('data.1.placements.1', 2)
+            ->assertJsonPath('data.4.placements.0', 0)
+            ->assertJsonMissingPath('data.0.email');
     }
 }

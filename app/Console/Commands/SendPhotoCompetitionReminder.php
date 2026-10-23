@@ -39,7 +39,7 @@ class SendPhotoCompetitionReminder extends Command
             return;
         }
 
-        User::query()->chunkById(200, function ($users) use ($competition) {
+        User::query()->real()->chunkById(200, function ($users) use ($competition) {
             Notification::send(
                 $users,
                 new PhotoCompetitionReminderNotification($competition),

@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
+use App\Models\PhotoCompetitionWinner;
 use App\Models\PhotoSlotPurchase;
+use App\Models\User;
 
 class PhotoCompetitionService extends Service
 {
@@ -184,5 +186,49 @@ class PhotoCompetitionService extends Service
 			->paginate(30);
 
 		return $photos;
+	}
+
+	/**
+	 * Highest placement a leaderboard counts (prize tiers stop at 10).
+	 */
+	public const LEADERBOARD_POSITIONS = 10;
+
+	/**
+	 * Every real user who has posted, ranked by their placements: most 1st
+	 * places first, ties broken by most 2nd places, then 3rd, and so on.
+	 * Anyone still tied falls back to how many photos they've posted.
+	 */
+	public function leaderboard(): LengthAwarePaginator
+	{
+		$positions = range(1, self::LEADERBOARD_POSITIONS);
+
+		$placements = PhotoCompetitionWinner::query()
+			->select('user_id')
+			->groupBy('user_id');
+
+		foreach ($positions as $position) {
+			$placements->selectRaw(
+				"SUM(CASE WHEN position = ? THEN 1 ELSE 0 END) AS position_{$position}_count",
+				[$position]
+			);
+		}
+
+		$users = User::query()
+			->real()
+			->whereHas('photos')
+			->leftJoinSub($placements, 'placements', 'placements.user_id', '=', 'users.id')
+			->select('users.*')
+			->withCount('photos');
+
+		foreach ($positions as $position) {
+			$column = "position_{$position}_count";
+
+			$users->selectRaw("COALESCE(placements.{$column}, 0) AS {$column}")
+				->orderByDesc($column);
+		}
+
+		return $users->orderByDesc('photos_count')
+			->orderBy('users.id')
+			->paginate(50);
 	}
 }

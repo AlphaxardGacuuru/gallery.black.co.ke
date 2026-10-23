@@ -44,6 +44,13 @@ Schedule::command('app:send-photo-competition-reminder')
     ->everyMinute()
     ->withoutOverlapping();
 
+// Seed users post an Unsplash photo on each of the active challenge's
+// first three days. The command works out whether one is due, so it's
+// safe to run often.
+Schedule::command('app:post-seed-photos')
+    ->everyTenMinutes()
+    ->withoutOverlapping();
+
 Schedule::command('app:reconcile-kopokopo-transfers')
     ->everyFiveMinutes()
     ->withoutOverlapping();

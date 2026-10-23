@@ -29,6 +29,7 @@ class Photo extends Model
         'path',
         'thumbnail_path',
         'caption',
+        'unsplash_id',
         'width',
         'height',
         'likes_count',
@@ -117,10 +118,16 @@ class Photo extends Model
         ]);
     }
 
+    /**
+     * Seed photos from Unsplash are hotlinked (their API terms require it),
+     * so they're stored on the "remote" disk with full URLs as their paths.
+     */
+    public const DISK_REMOTE = 'remote';
+
     protected function url(): Attribute
     {
         return Attribute::make(
-            get: fn() => Storage::disk($this->disk)->url($this->path),
+            get: fn() => $this->resolveUrl($this->path),
         );
     }
 
@@ -132,8 +139,15 @@ class Photo extends Model
     protected function thumbnailUrl(): Attribute
     {
         return Attribute::make(
-            get: fn() => Storage::disk($this->disk)->url($this->thumbnail_path ?? $this->path),
+            get: fn() => $this->resolveUrl($this->thumbnail_path ?? $this->path),
         );
+    }
+
+    private function resolveUrl(string $path): string
+    {
+        return $this->disk === self::DISK_REMOTE
+            ? $path
+            : Storage::disk($this->disk)->url($path);
     }
 
     protected function aspectRatio(): Attribute

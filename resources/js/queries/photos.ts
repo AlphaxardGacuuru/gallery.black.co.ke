@@ -172,6 +172,37 @@ export function useDiscoverPhotos() {
 	})
 }
 
+export type LeaderboardEntry = {
+	rank: number
+	userId: string
+	userName: string
+	userAvatar: string | null
+	userVerified: boolean
+	photosCount: number
+	/** How many times the user finished at each position, index 0 = 1st place. */
+	placements: number[]
+}
+
+type LeaderboardPage = {
+	data: LeaderboardEntry[]
+	meta: { current_page: number; last_page: number }
+}
+
+export function useLeaderboard() {
+	return useInfiniteQuery({
+		queryKey: ["leaderboard"],
+		queryFn: ({ pageParam }) =>
+			Axios.get<LeaderboardPage>(PhotoCompetitionController.leaderboard.url(), {
+				params: { page: pageParam },
+			}).then((res) => res.data),
+		initialPageParam: 1,
+		getNextPageParam: (lastPage) =>
+			lastPage.meta.current_page < lastPage.meta.last_page
+				? lastPage.meta.current_page + 1
+				: undefined,
+	})
+}
+
 export function usePhoto(id: string) {
 	return useQuery({
 		queryKey: ["photos", "show", id],

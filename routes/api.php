@@ -51,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // GUEST_ONLY in app.tsx), so this doesn't newly restrict anything.
     Route::get('photos/current', [PhotoCompetitionController::class, 'current']);
     Route::get('photos/discover', [PhotoCompetitionController::class, 'discover']);
+    Route::get('leaderboard', [PhotoCompetitionController::class, 'leaderboard']);
 
     Route::apiResources([
         "users" => UserController::class,
