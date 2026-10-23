@@ -3,7 +3,6 @@ import { Compass, Download, Image as ImageIcon, Trophy } from "lucide-react"
 import { AdminNav } from "@/components/admin/AdminNav"
 import AppLogo from "@/components/app-logo"
 import { NavFooter } from "@/components/nav-footer"
-import { NavNotifications } from "@/components/nav-notifications"
 import { NavUser } from "@/components/nav-user"
 import { useApp } from "@/contexts/AppContext"
 import { useCurrentUrl } from "@/hooks/use-current-url"
@@ -137,7 +136,6 @@ export function AppSidebar() {
 						className="mt-auto"
 					/>
 				)}
-				<NavNotifications />
 				<NavUser />
 			</SidebarFooter>
 		</Sidebar>

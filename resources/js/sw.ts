@@ -99,11 +99,21 @@ registerRoute(
 	new NetworkFirst({ cacheName: "api-current-competition" })
 )
 
+// Notifications change the moment they're read or deleted, so a refetch
+// must reach the network (falling back to the cache only when offline);
+// stale-while-revalidate would hand back the list from before the change.
+registerRoute(
+	({ url }) =>
+		url.origin === self.location.origin &&
+		url.pathname.startsWith("/api/notifications"),
+	new NetworkFirst({ cacheName: "api-notifications" })
+)
+
 // Read API routes: stale-while-revalidate so the last-fetched response
 // renders immediately — offline or not — while a fresh copy is fetched in
 // the background for next time. Auth-sensitive and current-competition/
 // discover routes are intentionally excluded above/below.
-const STALE_WHILE_REVALIDATE_APIS = ["/api/notifications", "/api/photos"]
+const STALE_WHILE_REVALIDATE_APIS = ["/api/photos"]
 
 registerRoute(
 	({ url }) =>

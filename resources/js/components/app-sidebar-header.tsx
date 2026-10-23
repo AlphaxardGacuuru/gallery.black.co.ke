@@ -7,6 +7,7 @@ import { useInitials } from "@/hooks/use-initials"
 import { cn } from "@/lib/utils"
 import type { BreadcrumbItem as BreadcrumbItemType } from "@/types"
 import PhotoConnectionStatus from "./photos/PhotoConnectionStatus"
+import { NotificationsBell } from "@/components/notifications-bell"
 
 export function AppSidebarHeader({
 	breadcrumbs = [],
@@ -33,6 +34,7 @@ export function AppSidebarHeader({
 			</div>
 
 			<PhotoConnectionStatus />
+			<NotificationsBell />
 
 			<button
 				type="button"
