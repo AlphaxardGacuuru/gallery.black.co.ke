@@ -34,6 +34,12 @@ class AdminDashboardFinanceTest extends TestCase
             'prize_amount' => 300,
             'kopokopo_reference' => 'in-flight-ref',
         ]);
+        // A seed winner is marked paid without any money moving.
+        PhotoCompetitionWinner::factory()->create([
+            'user_id' => User::factory()->create(['is_seed' => true])->id,
+            'prize_amount' => 700,
+            'prize_paid_at' => now(),
+        ]);
 
         // Referral rewards: confirmed counts, unpaid doesn't.
         Referral::create([

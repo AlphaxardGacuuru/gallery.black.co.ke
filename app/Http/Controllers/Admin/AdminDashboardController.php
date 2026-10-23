@@ -52,6 +52,8 @@ class AdminDashboardController extends Controller
      * has confirmed). Prizes and referral rewards only count once their
      * transfer's webhook confirms it (prize_paid_at / paid_at), never at
      * initiation, so in-flight or failed payouts aren't counted as spent.
+     * Seed winners are marked paid without any money moving, so they're
+     * left out too.
      */
     private function finance(): array
     {
@@ -66,6 +68,7 @@ class AdminDashboardController extends Controller
 
         $prizes = (int) PhotoCompetitionWinner::query()
             ->whereNotNull('prize_paid_at')
+            ->whereHas('user', fn($query) => $query->real())
             ->sum('prize_amount');
 
         $referralRewards = (int) round((float) Referral::query()

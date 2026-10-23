@@ -1,6 +1,7 @@
 import { Heart } from "lucide-react"
 import { useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
 	Dialog,
@@ -89,6 +90,13 @@ function ManageLikesBody({ photoId }: { photoId: string }) {
 								<span className="min-w-0 flex-1 truncate font-medium">
 									{user.name}
 								</span>
+								{user.isSeed && (
+									<Badge
+										variant="outline"
+										className="shrink-0 text-xs font-normal">
+										Seed
+									</Badge>
+								)}
 								<Heart
 									className={cn(
 										"size-4 shrink-0 text-muted-foreground",

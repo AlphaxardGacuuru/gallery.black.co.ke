@@ -75,6 +75,7 @@ class AdminPhotoCompetitionController extends Controller
                     'position' => $winner->position,
                     'userName' => $winner->user?->name,
                     'userPhone' => $winner->user?->phone,
+                    'isSeed' => (bool) $winner->user?->is_seed,
                     'prizeAmount' => $winner->prize_amount,
                     'prizePaidAt' => $winner->prize_paid_at,
                     'kopokopoReference' => $winner->kopokopo_reference,

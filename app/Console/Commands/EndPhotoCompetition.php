@@ -27,10 +27,10 @@ class EndPhotoCompetition extends Command
             return;
         }
 
-        // Seed photos compete for likes like any other entry, but never
-        // take a prize: their accounts aren't real people to pay.
+        // Seed photos compete and place exactly like real entries, so the
+        // Unsplash photographers they promote can win any position.
         $topPhotos = $competition->photos()
-            // ->whereHas('user', fn($query) => $query->real())
+            ->with('user:id,is_seed')
             ->orderByDesc('likes_count')
             ->orderBy('created_at')
             ->limit(10)
@@ -48,7 +48,10 @@ class EndPhotoCompetition extends Command
                 'user_id' => $photo->user_id,
                 'position' => $index + 1,
                 'prize_amount' => $tiers[$index] ?? 0,
-                'prize_paid_at' => null,
+                // There's nobody real to pay for a seed placement, so it's
+                // marked paid straight away (no Kopokopo transfer is made).
+                // That keeps it out of the admin's unpaid payout queue.
+                'prize_paid_at' => $photo->user?->is_seed ? $now : null,
                 'created_at' => $now,
                 'updated_at' => $now,
             ])

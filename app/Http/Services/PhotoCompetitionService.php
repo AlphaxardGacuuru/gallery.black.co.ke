@@ -194,7 +194,7 @@ class PhotoCompetitionService extends Service
 	public const LEADERBOARD_POSITIONS = 10;
 
 	/**
-	 * Every real user who has posted, ranked by their placements: most 1st
+	 * Every user who has posted (seed accounts included), ranked by their placements: most 1st
 	 * places first, ties broken by most 2nd places, then 3rd, and so on.
 	 * Anyone still tied falls back to how many photos they've posted.
 	 */
@@ -214,7 +214,6 @@ class PhotoCompetitionService extends Service
 		}
 
 		$users = User::query()
-			->real()
 			->whereHas('photos')
 			->leftJoinSub($placements, 'placements', 'placements.user_id', '=', 'users.id')
 			->select('users.*')

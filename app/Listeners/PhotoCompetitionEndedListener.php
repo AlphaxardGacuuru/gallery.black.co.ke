@@ -48,7 +48,8 @@ class PhotoCompetitionEndedListener
     private function notifyWinners(PhotoCompetitionEnded $event): void
     {
         $event->competition->winners
-            ->filter(fn($winner) => $winner->user)
+            // Seed accounts' emails are on a domain with no inbox.
+            ->filter(fn($winner) => $winner->user && ! $winner->user->is_seed)
             ->each(fn($winner) => $winner->user->notify(
                 new PhotoCompetitionWonNotification($event->competition, $winner)
             ));

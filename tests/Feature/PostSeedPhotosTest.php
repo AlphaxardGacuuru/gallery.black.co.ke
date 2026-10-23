@@ -6,8 +6,10 @@ use App\Console\Commands\PostSeedPhotos;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoCompetitionWinner;
+use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\PhotoCompetitionReminderNotification;
+use App\Notifications\PhotoCompetitionWonNotification;
 use Database\Seeders\SeedUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -176,19 +178,30 @@ class PostSeedPhotosTest extends TestCase
         $this->assertStringEndsWith('... Photo by Jane Mwangi (@janem) on Unsplash', $caption);
     }
 
-    public function test_seed_photos_never_take_a_prize(): void
+    public function test_seed_photos_can_win_and_their_prize_is_marked_paid(): void
     {
-        Event::fake();
+        Notification::fake();
+        Setting::updateOrCreate(['key' => 'photo_prize_tiers'], ['value' => [500, 300]]);
         $competition = $this->competition();
         $seedUser = User::where('is_seed', true)->first();
-        Photo::factory()->create(['competition_id' => $competition->id, 'user_id' => $seedUser->id, 'likes_count' => 50]);
+        $seedPhoto = Photo::factory()->create(['competition_id' => $competition->id, 'user_id' => $seedUser->id, 'likes_count' => 50]);
         $realPhoto = Photo::factory()->create(['competition_id' => $competition->id, 'likes_count' => 5]);
 
         $this->artisan('app:end-photo-competition')->assertSuccessful();
 
-        $winner = PhotoCompetitionWinner::sole();
-        $this->assertSame($realPhoto->id, $winner->photo_id);
-        $this->assertSame(1, $winner->position);
+        $seedWinner = PhotoCompetitionWinner::where('photo_id', $seedPhoto->id)->sole();
+        $this->assertSame(1, $seedWinner->position);
+        $this->assertNotNull($seedWinner->prize_paid_at);
+        $this->assertNull($seedWinner->kopokopo_reference);
+        $this->assertTrue($seedUser->fresh()->verified);
+
+        // The real runner-up still waits for an admin-initiated payout.
+        $realWinner = PhotoCompetitionWinner::where('photo_id', $realPhoto->id)->sole();
+        $this->assertSame(2, $realWinner->position);
+        $this->assertNull($realWinner->prize_paid_at);
+
+        Notification::assertNotSentTo($seedUser, PhotoCompetitionWonNotification::class);
+        Notification::assertSentTo($realPhoto->user, PhotoCompetitionWonNotification::class);
     }
 
     public function test_seed_users_do_not_get_the_mid_challenge_reminder(): void

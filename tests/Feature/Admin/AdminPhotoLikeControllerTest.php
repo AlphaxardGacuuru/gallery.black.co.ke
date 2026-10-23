@@ -49,6 +49,21 @@ class AdminPhotoLikeControllerTest extends TestCase
         $this->assertFalse($byId[$nonLiker->id]['likesPhoto']);
     }
 
+    public function test_seed_users_are_flagged_in_the_list(): void
+    {
+        $photo = Photo::factory()->create();
+        $seedUser = User::factory()->create();
+        $seedUser->forceFill(['is_seed' => true])->save();
+        $realUser = User::factory()->create();
+
+        $response = $this->actingAs($this->admin(), 'sanctum')
+            ->getJson("/api/admin/photos/{$photo->id}/likes?per_page=50");
+
+        $byId = collect($response->assertOk()->json('data'))->keyBy('id');
+        $this->assertTrue($byId[$seedUser->id]['isSeed']);
+        $this->assertFalse($byId[$realUser->id]['isSeed']);
+    }
+
     public function test_admin_can_search_users_by_name(): void
     {
         $photo = Photo::factory()->create();

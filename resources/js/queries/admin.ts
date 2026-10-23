@@ -128,6 +128,7 @@ export type AdminPhotoCompetitionWinner = {
 	position: number
 	userName: string | null
 	userPhone: string | null
+	isSeed: boolean
 	prizeAmount: number
 	prizePaidAt: string | null
 	kopokopoReference: string | null
@@ -546,6 +547,7 @@ export type AdminPhotoLiker = {
 	name: string
 	avatar: string | null
 	verified: boolean
+	isSeed: boolean
 	likesPhoto: boolean
 }
 

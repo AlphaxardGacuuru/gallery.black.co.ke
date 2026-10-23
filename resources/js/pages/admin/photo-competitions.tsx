@@ -452,7 +452,17 @@ function WinnerRow({ winner }: { winner: AdminPhotoCompetitionWinner }) {
 					#{winner.position}
 				</Badge>
 				<div>
-					<p className="text-sm font-medium">{winner.userName ?? "—"}</p>
+					<div className="flex items-center gap-1.5">
+						<p className="text-sm font-medium">{winner.userName ?? "—"}</p>
+						{/* Seed prizes are marked paid automatically, no money moves. */}
+						{winner.isSeed && (
+							<Badge
+								variant="outline"
+								className="text-xs font-normal">
+								Seed
+							</Badge>
+						)}
+					</div>
 					{winner.userPhone && (
 						<p className="text-xs text-muted-foreground">
 							{winner.userPhone}

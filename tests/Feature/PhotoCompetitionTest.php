@@ -544,21 +544,25 @@ class PhotoCompetitionTest extends TestCase
         $place($oneFirstOneSecond, 2);
         $place($twoFirsts, 1);
         $place($twoFirsts, 1);
+        $place($seed, 1);
+        $place($seed, 1);
+        $place($seed, 1);
 
         $response = $this->actingAs($viewer)->getJson('/api/leaderboard');
 
-        // The viewer never posted and seed accounts are not real people, so
-        // neither appears.
+        // Seed accounts rank like anyone else. The viewer never posted, so
+        // they don't appear.
         $response->assertOk()
-            ->assertJsonCount(5, 'data')
-            ->assertJsonPath('data.0.userId', $twoFirsts->id)
-            ->assertJsonPath('data.1.userId', $oneFirstTwoSeconds->id)
-            ->assertJsonPath('data.2.userId', $oneFirstOneSecond->id)
-            ->assertJsonPath('data.3.userId', $oneFirst->id)
-            ->assertJsonPath('data.4.userId', $neverPlaced->id)
+            ->assertJsonCount(6, 'data')
+            ->assertJsonPath('data.0.userId', $seed->id)
+            ->assertJsonPath('data.1.userId', $twoFirsts->id)
+            ->assertJsonPath('data.2.userId', $oneFirstTwoSeconds->id)
+            ->assertJsonPath('data.3.userId', $oneFirstOneSecond->id)
+            ->assertJsonPath('data.4.userId', $oneFirst->id)
+            ->assertJsonPath('data.5.userId', $neverPlaced->id)
             ->assertJsonPath('data.0.rank', 1)
-            ->assertJsonPath('data.1.placements.1', 2)
-            ->assertJsonPath('data.4.placements.0', 0)
+            ->assertJsonPath('data.2.placements.1', 2)
+            ->assertJsonPath('data.5.placements.0', 0)
             ->assertJsonMissingPath('data.0.email');
     }
 }
