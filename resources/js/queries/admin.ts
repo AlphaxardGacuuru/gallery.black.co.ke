@@ -20,10 +20,15 @@ export type AdminDashboardData = {
 		revenue: number
 		payouts: number
 		net: number
-		revenueBreakdown: { extraEntries: number; extraPhotos: number }
+		revenueBreakdown: {
+			extraEntries: number
+			extraPhotos: number
+			photoSales: number
+		}
 		payoutsBreakdown: {
 			prizes: number
 			referralRewards: number
+			photographerPayouts: number
 			otherTransfers: number
 		}
 	}
@@ -153,6 +158,13 @@ export type AdminExtraPhotoSettings = {
 	price: number
 }
 
+export type AdminPhotoSaleSettings = {
+	enabled: boolean
+	price: number
+	/** Percentage of each sale paid on to the photographer. */
+	photographerShare: number
+}
+
 export type AdminPhotoCompetitionsData = {
 	current: {
 		id: string
@@ -168,6 +180,7 @@ export type AdminPhotoCompetitionsData = {
 	schedule: PhotoCompetitionSchedule
 	extraSlot: AdminExtraSlotSettings
 	extraPhoto: AdminExtraPhotoSettings
+	photoSale: AdminPhotoSaleSettings
 }
 
 export function useAdminPhotoCompetitions() {
@@ -285,6 +298,73 @@ export function useUpdateExtraPhoto() {
 			queryClient.invalidateQueries({
 				queryKey: ["admin", "photo-competitions"],
 			})
+		},
+	})
+}
+
+export function useUpdatePhotoSale() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (payload: AdminPhotoSaleSettings) =>
+			Axios.put("api/admin/photo-purchases/settings", payload),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "photo-competitions"],
+			})
+		},
+	})
+}
+
+export type AdminPhotoPurchase = {
+	id: string
+	photoId: string
+	photoThumbnailUrl: string | null
+	buyerName: string | null
+	buyerPhone: string | null
+	sellerName: string | null
+	sellerPhone: string | null
+	amount: number
+	sellerAmount: number
+	status: "pending" | "paid" | "failed"
+	createdAt: string
+	paidAt: string | null
+	payoutReference: string | null
+	payoutPaidAt: string | null
+}
+
+type AdminPhotoPurchasesResponse = {
+	data: AdminPhotoPurchase[]
+	meta: { current_page: number; last_page: number; total: number }
+}
+
+export function useAdminPhotoPurchases(page = 1, perPage = 10) {
+	return useQuery({
+		queryKey: ["admin", "photo-purchases", page, perPage],
+		queryFn: () =>
+			Axios.get<AdminPhotoPurchasesResponse>("api/admin/photo-purchases", {
+				params: { page, per_page: perPage },
+			}).then((res) => res.data),
+	})
+}
+
+export function usePayPhotographer() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		// Same status-in-body convention as usePayCompetitionWinner.
+		mutationFn: (purchaseId: string) =>
+			Axios.post<{ status: unknown; message: string }>(
+				`api/admin/photo-purchases/${purchaseId}/pay`
+			).then((res) => {
+				if (res.data.status !== true) {
+					throw new Error(res.data.message)
+				}
+
+				return res.data
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "photo-purchases"] })
 		},
 	})
 }
@@ -472,6 +552,8 @@ export type AdminReferralsData = {
 	totalPendingPayout: number
 	threshold: number
 	rewardAmount: number
+	/** One-off KES bonus for each referred user who posts a photo. */
+	photoBonusAmount: number
 	leaderboard: AdminReferralLeaderboardEntry[]
 }
 
@@ -492,6 +574,9 @@ export type AdminReferral = {
 	createdAt: string
 	amountPaid: number | null
 	paidAt: string | null
+	referredHasPosted: boolean
+	photoBonusAmount: number | null
+	photoBonusPaidAt: string | null
 }
 
 type AdminRecentReferralsResponse = {
@@ -513,8 +598,11 @@ export function useUpdateReferralSettings() {
 	const queryClient = useQueryClient()
 
 	return useMutation({
-		mutationFn: (payload: { threshold: number; rewardAmount: number }) =>
-			Axios.put("api/admin/referrals/settings", payload),
+		mutationFn: (payload: {
+			threshold: number
+			rewardAmount: number
+			photoBonusAmount: number
+		}) => Axios.put("api/admin/referrals/settings", payload),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["admin", "referrals"] })
 		},

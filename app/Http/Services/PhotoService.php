@@ -29,6 +29,7 @@ class PhotoService extends Service
 	{
 		$photo = Photo::with(['user', 'competition', 'images'])
 			->withLikedByViewer($request->user())
+			->withPurchasedByViewer($request->user())
 			->withIsWinner()
 			->findOrFail($id);
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Events\ReferralAttachedEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Services\KopokopoTransferService;
+use App\Http\Services\ReferralService;
 use App\Models\Referral;
 use App\Models\Setting;
 use App\Models\User;
@@ -14,8 +15,10 @@ use Illuminate\Validation\ValidationException;
 
 class AdminReferralController extends Controller
 {
-    public function __construct(protected KopokopoTransferService $kopokopoTransferService)
-    {
+    public function __construct(
+        protected KopokopoTransferService $kopokopoTransferService,
+        protected ReferralService $referralService,
+    ) {
         //
     }
 
@@ -27,7 +30,8 @@ class AdminReferralController extends Controller
      */
     public function index(): JsonResponse
     {
-        [$threshold, $rewardAmount] = $this->settings();
+        ['threshold' => $threshold, 'rewardAmount' => $rewardAmount, 'photoBonusAmount' => $photoBonusAmount]
+            = $this->referralService->settings();
 
         $leaderboard = User::query()
             ->whereHas('referralsMade')
@@ -35,8 +39,8 @@ class AdminReferralController extends Controller
             ->orderByDesc('referrals_made_count')
             ->limit(20)
             ->get()
-            ->map(function (User $user) use ($threshold, $rewardAmount) {
-                $payout = Referral::eligiblePayout($user->id, $threshold, $rewardAmount);
+            ->map(function (User $user) use ($threshold, $rewardAmount, $photoBonusAmount) {
+                $payout = Referral::eligiblePayout($user->id, $threshold, $rewardAmount, $photoBonusAmount);
 
                 return [
                     'userId' => $user->id,
@@ -54,6 +58,7 @@ class AdminReferralController extends Controller
                 ...Referral::summary(),
                 'threshold' => $threshold,
                 'rewardAmount' => $rewardAmount,
+                'photoBonusAmount' => $photoBonusAmount,
                 'leaderboard' => $leaderboard,
             ],
         ]);
@@ -66,6 +71,7 @@ class AdminReferralController extends Controller
     {
         $referrals = Referral::query()
             ->with(['referrer', 'referred'])
+            ->withReferredHasPosted()
             ->latest('created_at')
             ->paginate($request->integer('per_page', 20));
 
@@ -79,6 +85,9 @@ class AdminReferralController extends Controller
                     'createdAt' => $referral->created_at,
                     'amountPaid' => $referral->amount_paid,
                     'paidAt' => $referral->paid_at,
+                    'referredHasPosted' => (bool) $referral->referred_has_posted,
+                    'photoBonusAmount' => $referral->photo_bonus_amount,
+                    'photoBonusPaidAt' => $referral->photo_bonus_paid_at,
                 ]),
             'meta' => [
                 'current_page' => $referrals->currentPage(),
@@ -131,13 +140,15 @@ class AdminReferralController extends Controller
 
     /**
      * Set how many referrals earn a reward, and how much (KES) that
-     * reward is — split evenly across the referrals in each batch.
+     * reward is (split evenly across the referrals in each batch), plus the
+     * one-off bonus for each referred user who posts a photo.
      */
     public function updateSettings(Request $request): JsonResponse
     {
         $data = $request->validate([
             'threshold' => 'required|integer|min:1',
             'rewardAmount' => 'required|numeric|min:0',
+            'photoBonusAmount' => 'required|numeric|min:0',
         ]);
 
         Setting::query()->updateOrCreate(
@@ -150,24 +161,32 @@ class AdminReferralController extends Controller
             ['value' => $data['rewardAmount']]
         );
 
+        Setting::query()->updateOrCreate(
+            ['key' => 'referral_photo_bonus_amount'],
+            ['value' => $data['photoBonusAmount']]
+        );
+
         return response()->json(['data' => $data]);
     }
 
     /**
-     * Pay a referrer for however many complete reward batches they've
-     * accumulated, in one transfer, and mark those referrals paid.
+     * Pay a referrer for however many complete reward batches and photo
+     * bonuses they've accumulated, in one transfer.
      */
     public function pay(User $user): JsonResponse
     {
-        [$threshold, $rewardAmount] = $this->settings();
+        ['threshold' => $threshold, 'rewardAmount' => $rewardAmount, 'photoBonusAmount' => $photoBonusAmount]
+            = $this->referralService->settings();
 
-        $payout = Referral::eligiblePayout($user->id, $threshold, $rewardAmount);
+        $payout = Referral::eligiblePayout($user->id, $threshold, $rewardAmount, $photoBonusAmount);
 
         [$status, $message, $data] = $this->kopokopoTransferService->payReferrer(
             $user,
             $payout['totalAmount'],
             $payout['referralIds'],
             $payout['perReferralAmount'],
+            $payout['photoBonusReferralIds'],
+            $payout['photoBonusAmount'],
         );
 
         return response()->json([
@@ -175,21 +194,5 @@ class AdminReferralController extends Controller
             'message' => $message,
             'data' => $data,
         ]);
-    }
-
-    /**
-     * @return array{0: int, 1: float}
-     */
-    private function settings(): array
-    {
-        $threshold = (int) (Setting::query()
-            ->where('key', 'referral_threshold')
-            ->value('value') ?? 5);
-
-        $rewardAmount = (float) (Setting::query()
-            ->where('key', 'referral_reward_amount')
-            ->value('value') ?? 50);
-
-        return [$threshold, $rewardAmount];
     }
 }

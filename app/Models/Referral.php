@@ -18,11 +18,16 @@ class Referral extends Model
         'paid_at',
         'amount_paid',
         'kopokopo_reference',
+        'photo_bonus_amount',
+        'photo_bonus_reference',
+        'photo_bonus_paid_at',
     ];
 
     protected $casts = [
         'paid_at' => 'datetime',
         'amount_paid' => 'decimal:2',
+        'photo_bonus_amount' => 'decimal:2',
+        'photo_bonus_paid_at' => 'datetime',
     ];
 
     public function referrer(): BelongsTo
@@ -48,24 +53,71 @@ class Referral extends Model
     }
 
     /**
+     * Referrals whose referred user has posted at least one photo and whose
+     * photo bonus hasn't been paid or started paying yet (same in-flight
+     * rule as scopeUnpaid(), via photo_bonus_reference).
+     */
+    public function scopeUnpaidPhotoBonus(Builder $query): Builder
+    {
+        return $query
+            ->whereNull('photo_bonus_paid_at')
+            ->whereNull('photo_bonus_reference')
+            ->whereHas('referred.photos');
+    }
+
+    /**
+     * Annotate each referral with whether the referred user has posted a
+     * photo yet (referred_has_posted), via a correlated exists() subquery.
+     */
+    public function scopeWithReferredHasPosted(Builder $query): Builder
+    {
+        if (is_null($query->getQuery()->columns)) {
+            $query->select('referrals.*');
+        }
+
+        return $query->addSelect([
+            'referred_has_posted' => Photo::query()
+                ->selectRaw('1')
+                ->whereColumn('photos.user_id', 'referrals.referred_id')
+                ->limit(1),
+        ]);
+    }
+
+    /**
      * How much $referrerId is currently owed: every full $threshold-sized
      * group of their still-unpaid referrals splits $rewardAmount evenly
      * (e.g. a threshold of 5 at KES 50 pays KES 10 per referral). Partial
-     * groups short of the threshold aren't paid yet.
+     * groups short of the threshold aren't paid yet. On top of that, each
+     * referral whose referred user has posted a photo earns a one-off
+     * $photoBonusAmount, with no threshold.
      *
-     * @return array{batches: int, referralIds: array<int, string>, totalAmount: float, perReferralAmount: float}
+     * @return array{batches: int, referralIds: array<int, string>, totalAmount: float, perReferralAmount: float, photoBonusReferralIds: array<int, string>, photoBonusAmount: float}
      */
     public static function eligiblePayout(
         string $referrerId,
         int $threshold,
-        float $rewardAmount
+        float $rewardAmount,
+        float $photoBonusAmount = 0.0
     ): array {
+        $photoBonusIds = $photoBonusAmount > 0
+            ? static::query()
+                ->where('referrer_id', $referrerId)
+                ->unpaidPhotoBonus()
+                ->oldest('created_at')
+                ->pluck('id')
+                ->all()
+            : [];
+
+        $photoBonusTotal = count($photoBonusIds) * $photoBonusAmount;
+
         if ($threshold < 1) {
             return [
                 'batches' => 0,
                 'referralIds' => [],
-                'totalAmount' => 0.0,
-                'perReferralAmount' => 0.0
+                'totalAmount' => $photoBonusTotal,
+                'perReferralAmount' => 0.0,
+                'photoBonusReferralIds' => $photoBonusIds,
+                'photoBonusAmount' => $photoBonusAmount,
             ];
         }
 
@@ -80,8 +132,10 @@ class Referral extends Model
         return [
             'batches' => $batches,
             'referralIds' => $unpaidIds->take($batches * $threshold)->values()->all(),
-            'totalAmount' => $batches * $rewardAmount,
+            'totalAmount' => $batches * $rewardAmount + $photoBonusTotal,
             'perReferralAmount' => round($rewardAmount / $threshold, 2),
+            'photoBonusReferralIds' => $photoBonusIds,
+            'photoBonusAmount' => $photoBonusAmount,
         ];
     }
 
@@ -109,8 +163,9 @@ class Referral extends Model
     /**
      * Headline referral numbers, shared by the admin referrals page and the
      * admin dashboard so the two can't disagree. Payouts only count as paid
-     * once Kopokopo's webhook confirms them (paid_at); ones initiated but
-     * not yet confirmed are "pending".
+     * once Kopokopo's webhook confirms them (paid_at/photo_bonus_paid_at);
+     * ones initiated but not yet confirmed are "pending". Both include
+     * photo bonuses.
      *
      * @return array{totalReferrals: int, totalReferrers: int, totalPaidOut: int, totalPendingPayout: int}
      */
@@ -119,13 +174,20 @@ class Referral extends Model
         return [
             'totalReferrals' => static::query()->count(),
             'totalReferrers' => static::query()->distinct()->count('referrer_id'),
-            'totalPaidOut' => (int) round((float) static::query()
-                ->whereNotNull('paid_at')
-                ->sum('amount_paid')),
-            'totalPendingPayout' => (int) round((float) static::query()
-                ->whereNull('paid_at')
-                ->whereNotNull('kopokopo_reference')
-                ->sum('amount_paid')),
+            'totalPaidOut' => (int) round(
+                (float) static::query()->whereNotNull('paid_at')->sum('amount_paid')
+                + (float) static::query()->whereNotNull('photo_bonus_paid_at')->sum('photo_bonus_amount')
+            ),
+            'totalPendingPayout' => (int) round(
+                (float) static::query()
+                    ->whereNull('paid_at')
+                    ->whereNotNull('kopokopo_reference')
+                    ->sum('amount_paid')
+                + (float) static::query()
+                    ->whereNull('photo_bonus_paid_at')
+                    ->whereNotNull('photo_bonus_reference')
+                    ->sum('photo_bonus_amount')
+            ),
         ];
     }
 }

@@ -47,6 +47,7 @@ class AdminPhotoCompetitionController extends Controller
                 'schedule' => PhotoCompetition::schedule(),
                 'extraSlot' => PhotoCompetition::extraSlotSettings(),
                 'extraPhoto' => PhotoCompetition::extraPhotoSettings(),
+                'photoSale' => Photo::saleSettings(),
             ],
         ]);
     }

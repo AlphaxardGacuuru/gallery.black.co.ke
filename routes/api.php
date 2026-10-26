@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminPhotoCompetitionController;
 use App\Http\Controllers\Admin\AdminPhotoLikeController;
+use App\Http\Controllers\Admin\AdminPhotoPurchaseController;
 use App\Http\Controllers\Admin\AdminReferralController;
 use App\Http\Controllers\FilePondController;
 use App\Http\Controllers\IntegrationController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\PhotoCompetitionController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\ExtraPhotoPurchaseController;
 use App\Http\Controllers\PhotoLikeController;
+use App\Http\Controllers\PhotoPurchaseController;
 use App\Http\Controllers\PhotoSlotPurchaseController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReferralController;
@@ -78,6 +80,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('photo-slot-purchases', [PhotoSlotPurchaseController::class, 'store']);
     Route::get('photo-slot-purchases/{purchase}', [PhotoSlotPurchaseController::class, 'show']);
     Route::post('extra-photo-purchases', [ExtraPhotoPurchaseController::class, 'store']);
+    Route::post('photos/{photo}/purchases', [PhotoPurchaseController::class, 'store']);
+    Route::get('photos/{photo}/downloads', [PhotoPurchaseController::class, 'downloads']);
+    Route::get('photo-purchases/{purchase}', [PhotoPurchaseController::class, 'show']);
 
     Route::get('referrals/settings', [ReferralController::class, 'settings'])->name('referrals.settings');
     Route::get('referrals/mine', [ReferralController::class, 'mine'])->name('referrals.mine');
@@ -99,6 +104,9 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::put('photo-competitions/schedule', [AdminPhotoCompetitionController::class, 'updateSchedule'])->name('photo-competitions.schedule');
         Route::put('photo-competitions/active', [AdminPhotoCompetitionController::class, 'updateActive'])->name('photo-competitions.update-active');
         Route::post('photo-competition-winners/{winner}/pay', [AdminPhotoCompetitionController::class, 'payWinner'])->name('photo-competition-winners.pay');
+        Route::get('photo-purchases', [AdminPhotoPurchaseController::class, 'index'])->name('photo-purchases.index');
+        Route::put('photo-purchases/settings', [AdminPhotoPurchaseController::class, 'updateSettings'])->name('photo-purchases.settings');
+        Route::post('photo-purchases/{purchase}/pay', [AdminPhotoPurchaseController::class, 'pay'])->name('photo-purchases.pay');
         Route::get('kopokopo-transfers', [KopokopoTransferController::class, 'index'])->name('kopokopo-transfers.index');
         Route::post('kopokopo-transfers/initiate', [KopokopoTransferController::class, 'initiateTransfer'])->name('kopokopo-transfers.initiate');
         Route::get('kopokopo-recipients', [KopokopoRecipientController::class, 'index'])->name('kopokopo-recipients.index');
@@ -111,6 +119,12 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::get('photos/{photo}/likes', [AdminPhotoLikeController::class, 'index'])->name('photos.likes.index');
         Route::post('photos/{photo}/likes/{user}', [AdminPhotoLikeController::class, 'toggle'])->name('photos.likes.toggle');
     });
+
+// Signed, short-lived links handed out by PhotoPurchaseController::downloads(),
+// so a plain browser download works without the API's bearer token.
+Route::get('photos/{photo}/download/{image?}', [PhotoPurchaseController::class, 'download'])
+    ->middleware('signed')
+    ->name('photos.download');
 
 // Kopokopo's send_money callback — hit by Kopokopo itself, not the admin UI.
 Route::post('kopokopo-transfers', [KopokopoTransferController::class, 'store']);

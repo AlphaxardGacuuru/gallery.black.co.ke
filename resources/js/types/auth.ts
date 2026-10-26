@@ -7,6 +7,7 @@ export type UserSettings = {
 	competitionWonNotification?: boolean
 	referralSignupNotification?: boolean
 	photoLikedNotification?: boolean
+	photoSoldNotification?: boolean
 	[key: string]: unknown
 }
 

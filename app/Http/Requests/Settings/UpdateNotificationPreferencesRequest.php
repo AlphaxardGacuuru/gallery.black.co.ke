@@ -21,6 +21,7 @@ class UpdateNotificationPreferencesRequest extends FormRequest
             'competitionWonNotification' => ['required', 'boolean'],
             'referralSignupNotification' => ['required', 'boolean'],
             'photoLikedNotification' => ['required', 'boolean'],
+            'photoSoldNotification' => ['required', 'boolean'],
         ];
     }
 }

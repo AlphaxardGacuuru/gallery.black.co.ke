@@ -27,16 +27,21 @@ import {
 	type AdminExtraSlotSettings,
 	type AdminPhotoCompetitionSummary,
 	type AdminPhotoCompetitionWinner,
+	type AdminPhotoPurchase,
+	type AdminPhotoSaleSettings,
 	type AdminPhotoSlotPurchase,
 	type PhotoCompetitionSchedule,
 	useAdminPhotoCompetitions,
+	useAdminPhotoPurchases,
 	useAdminPhotoSlotPurchases,
 	useAdminRecentPhotoCompetitions,
 	usePayCompetitionWinner,
+	usePayPhotographer,
 	useUpdateActiveCompetition,
 	useUpdateExtraPhoto,
 	useUpdateExtraSlot,
 	useUpdatePhotoCompetitionSchedule,
+	useUpdatePhotoSale,
 	useUpdatePrizeTiers,
 } from "@/queries/admin"
 
@@ -342,6 +347,100 @@ function ExtraPhotoSettings({
 	)
 }
 
+function PhotoSaleSettings({
+	photoSale,
+}: {
+	photoSale: AdminPhotoSaleSettings
+}) {
+	const updatePhotoSale = useUpdatePhotoSale()
+	const [enabled, setEnabled] = useState(photoSale.enabled)
+	const [price, setPrice] = useState(String(photoSale.price))
+	const [share, setShare] = useState(String(photoSale.photographerShare))
+
+	const parsedPrice = Number(price)
+	const parsedShare = Number(share)
+	const photographerAmount =
+		Number.isFinite(parsedPrice) && Number.isFinite(parsedShare)
+			? Math.floor((parsedPrice * parsedShare) / 100)
+			: 0
+
+	function handleSave() {
+		if (!Number.isInteger(parsedPrice) || parsedPrice < 0) {
+			toast.error("Enter a valid price")
+			return
+		}
+
+		if (
+			!Number.isInteger(parsedShare) ||
+			parsedShare < 0 ||
+			parsedShare > 100
+		) {
+			toast.error("The photographer's share must be between 0 and 100%")
+			return
+		}
+
+		if (enabled && parsedPrice < 1) {
+			toast.error("Set a price before turning photo sales on")
+			return
+		}
+
+		updatePhotoSale.mutate(
+			{ enabled, price: parsedPrice, photographerShare: parsedShare },
+			{
+				onSuccess: () => toast.success("Photo sale settings updated"),
+				onError: () => toast.error("Couldn't update the photo sale settings"),
+			}
+		)
+	}
+
+	return (
+		<div className="w-full space-y-3 sm:max-w-sm sm:flex-1 rounded-lg border p-4">
+			<Heading
+				variant="small"
+				title="Sell photos"
+				description="Let users buy full-resolution photos from past challenges on Discover. Unsplash seed photos are never for sale."
+			/>
+			<div className="flex items-center justify-between gap-4">
+				<p className="text-sm font-medium">Enabled</p>
+				<Switch
+					checked={enabled}
+					onCheckedChange={setEnabled}
+					aria-label="Toggle photo sales"
+				/>
+			</div>
+			<Input
+				type="number"
+				min={0}
+				label="Price per photo (KES)"
+				value={price}
+				onChange={(event) => setPrice(event.target.value)}
+			/>
+			<Input
+				type="number"
+				min={0}
+				max={100}
+				label="Photographer's share (%)"
+				value={share}
+				onChange={(event) => setShare(event.target.value)}
+			/>
+			<p className="text-xs text-muted-foreground">
+				Photographers get KES {photographerAmount} per sale, sent to their
+				M-Pesa as soon as the buyer pays.
+			</p>
+			<div className="flex justify-end">
+				<Button
+					disabled={updatePhotoSale.isPending}
+					onClick={handleSave}>
+					{updatePhotoSale.isPending && (
+						<Loader2 className="size-3.5 animate-spin" />
+					)}
+					Save
+				</Button>
+			</div>
+		</div>
+	)
+}
+
 function ScheduleSettings({
 	schedule,
 }: {
@@ -464,9 +563,7 @@ function WinnerRow({ winner }: { winner: AdminPhotoCompetitionWinner }) {
 						)}
 					</div>
 					{winner.userPhone && (
-						<p className="text-xs text-muted-foreground">
-							{winner.userPhone}
-						</p>
+						<p className="text-xs text-muted-foreground">{winner.userPhone}</p>
 					)}
 					<p className="text-xs text-muted-foreground">
 						KES {winner.prizeAmount}
@@ -663,6 +760,159 @@ function SlotPurchasesTable() {
 	)
 }
 
+function PhotographerPayout({ purchase }: { purchase: AdminPhotoPurchase }) {
+	const payPhotographer = usePayPhotographer()
+
+	if (purchase.status !== "paid" || purchase.sellerAmount < 1) {
+		return <span className="text-muted-foreground">—</span>
+	}
+
+	if (purchase.payoutPaidAt) {
+		return <Badge variant="secondary">Paid</Badge>
+	}
+
+	if (purchase.payoutReference) {
+		return <Badge variant="outline">Awaiting confirmation</Badge>
+	}
+
+	if (!purchase.sellerPhone) {
+		return (
+			<span className="text-xs text-muted-foreground">No phone number</span>
+		)
+	}
+
+	// The payout starts automatically when the buyer pays, so landing here
+	// means that attempt failed or Kopokopo later reported the transfer as
+	// failed. Retrying sends a fresh transfer.
+	return (
+		<Button
+			variant="outline"
+			size="sm"
+			disabled={payPhotographer.isPending}
+			onClick={() =>
+				payPhotographer.mutate(purchase.id, {
+					onSuccess: () => toast.success("Payout sent to Kopokopo"),
+					onError: (error) =>
+						toast.error("Couldn't pay the photographer", {
+							description: error.message,
+						}),
+				})
+			}>
+			{payPhotographer.isPending && (
+				<Loader2 className="size-3.5 animate-spin" />
+			)}
+			Pay
+		</Button>
+	)
+}
+
+function PhotoPurchasesTable() {
+	const [page, setPage] = useState(1)
+	const [perPage, setPerPage] = useState(10)
+	const { data } = useAdminPhotoPurchases(page, perPage)
+
+	const columns: ColumnDef<AdminPhotoPurchase>[] = [
+		{
+			id: "photo",
+			header: "Photo",
+			cell: ({ row }) =>
+				row.original.photoThumbnailUrl ? (
+					<img
+						src={row.original.photoThumbnailUrl}
+						alt=""
+						className="size-10 rounded object-cover"
+					/>
+				) : (
+					"—"
+				),
+		},
+		{
+			id: "buyer",
+			header: "Buyer",
+			cell: ({ row }) => (
+				<div>
+					<p className="font-medium">{row.original.buyerName ?? "—"}</p>
+					{row.original.buyerPhone && (
+						<p className="text-xs text-muted-foreground">
+							{row.original.buyerPhone}
+						</p>
+					)}
+				</div>
+			),
+		},
+		{
+			id: "seller",
+			header: "Photographer",
+			cell: ({ row }) => (
+				<div>
+					<p className="font-medium">{row.original.sellerName ?? "—"}</p>
+					{row.original.sellerPhone && (
+						<p className="text-xs text-muted-foreground">
+							{row.original.sellerPhone}
+						</p>
+					)}
+				</div>
+			),
+		},
+		{
+			accessorKey: "amount",
+			header: "Amount",
+			cell: ({ row }) => (
+				<div>
+					<p>KES {row.original.amount}</p>
+					<p className="text-xs text-muted-foreground">
+						KES {row.original.sellerAmount} to photographer
+					</p>
+				</div>
+			),
+		},
+		{
+			accessorKey: "status",
+			header: "Status",
+			cell: ({ row }) => (
+				<SlotPurchaseStatusBadge status={row.original.status} />
+			),
+		},
+		{
+			id: "payout",
+			header: "Payout",
+			enableSorting: false,
+			cell: ({ row }) => <PhotographerPayout purchase={row.original} />,
+		},
+		{
+			accessorKey: "createdAt",
+			header: "Purchased at",
+			cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
+		},
+	]
+
+	return (
+		<Card className="overflow-hidden">
+			<CardHeader className="pb-4">
+				<CardTitle>Photo sales</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<DataTable
+					columns={columns}
+					data={data?.data ?? []}
+					emptyMessage="No one has bought a photo yet"
+					pagination={{
+						currentPage: data?.meta.current_page ?? 1,
+						lastPage: data?.meta.last_page ?? 1,
+						total: data?.meta.total ?? 0,
+						pageSize: perPage,
+						onPageChange: setPage,
+						onPageSizeChange: (size) => {
+							setPerPage(size)
+							setPage(1)
+						},
+					}}
+				/>
+			</CardContent>
+		</Card>
+	)
+}
+
 export default function AdminPhotoCompetitions() {
 	const { data, isLoading } = useAdminPhotoCompetitions()
 	const [page, setPage] = useState(1)
@@ -758,6 +1008,7 @@ export default function AdminPhotoCompetitions() {
 							<PrizeTiersSettings prizeTiers={data.prizeTiers} />
 							<ExtraSlotSettings extraSlot={data.extraSlot} />
 							<ExtraPhotoSettings extraPhoto={data.extraPhoto} />
+							<PhotoSaleSettings photoSale={data.photoSale} />
 							<ScheduleSettings schedule={data.schedule} />
 						</div>
 
@@ -786,6 +1037,8 @@ export default function AdminPhotoCompetitions() {
 						</Card>
 
 						<SlotPurchasesTable />
+
+						<PhotoPurchasesTable />
 					</>
 				)}
 			</div>

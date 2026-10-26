@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\PhotoResource;
+use App\Http\Services\PhotoPurchaseService;
 use App\Http\Services\PhotoService;
 use App\Models\Photo;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +29,7 @@ class PhotoController extends Controller
             'data' => new PhotoResource($result['photo']),
             'canDelete' => $result['canDelete'],
             'canLike' => $result['canLike'],
+            'sale' => PhotoPurchaseService::publicSaleSettings(),
         ]);
     }
 

@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\KopokopoTransfer;
 use App\Models\PhotoCompetitionWinner;
+use App\Models\PhotoPurchase;
 use App\Models\PhotoSlotPurchase;
 use App\Models\Referral;
 use App\Models\User;
@@ -54,11 +55,22 @@ class AdminDashboardFinanceTest extends TestCase
             'referred_id' => User::factory()->create()->id,
         ]);
 
+        // Photo sales: paid sales count as revenue, pending ones don't, and
+        // the photographer's share counts as a payout once confirmed.
+        PhotoPurchase::factory()->paid()->create([
+            'amount' => 200,
+            'seller_amount' => 140,
+            'payout_reference' => 'sale-ref',
+            'payout_paid_at' => now(),
+        ]);
+        PhotoPurchase::factory()->create(['amount' => 300, 'seller_amount' => 210]);
+
         // Transfers: the prize's and referral's own transfers are already
         // counted above; a manual one counts once despite a repeated
         // webhook; a failed one never counts.
         $this->transfer('prize-ref', 500, 'Transferred');
         $this->transfer('referral-ref', 100, 'Transferred');
+        $this->transfer('sale-ref', 140, 'Transferred');
         $this->transfer('manual-ref', 250, 'Transferred');
         $this->transfer('manual-ref', 250, 'Transferred');
         $this->transfer('failed-ref', 1000, 'Failed');
@@ -66,14 +78,16 @@ class AdminDashboardFinanceTest extends TestCase
         $this->actingAs($admin, 'sanctum')
             ->getJson('/api/admin/dashboard')
             ->assertOk()
-            ->assertJsonPath('data.finance.revenue', 90)
+            ->assertJsonPath('data.finance.revenue', 290)
             ->assertJsonPath('data.finance.revenueBreakdown.extraEntries', 50)
             ->assertJsonPath('data.finance.revenueBreakdown.extraPhotos', 40)
+            ->assertJsonPath('data.finance.revenueBreakdown.photoSales', 200)
             ->assertJsonPath('data.finance.payoutsBreakdown.prizes', 500)
             ->assertJsonPath('data.finance.payoutsBreakdown.referralRewards', 100)
+            ->assertJsonPath('data.finance.payoutsBreakdown.photographerPayouts', 140)
             ->assertJsonPath('data.finance.payoutsBreakdown.otherTransfers', 250)
-            ->assertJsonPath('data.finance.payouts', 850)
-            ->assertJsonPath('data.finance.net', -760)
+            ->assertJsonPath('data.finance.payouts', 990)
+            ->assertJsonPath('data.finance.net', -700)
             ->assertJsonPath('data.referrals.totalReferrals', 2)
             ->assertJsonPath('data.referrals.totalReferrers', 2)
             ->assertJsonPath('data.referrals.totalPaidOut', 100)

@@ -24,6 +24,11 @@ export type Photo = {
 	isLikedByViewer: boolean
 	isWinner: boolean
 	position: number | null
+	/** Whether this photo can be sold at all (an ended competition's entry
+	 *  that isn't an Unsplash seed photo). The viewer's own photos are still
+	 *  sellable, the UI just doesn't offer to sell them back to them. */
+	isSellable: boolean
+	isPurchasedByViewer: boolean
 	createdAt: string
 }
 

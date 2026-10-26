@@ -111,6 +111,7 @@ class EmailNotificationPreferencesTest extends TestCase
                 'competitionWonNotification' => true,
                 'referralSignupNotification' => true,
                 'photoLikedNotification' => true,
+                'photoSoldNotification' => true,
             ])
             ->assertOk();
 

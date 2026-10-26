@@ -1,5 +1,6 @@
 import {
 	Banknote,
+	Camera,
 	Gift,
 	HandCoins,
 	Hourglass,
@@ -119,10 +120,14 @@ export default function AdminDashboard() {
 											label: "Extra photos",
 											amount: data.finance.revenueBreakdown.extraPhotos,
 										},
+										{
+											label: "Photo sales",
+											amount: data.finance.revenueBreakdown.photoSales,
+										},
 									]}
 								/>
 							</div>
-							<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+							<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 								<AdminStatCard
 									label="Winnings paid"
 									value={data.finance.payoutsBreakdown.prizes}
@@ -135,6 +140,13 @@ export default function AdminDashboard() {
 									value={data.finance.payoutsBreakdown.referralRewards}
 									prefix="KES"
 									icon={Gift}
+									tone="warning"
+								/>
+								<AdminStatCard
+									label="Paid to photographers"
+									value={data.finance.payoutsBreakdown.photographerPayouts}
+									prefix="KES"
+									icon={Camera}
 									tone="warning"
 								/>
 								<AdminStatCard

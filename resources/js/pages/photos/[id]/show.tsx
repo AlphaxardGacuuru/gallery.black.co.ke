@@ -1,7 +1,9 @@
 import {
 	AlignRight,
 	ArrowLeft,
+	Download,
 	Heart,
+	ShoppingCart,
 	Trash2,
 	Trophy,
 	Users,
@@ -10,6 +12,7 @@ import { useCanGoBack, useNavigate, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { Head } from "@/lib/spa"
 import { AddPhotosDialog } from "@/components/photos/AddPhotosDialog"
+import { BuyPhotoDialog, canBuyPhoto } from "@/components/photos/BuyPhotoDialog"
 import { ManageLikesDialog } from "@/components/photos/ManageLikesDialog"
 import { PhotoCarousel } from "@/components/photos/PhotoCarousel"
 import VerifiedBadge from "@/components/verified-badge"
@@ -83,7 +86,12 @@ export default function PhotoShow({ id }: Props) {
 		)
 	}
 
-	const { photo, canDelete, canLike } = data
+	const { photo, canDelete, canLike, sale } = data
+	// Owners can always download their own originals, buyers once they've paid.
+	const canDownload =
+		photo.isPurchasedByViewer ||
+		(photo.isSellable && String(photo.userId) === String(auth?.id))
+	const canBuy = !canDownload && canBuyPhoto(photo, sale, auth?.id)
 
 	return (
 		<div className="flex h-dvh max-h-dvh w-full flex-col gap-0 bg-black">
@@ -99,7 +107,9 @@ export default function PhotoShow({ id }: Props) {
 					<ArrowLeft className="size-5" />
 				</Button>
 				<p className="truncate text-sm font-medium">{photo.userName}</p>
-				{photo.userVerified && <VerifiedBadge className="-ml-1 size-3.5 shrink-0" />}
+				{photo.userVerified && (
+					<VerifiedBadge className="-ml-1 size-3.5 shrink-0" />
+				)}
 				{photo.isWinner ? (
 					<span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-400 px-2 py-1 text-xs font-semibold text-amber-950">
 						<Trophy className="size-3.5" />
@@ -227,6 +237,27 @@ export default function PhotoShow({ id }: Props) {
 						{photo.likesCount}
 					</span>
 				</button>
+				{(canDownload || canBuy) && (
+					<BuyPhotoDialog
+						photo={{ ...photo, isPurchasedByViewer: canDownload }}
+						sale={sale}
+						trigger={
+							<button
+								type="button"
+								aria-label={canDownload ? "Download photo" : "Buy photo"}
+								className="flex cursor-pointer flex-col items-center gap-1 text-white">
+								{canDownload ? (
+									<Download className="size-7 drop-shadow" />
+								) : (
+									<ShoppingCart className="size-7 drop-shadow" />
+								)}
+								<span className="text-xs font-medium tabular-nums drop-shadow">
+									{canDownload ? "Save" : `KES ${sale.price}`}
+								</span>
+							</button>
+						}
+					/>
+				)}
 			</div>
 		</div>
 	)

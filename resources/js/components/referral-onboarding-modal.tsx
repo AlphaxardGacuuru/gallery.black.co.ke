@@ -102,6 +102,8 @@ export default function ReferralOnboardingModal() {
 						<DialogDescription>
 							Refer {settings.threshold} friends this week and get KES{" "}
 							{settings.rewardAmount} sent straight to your M-Pesa.
+							{settings.photoBonusAmount > 0 &&
+								` Plus KES ${settings.photoBonusAmount} for every friend who posts a photo.`}
 						</DialogDescription>
 					</DialogHeader>
 				</div>

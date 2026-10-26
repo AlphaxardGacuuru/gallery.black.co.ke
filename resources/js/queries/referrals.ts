@@ -25,6 +25,8 @@ export function useMyReferrals(page = 1, perPage = 20) {
 export type ReferralSettings = {
 	threshold: number
 	rewardAmount: number
+	/** One-off KES bonus for each referred friend who posts a photo (0 = off). */
+	photoBonusAmount: number
 }
 
 export function useReferralSettings() {

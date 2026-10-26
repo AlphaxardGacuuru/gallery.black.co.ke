@@ -179,8 +179,9 @@ class PhotoCompetitionService extends Service
 	{
 		$photos = Photo::query()
 			->whereHas('competition', fn($query) => $query->where('status', PhotoCompetition::STATUS_ENDED))
-			->with(['user', 'images'])
+			->with(['user', 'images', 'competition'])
 			->withLikedByViewer($request->user())
+			->withPurchasedByViewer($request->user())
 			->withIsWinner()
 			->latest('created_at')
 			->paginate(30);

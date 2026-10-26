@@ -12,6 +12,7 @@ type PreferenceKey =
 	| "competitionWonNotification"
 	| "referralSignupNotification"
 	| "photoLikedNotification"
+	| "photoSoldNotification"
 
 const CATEGORIES: { key: PreferenceKey; label: string; description: string }[] =
 	[
@@ -35,6 +36,11 @@ const CATEGORIES: { key: PreferenceKey; label: string; description: string }[] =
 			key: "photoLikedNotification",
 			label: "Photo likes",
 			description: "Email me when someone likes one of my photos.",
+		},
+		{
+			key: "photoSoldNotification",
+			label: "Photo sales",
+			description: "Email me when someone buys one of my photos.",
 		},
 	]
 
@@ -65,6 +71,7 @@ export default function EmailNotificationSettings() {
 					competitionWonNotification: isEnabled("competitionWonNotification"),
 					referralSignupNotification: isEnabled("referralSignupNotification"),
 					photoLikedNotification: isEnabled("photoLikedNotification"),
+					photoSoldNotification: isEnabled("photoSoldNotification"),
 					[key]: checked,
 				},
 			})

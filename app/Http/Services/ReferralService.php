@@ -10,10 +10,11 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class ReferralService extends Service
 {
 	/**
-	 * The current referral reward threshold/amount, so any signed-in user
-	 * (not just admins) can see what referring friends earns them.
+	 * The current referral reward threshold/amount, plus the one-off bonus
+	 * for each referred friend who posts a photo, so any signed-in user (not
+	 * just admins) can see what referring friends earns them.
 	 *
-	 * @return array{threshold: int, rewardAmount: float}
+	 * @return array{threshold: int, rewardAmount: float, photoBonusAmount: float}
 	 */
 	public function settings(): array
 	{
@@ -24,6 +25,9 @@ class ReferralService extends Service
 			'rewardAmount' => (float) (Setting::query()
 				->where('key', 'referral_reward_amount')
 				->value('value') ?? 50),
+			'photoBonusAmount' => (float) (Setting::query()
+				->where('key', 'referral_photo_bonus_amount')
+				->value('value') ?? 0),
 		];
 	}
 

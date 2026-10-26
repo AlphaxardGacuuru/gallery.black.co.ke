@@ -1,4 +1,11 @@
-import { HandCoins, Hourglass, Loader2, Trophy, UserPlus, Users } from "lucide-react"
+import {
+	HandCoins,
+	Hourglass,
+	Loader2,
+	Trophy,
+	UserPlus,
+	Users,
+} from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import Heading from "@/components/heading"
@@ -62,6 +69,21 @@ function referralColumns(startIndex: number): ColumnDef<AdminReferral>[] {
 				),
 		},
 		{
+			id: "photo bonus",
+			header: "Photo bonus",
+			enableSorting: false,
+			cell: ({ row }) =>
+				row.original.photoBonusPaidAt ? (
+					<span className="text-emerald-500">
+						KES {row.original.photoBonusAmount}
+					</span>
+				) : row.original.referredHasPosted ? (
+					<span className="text-muted-foreground">Posted, unpaid</span>
+				) : (
+					<span className="text-muted-foreground">-</span>
+				),
+		},
+		{
 			id: "paid on",
 			header: "Paid on",
 			enableSorting: false,
@@ -78,17 +100,23 @@ function referralColumns(startIndex: number): ColumnDef<AdminReferral>[] {
 function RewardSettings({
 	threshold,
 	rewardAmount,
+	photoBonusAmount,
 }: {
 	threshold: number
 	rewardAmount: number
+	photoBonusAmount: number
 }) {
 	const updateSettings = useUpdateReferralSettings()
 	const [thresholdInput, setThresholdInput] = useState(String(threshold))
 	const [rewardInput, setRewardInput] = useState(String(rewardAmount))
+	const [photoBonusInput, setPhotoBonusInput] = useState(
+		String(photoBonusAmount)
+	)
 
 	function handleSave() {
 		const parsedThreshold = Number(thresholdInput)
 		const parsedReward = Number(rewardInput)
+		const parsedPhotoBonus = Number(photoBonusInput)
 
 		if (!Number.isFinite(parsedThreshold) || parsedThreshold < 1) {
 			toast.error("Enter a valid referral threshold")
@@ -100,8 +128,17 @@ function RewardSettings({
 			return
 		}
 
+		if (!Number.isFinite(parsedPhotoBonus) || parsedPhotoBonus < 0) {
+			toast.error("Enter a valid photo bonus")
+			return
+		}
+
 		updateSettings.mutate(
-			{ threshold: parsedThreshold, rewardAmount: parsedReward },
+			{
+				threshold: parsedThreshold,
+				rewardAmount: parsedReward,
+				photoBonusAmount: parsedPhotoBonus,
+			},
 			{
 				onSuccess: () => toast.success("Referral reward settings updated"),
 				onError: () => toast.error("Couldn't update the reward settings"),
@@ -114,9 +151,9 @@ function RewardSettings({
 			<Heading
 				variant="small"
 				title="Referral reward"
-				description="Every full batch of referrals splits the reward evenly."
+				description="Every full batch of referrals splits the reward evenly. The photo bonus is paid once for each referred user who posts a photo, with no batch needed. Set it to 0 to turn it off."
 			/>
-			<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+			<div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
 				<Input
 					type="number"
 					min={1}
@@ -130,6 +167,13 @@ function RewardSettings({
 					label="Reward amount (KES)"
 					value={rewardInput}
 					onChange={(event) => setRewardInput(event.target.value)}
+				/>
+				<Input
+					type="number"
+					min={0}
+					label="Photo bonus (KES)"
+					value={photoBonusInput}
+					onChange={(event) => setPhotoBonusInput(event.target.value)}
 				/>
 			</div>
 			<div className="flex justify-end">
@@ -282,6 +326,7 @@ export default function AdminReferrals() {
 					<RewardSettings
 						threshold={data.threshold}
 						rewardAmount={data.rewardAmount}
+						photoBonusAmount={data.photoBonusAmount}
 					/>
 				)}
 

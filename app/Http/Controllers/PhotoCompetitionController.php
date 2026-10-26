@@ -6,6 +6,7 @@ use App\Http\Resources\LeaderboardEntryResource;
 use App\Http\Resources\PhotoCompetitionResource;
 use App\Http\Resources\PhotoResource;
 use App\Http\Services\PhotoCompetitionService;
+use App\Http\Services\PhotoPurchaseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -41,6 +42,7 @@ class PhotoCompetitionController extends Controller
 
         return response()->json([
             'data' => PhotoResource::collection($photos),
+            'sale' => PhotoPurchaseService::publicSaleSettings(),
             'meta' => [
                 'current_page' => $photos->currentPage(),
                 'last_page' => $photos->lastPage(),

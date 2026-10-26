@@ -37,6 +37,8 @@ class PhotoResource extends JsonResource
 			'isLikedByViewer' => (bool) ($this->is_liked_by_viewer ?? false),
 			'isWinner' => (bool) ($this->is_winner ?? false),
 			'position' => $this->position !== null ? (int) $this->position : null,
+			'isSellable' => $this->isSellable(),
+			'isPurchasedByViewer' => (bool) ($this->is_purchased_by_viewer ?? false),
 			'createdAt' => $this->created_at,
 		];
 	}

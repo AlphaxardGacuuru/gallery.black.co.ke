@@ -6,6 +6,7 @@ use App\Events\KopokopoTransferRecordedEvent;
 use App\Http\Resources\KopokopoTransferResource;
 use App\Models\KopokopoTransfer;
 use App\Models\PhotoCompetitionWinner;
+use App\Models\PhotoPurchase;
 use App\Models\Referral;
 use App\Models\User;
 use Carbon\Carbon;
@@ -360,6 +361,58 @@ class KopokopoTransferService extends Service
     }
 
     /**
+     * Send the photographer their share of a photo sale via Kopokopo. Same
+     * in-flight convention as payWinner(): this records payout_reference,
+     * and payout_paid_at is only set once the webhook confirms the transfer
+     * (see KopokopoTransferRecordedListener).
+     *
+     * @return array{0: bool, 1: string, 2: mixed}
+     */
+    public function payPhotographer(PhotoPurchase $purchase): array
+    {
+        if ($purchase->status !== PhotoPurchase::STATUS_PAID) {
+            return [false, 'The buyer hasn\'t paid for this photo yet', null];
+        }
+
+        if ($purchase->payout_paid_at) {
+            return [false, 'The photographer has already been paid for this sale', null];
+        }
+
+        if ($purchase->payout_reference) {
+            return [false, 'A payout for this sale is already in progress', null];
+        }
+
+        if ($purchase->seller_amount < 1) {
+            return [false, 'There is no photographer share to pay for this sale', null];
+        }
+
+        $seller = $purchase->seller;
+
+        if (! $seller) {
+            return [false, 'This sale has no photographer to pay', null];
+        }
+
+        if (! $seller->phone) {
+            return [false, $seller->name . ' has no M-Pesa phone number on file', null];
+        }
+
+        $request = Request::create('/', 'POST', [
+            'destinationReference' => $seller->phone,
+            'amount' => $purchase->seller_amount,
+            'recipientName' => $seller->name,
+            'description' => 'Black Gallery photo sale',
+        ]);
+
+        [$status, $message, $data] = $this->initiateTransfer($request);
+
+        if ($status === true) {
+            $purchase->update(['payout_reference' => $this->locationId($data['location'] ?? '')]);
+        }
+
+        return [$status === true, $message, $data];
+    }
+
+    /**
      * Pay a referrer for however many complete referral-reward batches
      * they've accumulated (see Referral::eligiblePayout()). As with
      * payWinner(), a successful initiation only means Kopokopo accepted the
@@ -368,17 +421,23 @@ class KopokopoTransferService extends Service
      * outright; paid_at only gets set once the webhook confirms the
      * transfer actually completed (see KopokopoTransferRecordedListener).
      *
+     * Photo bonuses ride along in the same transfer, tracked through
+     * photo_bonus_reference/photo_bonus_amount the same way.
+     *
      * @param  array<int, string>  $referralIds  The specific unpaid referrals this payout covers.
+     * @param  array<int, string>  $photoBonusReferralIds  Referrals whose photo bonus this payout covers.
      * @return array{0: bool, 1: string, 2: mixed}
      */
     public function payReferrer(
         User $referrer,
         float $totalAmount,
         array $referralIds,
-        float $perReferralAmount
+        float $perReferralAmount,
+        array $photoBonusReferralIds = [],
+        float $photoBonusAmount = 0.0
     ): array {
-        if ($referralIds === []) {
-            return [false, $referrer->name . ' hasn\'t reached the referral threshold yet', null];
+        if ($referralIds === [] && $photoBonusReferralIds === []) {
+            return [false, $referrer->name . ' hasn\'t earned a referral reward yet', null];
         }
 
         if (! $referrer->phone) {
@@ -395,11 +454,20 @@ class KopokopoTransferService extends Service
         [$status, $message, $data] = $this->initiateTransfer($request);
 
         if ($status === true) {
+            $reference = $this->locationId($data['location'] ?? '');
+
             Referral::query()
                 ->whereIn('id', $referralIds)
                 ->update([
                     'amount_paid' => $perReferralAmount,
-                    'kopokopo_reference' => $this->locationId($data['location'] ?? ''),
+                    'kopokopo_reference' => $reference,
+                ]);
+
+            Referral::query()
+                ->whereIn('id', $photoBonusReferralIds)
+                ->update([
+                    'photo_bonus_amount' => $photoBonusAmount,
+                    'photo_bonus_reference' => $reference,
                 ]);
         }
 

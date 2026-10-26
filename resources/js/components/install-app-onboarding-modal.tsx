@@ -1,6 +1,7 @@
 import { Download } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
+import ManualInstallSteps from "@/components/manual-install-steps"
 import { Button } from "@/components/ui/button"
 import {
 	Dialog,
@@ -15,6 +16,7 @@ import { useApp } from "@/contexts/AppContext"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { usePwaInstall } from "@/hooks/use-pwa-install"
 import Axios from "@/lib/axios"
+import { getManualInstallGuide } from "@/lib/manual-install"
 import toast from "@/lib/toast"
 
 // Persisted per tab/session so "Not now" only silences the prompt for this
@@ -28,16 +30,24 @@ function wasDismissedThisSession(): boolean {
 	return sessionStorage.getItem(DISMISSED_KEY) === "1"
 }
 
+// Browsers without `beforeinstallprompt` (iOS, Firefox, in-app browsers)
+// get manual "Add to Home screen" steps instead of the one-tap button. The
+// user agent can't change mid-visit, so this is computed once.
+function useManualInstallGuide() {
+	return useMemo(() => getManualInstallGuide(), [])
+}
+
 // The install step is settled for this visit once the user has installed,
 // dismissed the prompt, or there's nothing to prompt for (already installed,
-// or the browser never offered an install prompt at all). The notifications
-// onboarding modal waits on this so it never appears ahead of — or stacked
-// on top of — the install prompt.
+// or a Chromium browser that hasn't offered an install prompt). The
+// notifications onboarding modal waits on this so it never appears ahead
+// of, or stacked on top of, the install prompt.
 export function useIsInstallStepSettled(): boolean {
 	const { canInstall, isInstalled } = usePwaInstall()
 	const isMobile = useIsMobile()
+	const manualGuide = useManualInstallGuide()
 
-	if (!isMobile || isInstalled || !canInstall) {
+	if (!isMobile || isInstalled || (!canInstall && !manualGuide)) {
 		return true
 	}
 
@@ -49,6 +59,7 @@ export default function InstallAppOnboardingModal() {
 	const queryClient = useQueryClient()
 	const { canInstall, install, isInstalled } = usePwaInstall()
 	const isMobile = useIsMobile()
+	const manualGuide = useManualInstallGuide()
 
 	const [open, setOpen] = useState(false)
 	const [processing, setProcessing] = useState(false)
@@ -72,7 +83,7 @@ export default function InstallAppOnboardingModal() {
 			return
 		}
 
-		if (isInstalled || !canInstall) {
+		if (isInstalled || (!canInstall && !manualGuide)) {
 			if (!onboardedAt) {
 				markComplete()
 			}
@@ -81,7 +92,7 @@ export default function InstallAppOnboardingModal() {
 		}
 
 		setOpen(isMobile)
-	}, [auth, onboardedAt, isInstalled, canInstall, isMobile])
+	}, [auth, onboardedAt, isInstalled, canInstall, isMobile, manualGuide])
 
 	async function handleInstall() {
 		setProcessing(true)
@@ -128,22 +139,35 @@ export default function InstallAppOnboardingModal() {
 						</DialogDescription>
 					</DialogHeader>
 				</div>
-				<DialogFooter className="sm:justify-center">
-					<Button
-						type="button"
-						variant="outline"
-						disabled={processing}
-						onClick={handleSkip}>
-						Not now
-					</Button>
-					<Button
-						type="button"
-						disabled={processing}
-						onClick={() => void handleInstall()}>
-						{processing && <Spinner className="size-4" />}
-						Install app
-					</Button>
-				</DialogFooter>
+				{!canInstall && manualGuide ? (
+					<>
+						<ManualInstallSteps guide={manualGuide} />
+						<DialogFooter className="sm:justify-center">
+							<Button
+								type="button"
+								onClick={handleSkip}>
+								Got it
+							</Button>
+						</DialogFooter>
+					</>
+				) : (
+					<DialogFooter className="sm:justify-center">
+						<Button
+							type="button"
+							variant="outline"
+							disabled={processing}
+							onClick={handleSkip}>
+							Not now
+						</Button>
+						<Button
+							type="button"
+							disabled={processing}
+							onClick={() => void handleInstall()}>
+							{processing && <Spinner className="size-4" />}
+							Install app
+						</Button>
+					</DialogFooter>
+				)}
 			</DialogContent>
 		</Dialog>
 	)

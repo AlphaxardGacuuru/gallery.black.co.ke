@@ -8,6 +8,7 @@ enum EmailNotificationCategory: string
     case COMPETITION_WON = 'competition-won';
     case REFERRAL_SIGNED_UP = 'referral-signed-up';
     case PHOTO_LIKED = 'photo-liked';
+    case PHOTO_SOLD = 'photo-sold';
 
     public function settingsKey(): string
     {
@@ -16,6 +17,7 @@ enum EmailNotificationCategory: string
             self::COMPETITION_WON => 'competitionWonNotification',
             self::REFERRAL_SIGNED_UP => 'referralSignupNotification',
             self::PHOTO_LIKED => 'photoLikedNotification',
+            self::PHOTO_SOLD => 'photoSoldNotification',
         };
     }
 
@@ -26,6 +28,7 @@ enum EmailNotificationCategory: string
             self::COMPETITION_WON => 'challenge winner',
             self::REFERRAL_SIGNED_UP => 'referral signup',
             self::PHOTO_LIKED => 'photo like',
+            self::PHOTO_SOLD => 'photo sale',
         };
     }
 }

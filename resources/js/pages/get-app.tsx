@@ -1,10 +1,15 @@
 import { Download, Sparkles } from "lucide-react"
 import { Head } from "@/lib/spa"
+import ManualInstallSteps from "@/components/manual-install-steps"
 import { Button } from "@/components/ui/button"
 import { usePwaInstall } from "@/hooks/use-pwa-install"
+import { getManualInstallGuide } from "@/lib/manual-install"
 
 export default function GetApp() {
 	const { canInstall, install, isInstalled } = usePwaInstall()
+	const manualGuide = canInstall
+		? null
+		: getManualInstallGuide({ includeBrowserMenu: true })
 
 	return (
 		<>
@@ -33,6 +38,11 @@ export default function GetApp() {
 						<div className="mt-8 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm text-primary">
 							Black Gallery is already installed on this device.
 						</div>
+					) : manualGuide ? (
+						<ManualInstallSteps
+							guide={manualGuide}
+							className="mx-auto mt-8 max-w-sm rounded-xl border bg-background/60 p-5"
+						/>
 					) : (
 						<Button
 							size="lg"

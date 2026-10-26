@@ -9,6 +9,7 @@ import PhotoCompetitionController from "@/actions/App/Http/Controllers/PhotoComp
 import PhotoController from "@/actions/App/Http/Controllers/PhotoController"
 import ExtraPhotoPurchaseController from "@/actions/App/Http/Controllers/ExtraPhotoPurchaseController"
 import PhotoLikeController from "@/actions/App/Http/Controllers/PhotoLikeController"
+import PhotoPurchaseController from "@/actions/App/Http/Controllers/PhotoPurchaseController"
 import PhotoSlotPurchaseController from "@/actions/App/Http/Controllers/PhotoSlotPurchaseController"
 import Axios from "@/lib/axios"
 import type { Photo, PhotoCompetition } from "@/types/photo"
@@ -131,10 +132,17 @@ function updateCachedDiscoverPhotos(
 	)
 }
 
+/** Whether photos can be bought from Discover, and the KES price. */
+export type PhotoSale = {
+	enabled: boolean
+	price: number
+}
+
 export type PhotoDetail = {
 	photo: Photo
 	canDelete: boolean
 	canLike: boolean
+	sale: PhotoSale
 }
 
 // The single-photo detail page keeps its own cache entry (keyed by id)
@@ -154,6 +162,7 @@ function updateCachedShowPhoto(
 
 type DiscoverPage = {
 	data: Photo[]
+	sale: PhotoSale
 	meta: { current_page: number; last_page: number }
 }
 
@@ -207,13 +216,17 @@ export function usePhoto(id: string) {
 	return useQuery({
 		queryKey: ["photos", "show", id],
 		queryFn: () =>
-			Axios.get<{ data: Photo; canDelete: boolean; canLike: boolean }>(
-				PhotoController.show.url(id)
-			).then(
+			Axios.get<{
+				data: Photo
+				canDelete: boolean
+				canLike: boolean
+				sale: PhotoSale
+			}>(PhotoController.show.url(id)).then(
 				(res): PhotoDetail => ({
 					photo: res.data.data,
 					canDelete: res.data.canDelete,
 					canLike: res.data.canLike,
+					sale: res.data.sale,
 				})
 			),
 	})
@@ -413,4 +426,80 @@ export function usePollSlotPurchase(purchaseId: string | null) {
 		refetchInterval: (query) =>
 			query.state.data?.status === "pending" ? 3000 : false,
 	})
+}
+
+/**
+ * Start an STK push to buy a full-resolution copy of a photo. Like the
+ * slot purchases, the payment is confirmed async by Kopokopo's webhook, so
+ * callers follow up with usePollPhotoPurchase().
+ */
+export function useBuyPhoto(photoId: string) {
+	return useMutation({
+		mutationFn: () =>
+			Axios.post<{
+				status: boolean
+				message: string
+				data: { purchaseId: string }
+			}>(PhotoPurchaseController.store.url(photoId)).then((res) => {
+				if (res.data.status !== true) {
+					throw new Error(res.data.message)
+				}
+
+				return res.data.data
+			}),
+	})
+}
+
+export function usePollPhotoPurchase(purchaseId: string | null) {
+	return useQuery({
+		queryKey: ["photo-purchases", purchaseId],
+		queryFn: () =>
+			Axios.get<{ data: { status: "pending" | "paid" | "failed" } }>(
+				PhotoPurchaseController.show.url(purchaseId!)
+			).then((res) => res.data.data),
+		enabled: !!purchaseId,
+		refetchInterval: (query) =>
+			query.state.data?.status === "pending" ? 3000 : false,
+	})
+}
+
+export type PhotoDownload = {
+	url: string
+	thumbnailUrl: string
+}
+
+/**
+ * Signed download links for each original in an entry. They expire after
+ * 30 minutes, so they're fetched fresh whenever the download view opens
+ * rather than kept in the cache.
+ */
+export function usePhotoDownloads(photoId: string, enabled: boolean) {
+	return useQuery({
+		queryKey: ["photos", "downloads", photoId],
+		queryFn: () =>
+			Axios.get<{ data: PhotoDownload[] }>(
+				PhotoPurchaseController.downloads.url(photoId)
+			).then((res) => res.data.data),
+		enabled,
+		staleTime: 0,
+		gcTime: 0,
+	})
+}
+
+/**
+ * Once a purchase is confirmed, flag the photo as owned in every cached
+ * view of it so Discover and the photo page both swap "Buy" for "Download"
+ * without a refetch.
+ */
+export function markPhotoPurchased(
+	queryClient: ReturnType<typeof useQueryClient>,
+	photoId: string
+) {
+	const markOwned = (photos: Photo[]) =>
+		photos.map((photo) =>
+			photo.id === photoId ? { ...photo, isPurchasedByViewer: true } : photo
+		)
+
+	updateCachedDiscoverPhotos(queryClient, markOwned)
+	updateCachedShowPhoto(queryClient, photoId, markOwned)
 }

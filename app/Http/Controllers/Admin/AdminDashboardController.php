@@ -7,6 +7,7 @@ use App\Models\KopokopoTransfer;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoCompetitionWinner;
+use App\Models\PhotoPurchase;
 use App\Models\PhotoSlotPurchase;
 use App\Models\Referral;
 use App\Models\User;
@@ -65,20 +66,26 @@ class AdminDashboardController extends Controller
 
         $extraEntries = (int) ($revenueByType[PhotoSlotPurchase::TYPE_EXTRA_ENTRY] ?? 0);
         $extraPhotos = (int) ($revenueByType[PhotoSlotPurchase::TYPE_EXTRA_PHOTO] ?? 0);
+        $photoSales = (int) PhotoPurchase::query()->paid()->sum('amount');
 
         $prizes = (int) PhotoCompetitionWinner::query()
             ->whereNotNull('prize_paid_at')
             ->whereHas('user', fn($query) => $query->real())
             ->sum('prize_amount');
 
-        $referralRewards = (int) round((float) Referral::query()
-            ->whereNotNull('paid_at')
-            ->sum('amount_paid'));
+        $referralRewards = (int) round(
+            (float) Referral::query()->whereNotNull('paid_at')->sum('amount_paid')
+            + (float) Referral::query()->whereNotNull('photo_bonus_paid_at')->sum('photo_bonus_amount')
+        );
+
+        $photographerPayouts = (int) PhotoPurchase::query()
+            ->whereNotNull('payout_paid_at')
+            ->sum('seller_amount');
 
         $otherTransfers = $this->otherConfirmedTransfers();
 
-        $revenue = $extraEntries + $extraPhotos;
-        $payouts = $prizes + $referralRewards + $otherTransfers;
+        $revenue = $extraEntries + $extraPhotos + $photoSales;
+        $payouts = $prizes + $referralRewards + $photographerPayouts + $otherTransfers;
 
         return [
             'revenue' => $revenue,
@@ -87,10 +94,12 @@ class AdminDashboardController extends Controller
             'revenueBreakdown' => [
                 'extraEntries' => $extraEntries,
                 'extraPhotos' => $extraPhotos,
+                'photoSales' => $photoSales,
             ],
             'payoutsBreakdown' => [
                 'prizes' => $prizes,
                 'referralRewards' => $referralRewards,
+                'photographerPayouts' => $photographerPayouts,
                 'otherTransfers' => $otherTransfers,
             ],
         ];
@@ -98,8 +107,9 @@ class AdminDashboardController extends Controller
 
     /**
      * Confirmed transfers sent from the admin "send money" form, i.e. any
-     * successful transfer that isn't a prize or referral reward (those are
-     * already counted above, via the kopokopo_reference they share). Kopokopo
+     * successful transfer that isn't a prize, referral reward or photographer
+     * payout (those are already counted above, via the reference they
+     * share). Kopokopo
      * statuses aren't a fixed enum, so success is matched in PHP with the
      * model's own heuristic rather than in SQL, and a webhook delivered
      * twice for the same transfer is only counted once.
@@ -110,6 +120,8 @@ class AdminDashboardController extends Controller
             ->whereNotNull('kopokopo_reference')
             ->pluck('kopokopo_reference')
             ->merge(Referral::query()->whereNotNull('kopokopo_reference')->pluck('kopokopo_reference'))
+            ->merge(Referral::query()->whereNotNull('photo_bonus_reference')->pluck('photo_bonus_reference'))
+            ->merge(PhotoPurchase::query()->whereNotNull('payout_reference')->pluck('payout_reference'))
             ->flip();
 
         return (int) round(KopokopoTransfer::query()
