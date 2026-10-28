@@ -141,7 +141,7 @@ class PostSeedPhotosTest extends TestCase
         $this->assertSame(3, Photo::distinct()->count('unsplash_id'));
     }
 
-    public function test_each_competition_rotates_to_a_seed_user_who_has_not_posted_yet(): void
+    public function test_every_competition_is_posted_by_the_same_seed_user(): void
     {
         $this->fakeUnsplash();
         $first = $this->competition();
@@ -155,7 +155,20 @@ class PostSeedPhotosTest extends TestCase
         $this->artisan('app:post-seed-photos');
 
         $secondPoster = Photo::where('competition_id', $second->id)->sole()->user_id;
-        $this->assertNotSame($firstPoster, $secondPoster);
+        $this->assertSame($firstPoster, $secondPoster);
+    }
+
+    public function test_the_seed_user_with_the_most_photos_is_featured(): void
+    {
+        $this->fakeUnsplash();
+        $established = User::where('is_seed', true)->latest('created_at')->latest('id')->first();
+        Photo::factory()->count(2)->create(['user_id' => $established->id]);
+        $competition = $this->competition();
+        $this->travelToDue($competition, 0);
+
+        $this->artisan('app:post-seed-photos')->assertSuccessful();
+
+        $this->assertSame($established->id, Photo::where('competition_id', $competition->id)->sole()->user_id);
     }
 
     public function test_skips_unsplash_photos_that_were_already_posted(): void

@@ -46,9 +46,9 @@ class PostSeedPhotos extends Command
             return self::SUCCESS;
         }
 
-        // One seed user per competition: whoever posted the first photo
-        // keeps posting the rest.
-        $user = $seedPhotos->first()?->user ?? static::nextSeedUser();
+        // Whoever posted this competition's first seed photo keeps posting
+        // the rest, which is normally the one featured seed user anyway.
+        $user = $seedPhotos->first()?->user ?? static::featuredSeedUser();
 
         if (! $user) {
             $this->components->warn('No seed users exist. Run: php artisan db:seed --class=SeedUserSeeder');
@@ -96,17 +96,18 @@ class PostSeedPhotos extends Command
     }
 
     /**
-     * The seed user who has gone longest without posting (never-posted
-     * ones first, picked at random among ties), so the pool rotates.
+     * The one seed user who posts every competition's seed photos, so a
+     * single profile builds up a history: whoever has posted the most so
+     * far (the oldest seed user on a tie, e.g. before anyone has posted).
      */
-    public static function nextSeedUser(): ?User
+    public static function featuredSeedUser(): ?User
     {
         return User::query()
             ->where('is_seed', true)
-            ->withMax('photos', 'created_at')
-            ->orderByRaw('photos_max_created_at IS NOT NULL')
-            ->orderBy('photos_max_created_at')
-            ->inRandomOrder()
+            ->withCount('photos')
+            ->orderByDesc('photos_count')
+            ->orderBy('created_at')
+            ->orderBy('id')
             ->first();
     }
 
