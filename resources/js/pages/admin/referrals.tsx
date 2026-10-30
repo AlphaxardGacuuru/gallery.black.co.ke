@@ -147,7 +147,7 @@ function RewardSettings({
 	}
 
 	return (
-		<div className="max-w-sm space-y-3 rounded-lg border p-4">
+		<div className="max-w-3xl space-y-3 rounded-lg border p-4">
 			<Heading
 				variant="small"
 				title="Referral reward"

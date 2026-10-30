@@ -187,7 +187,7 @@ function PrizeTiersSettings({ prizeTiers }: { prizeTiers: number[] }) {
 	}
 
 	return (
-		<div className="w-full space-y-3 sm:max-w-xl sm:flex-1 rounded-lg border p-4">
+		<div className="w-full space-y-3 sm:max-w-6xl sm:flex-1 rounded-lg border p-4">
 			<Heading
 				variant="small"
 				title="Weekly prize tiers"
