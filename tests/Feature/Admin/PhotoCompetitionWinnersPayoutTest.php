@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Events\KopokopoTransferInitiated;
 use App\Http\Services\KopokopoTransferService;
+use App\Http\Services\MPESATransactionService;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoCompetitionWinner;
 use App\Models\Setting;
@@ -306,5 +307,87 @@ class PhotoCompetitionWinnersPayoutTest extends TestCase
 
         $response->assertOk();
         $this->assertTrue($newEndsAt->equalTo($competition->fresh()->ends_at));
+    }
+
+    /**
+     * Two payable winners (500 + 300), plus one of each kind that shouldn't
+     * count: already paid, payout in flight, seed account, and no phone.
+     */
+    private function competitionWithMixedWinners(): PhotoCompetition
+    {
+        $competition = PhotoCompetition::factory()->create();
+        $winner = fn(int $position, int $prize, array $attributes = [], array $user = []) => PhotoCompetitionWinner::factory()->create([
+            'competition_id' => $competition->id,
+            'position' => $position,
+            'prize_amount' => $prize,
+            'user_id' => User::factory()->create(['phone' => "070012345{$position}", ...$user])->id,
+            ...$attributes,
+        ]);
+
+        $winner(1, 500);
+        $winner(2, 300);
+        $winner(3, 200, ['prize_paid_at' => now()]);
+        $winner(4, 100, ['kopokopo_reference' => 'in-flight']);
+        $winner(5, 100, [], ['is_seed' => true]);
+        $winner(6, 100, [], ['phone' => null]);
+
+        return $competition;
+    }
+
+    public function test_recent_competitions_include_what_the_wallet_needs_for_outstanding_prizes(): void
+    {
+        $this->competitionWithMixedWinners();
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->getJson('/api/admin/photo-competitions/recent')
+            ->assertOk()
+            ->assertJsonPath('data.0.payoutTotals', [
+                'payouts' => 2,
+                'prizes' => 800,
+                'fees' => 2 * KopokopoTransferService::TRANSFER_FEE,
+                'total' => 800 + 2 * KopokopoTransferService::TRANSFER_FEE,
+            ]);
+    }
+
+    public function test_loading_the_wallet_stk_pushes_the_admin_wallet_number_for_the_total(): void
+    {
+        $competition = $this->competitionWithMixedWinners();
+        $expected = 800 + 2 * KopokopoTransferService::TRANSFER_FEE;
+
+        $this->partialMock(MPESATransactionService::class, function ($mock) use ($expected) {
+            $mock->shouldReceive('stkPush')
+                ->once()
+                ->withArgs(fn($request, $phone) => (int) $request->input('amount') === $expected
+                    && $phone === '0700364446')
+                ->andReturn(['success', 'Request Sent to Your Phone', ['location' => 'https://x/incoming_payments/abc']]);
+        });
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson("/api/admin/photo-competitions/{$competition->id}/load-wallet", ['amount' => 1])
+            ->assertOk()
+            ->assertJsonPath('status', true)
+            ->assertJsonPath('data.amount', $expected);
+    }
+
+    public function test_loading_the_wallet_does_nothing_when_no_prizes_are_outstanding(): void
+    {
+        $competition = PhotoCompetition::factory()->create();
+        PhotoCompetitionWinner::factory()->create(['competition_id' => $competition->id, 'prize_paid_at' => now()]);
+
+        $this->partialMock(MPESATransactionService::class, fn($mock) => $mock->shouldNotReceive('stkPush'));
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson("/api/admin/photo-competitions/{$competition->id}/load-wallet")
+            ->assertOk()
+            ->assertJsonPath('status', false);
+    }
+
+    public function test_non_admins_cannot_load_the_wallet(): void
+    {
+        $competition = PhotoCompetition::factory()->create();
+
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->postJson("/api/admin/photo-competitions/{$competition->id}/load-wallet")
+            ->assertForbidden();
     }
 }

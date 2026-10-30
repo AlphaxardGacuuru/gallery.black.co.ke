@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Services\KopokopoTransferService;
+use App\Http\Services\MPESATransactionService;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoCompetitionWinner;
@@ -15,8 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 class AdminPhotoCompetitionController extends Controller
 {
-    public function __construct(protected KopokopoTransferService $kopokopoTransferService)
-    {
+    public function __construct(
+        protected KopokopoTransferService $kopokopoTransferService,
+        protected MPESATransactionService $mpesaTransactionService,
+    ) {
         //
     }
 
@@ -81,6 +84,7 @@ class AdminPhotoCompetitionController extends Controller
                     'prizePaidAt' => $winner->prize_paid_at,
                     'kopokopoReference' => $winner->kopokopo_reference,
                 ])->values(),
+                'payoutTotals' => $competition->payoutTotals(),
             ]),
             'meta' => [
                 'current_page' => $competitions->currentPage(),
@@ -257,6 +261,37 @@ class AdminPhotoCompetitionController extends Controller
             'status' => $status,
             'message' => $message,
             'data' => $status ? ['kopokopoReference' => $winner->fresh()->kopokopo_reference] : $data,
+        ]);
+    }
+
+    /**
+     * STK push the admin's wallet number for exactly what this competition's
+     * outstanding prizes and transfer fees come to, so the Kopokopo balance
+     * covers the payouts. The amount is worked out here, not sent by the
+     * browser.
+     */
+    public function loadWallet(Request $request, PhotoCompetition $competition): JsonResponse
+    {
+        $competition->load('winners.user');
+        $total = $competition->payoutTotals()['total'];
+
+        if ($total < 1) {
+            return response()->json([
+                'status' => false,
+                'message' => 'There are no outstanding prizes to load the wallet for',
+            ]);
+        }
+
+        $request->merge(['amount' => $total]);
+
+        [$status, $message, $data] = $this->mpesaTransactionService->stkPush($request, config('admin.wallet_phone'));
+
+        return response()->json([
+            'status' => $status === 'success',
+            'message' => $status === 'success'
+                ? 'KES ' . number_format($total) . ' requested on ' . config('admin.wallet_phone')
+                : $message,
+            'data' => ['amount' => $total],
         ]);
     }
 

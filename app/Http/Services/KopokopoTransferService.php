@@ -17,6 +17,12 @@ use Illuminate\Support\Str;
 
 class KopokopoTransferService extends Service
 {
+    /**
+     * What Kopokopo charges (KES) on top of each send_money payout, so the
+     * wallet needs this much extra per transfer.
+     */
+    public const TRANSFER_FEE = 50;
+
     /*
      * Show All Transfers
      */

@@ -137,16 +137,16 @@ class MPESATransactionService extends Service
     }
 
     /**
-     * Send STK Push to Kopokopo.
+     * Send STK Push to Kopokopo. Goes to the signed-in user's phone unless
+     * $phone is given (e.g. the admin's wallet top-up number).
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function stkPush($request)
+    public function stkPush($request, ?string $phone = null)
     {
         // Get phone in better format
-        $betterPhone = substr_replace(auth('sanctum')->user()->phone, '+254', 0, -9);
-        // $betterPhone = substr_replace("0700364446", '+254', 0, -9);
+        $betterPhone = substr_replace($phone ?? auth('sanctum')->user()->phone, '+254', 0, -9);
 
         // Get first and last name
         $parts = explode(" ", auth('sanctum')->user()->name);

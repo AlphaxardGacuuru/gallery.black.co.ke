@@ -146,6 +146,14 @@ export type AdminPhotoCompetitionSummary = {
 	status: string
 	photosCount: number
 	winners: AdminPhotoCompetitionWinner[]
+	/** What the Kopokopo wallet needs for the prizes still to be paid. */
+	payoutTotals: {
+		payouts: number
+		prizes: number
+		/** Kopokopo's per-transfer fee, times payouts. */
+		fees: number
+		total: number
+	}
 }
 
 export type AdminExtraSlotSettings = {
@@ -234,6 +242,23 @@ export function useAdminPhotoSlotPurchases(page = 1, perPage = 10) {
 				"api/admin/photo-slot-purchases",
 				{ params: { page, per_page: perPage } }
 			).then((res) => res.data),
+	})
+}
+
+/** STK pushes the admin's wallet number for a competition's payout total. */
+export function useLoadKopokopoWallet() {
+	return useMutation({
+		// Same status-in-body convention as usePayCompetitionWinner.
+		mutationFn: (competitionId: string) =>
+			Axios.post<{ status: unknown; message: string }>(
+				`api/admin/photo-competitions/${competitionId}/load-wallet`
+			).then((res) => {
+				if (res.data.status !== true) {
+					throw new Error(res.data.message)
+				}
+
+				return res.data
+			}),
 	})
 }
 

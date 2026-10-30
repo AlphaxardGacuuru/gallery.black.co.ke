@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Services\KopokopoTransferService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -39,6 +40,33 @@ class PhotoCompetition extends Model
     public function winners(): HasMany
     {
         return $this->hasMany(PhotoCompetitionWinner::class, 'competition_id')->orderBy('position');
+    }
+
+    /**
+     * What the Kopokopo wallet needs to pay this competition's outstanding
+     * prizes: winners not yet paid or in flight, skipping seed accounts
+     * (marked paid automatically) and anyone without a phone number (who
+     * can't be paid). Expects winners.user to be loaded.
+     *
+     * @return array{payouts: int, prizes: int, fees: int, total: int}
+     */
+    public function payoutTotals(): array
+    {
+        $payable = $this->winners->filter(fn(PhotoCompetitionWinner $winner) => ! $winner->prize_paid_at
+            && ! $winner->kopokopo_reference
+            && $winner->user
+            && ! $winner->user->is_seed
+            && $winner->user->phone);
+
+        $prizes = (int) $payable->sum('prize_amount');
+        $fees = $payable->count() * KopokopoTransferService::TRANSFER_FEE;
+
+        return [
+            'payouts' => $payable->count(),
+            'prizes' => $prizes,
+            'fees' => $fees,
+            'total' => $prizes + $fees,
+        ];
     }
 
     public function scopeActive(Builder $query): Builder

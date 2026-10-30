@@ -35,6 +35,7 @@ import {
 	useAdminPhotoPurchases,
 	useAdminPhotoSlotPurchases,
 	useAdminRecentPhotoCompetitions,
+	useLoadKopokopoWallet,
 	usePayCompetitionWinner,
 	usePayPhotographer,
 	useUpdateActiveCompetition,
@@ -594,6 +595,86 @@ function WinnerRow({ winner }: { winner: AdminPhotoCompetitionWinner }) {
 	)
 }
 
+function PayoutTotal({
+	label,
+	amount,
+	emphasis = false,
+}: {
+	label: string
+	amount: number
+	emphasis?: boolean
+}) {
+	return (
+		<div className="flex-1 rounded-md bg-muted/50 px-3 py-2">
+			<p className="text-xs text-muted-foreground">{label}</p>
+			<p
+				className={
+					emphasis
+						? "text-base font-semibold tabular-nums"
+						: "text-sm font-medium tabular-nums"
+				}>
+				KES {amount.toLocaleString()}
+			</p>
+		</div>
+	)
+}
+
+function PayoutTotals({
+	competition,
+}: {
+	competition: AdminPhotoCompetitionSummary
+}) {
+	const loadWallet = useLoadKopokopoWallet()
+	const { payouts, prizes, fees, total } = competition.payoutTotals
+
+	function handleLoadWallet() {
+		loadWallet.mutate(competition.id, {
+			onSuccess: (data) =>
+				toast.success(data.message, {
+					description: "Approve the M-Pesa prompt on your phone.",
+				}),
+			onError: (error) =>
+				toast.error("Couldn't load the wallet", {
+					description: error.message,
+				}),
+		})
+	}
+
+	return (
+		<div className="space-y-2 border-b pb-3">
+			<div className="flex gap-2">
+				<PayoutTotal
+					label="Prize cash"
+					amount={prizes}
+				/>
+				<PayoutTotal
+					label={`Fees (${payouts} × KES ${payouts ? fees / payouts : 0})`}
+					amount={fees}
+				/>
+				<PayoutTotal
+					label="Load to wallet"
+					amount={total}
+					emphasis
+				/>
+			</div>
+			<div className="flex items-center justify-between gap-3">
+				<p className="text-xs text-muted-foreground">
+					{payouts === 0
+						? "Nothing left to pay out."
+						: `Covers the ${payouts} unpaid payout${payouts === 1 ? "" : "s"} below.`}
+				</p>
+				<Button
+					size="sm"
+					disabled={total < 1 || loadWallet.isPending}
+					onClick={handleLoadWallet}>
+					{loadWallet.isPending && <Loader2 className="size-3.5 animate-spin" />}
+					Load wallet
+				</Button>
+			</div>
+		</div>
+	)
+}
+
 function WinnersDialog({
 	competition,
 }: {
@@ -620,6 +701,7 @@ function WinnersDialog({
 				<DialogHeader>
 					<DialogTitle>Winners</DialogTitle>
 				</DialogHeader>
+				<PayoutTotals competition={competition} />
 				<div className="space-y-1">
 					{competition.winners.map((winner) => (
 						<WinnerRow

@@ -104,6 +104,7 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::put('photo-competitions/schedule', [AdminPhotoCompetitionController::class, 'updateSchedule'])->name('photo-competitions.schedule');
         Route::put('photo-competitions/active', [AdminPhotoCompetitionController::class, 'updateActive'])->name('photo-competitions.update-active');
         Route::post('photo-competition-winners/{winner}/pay', [AdminPhotoCompetitionController::class, 'payWinner'])->name('photo-competition-winners.pay');
+        Route::post('photo-competitions/{competition}/load-wallet', [AdminPhotoCompetitionController::class, 'loadWallet'])->name('photo-competitions.load-wallet');
         Route::get('photo-purchases', [AdminPhotoPurchaseController::class, 'index'])->name('photo-purchases.index');
         Route::put('photo-purchases/settings', [AdminPhotoPurchaseController::class, 'updateSettings'])->name('photo-purchases.settings');
         Route::post('photo-purchases/{purchase}/pay', [AdminPhotoPurchaseController::class, 'pay'])->name('photo-purchases.pay');
