@@ -43,7 +43,6 @@ class PhotoLikedNotification extends Notification implements ShouldQueue
 	public function toMail($notifiable): MailMessage
 	{
 		return (new MailMessage)
-			->from('al@mail.black.co.ke', 'Alphaxard from Black Gallery')
 			->subject('Someone liked your photo! ❤️')
 			->greeting('Hello ' . $notifiable->name . ',')
 			->line($this->bodyLine())

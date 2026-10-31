@@ -39,7 +39,6 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 	public function toMail($notifiable): MailMessage
 	{
 		return (new MailMessage)
-			->from('al@mail.black.co.ke', 'Alphaxard from Black Gallery')
 			->subject('This week\'s photo challenge is live')
 			->greeting('Hello ' . $notifiable->name . ',')
 			->line("Submit your best shot before {$this->competition->ends_at->format('l g:ia')} — here's what's up for grabs this week:")

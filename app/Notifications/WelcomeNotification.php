@@ -42,7 +42,6 @@ class WelcomeNotification extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         return (new MailMessage)
-            ->from("al@mail.black.co.ke", "Alphaxard from Black Gallery")
             ->subject('Welcome to Black Gallery!')
             ->greeting('Hello ' . $notifiable->name . ',')
             ->line("Thank you for joining Black Gallery. We are excited to have you on board!")

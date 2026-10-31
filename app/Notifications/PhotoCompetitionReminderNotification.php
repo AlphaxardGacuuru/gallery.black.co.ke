@@ -73,7 +73,6 @@ class PhotoCompetitionReminderNotification extends Notification implements Shoul
 		$entry = $this->entryFor($notifiable);
 
 		$message = (new MailMessage)
-			->from('al@mail.black.co.ke', 'Alphaxard from Black Gallery')
 			->greeting('Hello ' . $notifiable->name . ',');
 
 		if ($entry) {

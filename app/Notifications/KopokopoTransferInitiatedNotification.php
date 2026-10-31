@@ -40,7 +40,6 @@ class KopokopoTransferInitiatedNotification extends Notification implements Shou
 	public function toMail($notifiable): MailMessage
 	{
 		return (new MailMessage)
-			->from('al@mail.black.co.ke', 'Alphaxard from Black Gallery')
 			->subject('Payment sent! 💸')
 			->greeting('Hello ' . $notifiable->name . ',')
 			->line($this->bodyLine())

@@ -34,7 +34,6 @@ class PhotoCompetitionEndedNotification extends Notification implements ShouldQu
 	public function toMail(mixed $notifiable): MailMessage
 	{
 		return (new MailMessage)
-			->from('al@mail.black.co.ke', 'Alphaxard from Black Gallery')
 			->subject('This week\'s challenge has ended')
 			->greeting('Hello ' . $notifiable->name . ',')
 			->line('This week\'s photo challenge has closed and the results are in.')

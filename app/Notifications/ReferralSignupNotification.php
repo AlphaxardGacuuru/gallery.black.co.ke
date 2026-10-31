@@ -41,7 +41,6 @@ class ReferralSignupNotification extends Notification implements ShouldQueue
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
-            ->from('al@mail.black.co.ke', 'Alphaxard from Black Gallery')
             ->subject('Your referral just joined Black Gallery!')
             ->greeting('Hello ' . $notifiable->name . ',')
             ->line($this->bodyLine())

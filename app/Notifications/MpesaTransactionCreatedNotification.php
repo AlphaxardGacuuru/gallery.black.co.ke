@@ -47,12 +47,11 @@ class MpesaTransactionCreatedNotification extends Notification implements Should
     public function toMail($notifiable)
     {
         return (new MailMessage)
-            ->from("al@property.black.co.ke", "Alphaxard from Black Property")
             ->subject('Payment Received')
             ->greeting('Hello '.$notifiable->name.',')
             ->line('Your Payment of KES '.number_format($this->mpesaTransaction->amount).' has been Received!')
-            ->action('View', url('/#/admin/billing'))
-            ->line('Thank you for choosing Black Property!');
+            ->action('Open Black Gallery', url('/'))
+            ->line('Thank you for being part of Black Gallery!');
     }
 
     /**
@@ -64,7 +63,7 @@ class MpesaTransactionCreatedNotification extends Notification implements Should
     public function toArray($notifiable)
     {
         return [
-            "url" => "/admin/billing",
+            "url" => "/",
             "from" => "",
             "message" => "Payment of KES ".number_format($this->mpesaTransaction->amount)." received.",
         ];
@@ -79,7 +78,7 @@ class MpesaTransactionCreatedNotification extends Notification implements Should
     public function toBroadcast(object $notifiable)
     {
         return new BroadcastMessage([
-            "url" => "/admin/billing",
+            "url" => "/",
             "from" => "",
             "message" => "Payment of KES ".number_format($this->mpesaTransaction->amount)." received.",
         ]);
@@ -97,6 +96,6 @@ class MpesaTransactionCreatedNotification extends Notification implements Should
             ->icon('/notification-badge-192x192.png')
             ->badge('/notification-badge-192x192.png')
             ->body('Payment of KES '.number_format($this->mpesaTransaction->amount).' received.')
-            ->data(['url' => '/admin/billing']);
+            ->data(['url' => '/']);
     }
 }

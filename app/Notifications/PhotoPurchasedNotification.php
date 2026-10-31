@@ -43,7 +43,6 @@ class PhotoPurchasedNotification extends Notification implements ShouldQueue
 	public function toMail($notifiable): MailMessage
 	{
 		return (new MailMessage)
-			->from('al@mail.black.co.ke', 'Alphaxard from Black Gallery')
 			->subject('Your photo is ready to download')
 			->greeting('Thanks ' . $notifiable->name . '!')
 			->line($this->bodyLine())

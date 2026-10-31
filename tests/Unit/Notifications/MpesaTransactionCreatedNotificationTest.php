@@ -33,7 +33,13 @@ class MpesaTransactionCreatedNotificationTest extends TestCase
             $notification->via($user)
         );
 
-        $this->assertInstanceOf(MailMessage::class, $notification->toMail($user));
+        $mail = $notification->toMail($user);
+        $this->assertInstanceOf(MailMessage::class, $mail);
+
+        // Sent from the app's own MAIL_FROM_ADDRESS, as Black Gallery
+        $this->assertEmpty($mail->from);
+        $this->assertSame(url('/'), $mail->actionUrl);
+        $this->assertStringNotContainsString('Property', implode(' ', $mail->outroLines));
         $this->assertInstanceOf(BroadcastMessage::class, $notification->toBroadcast($user));
 
         $webPush = $notification->toWebPush($user, $notification);

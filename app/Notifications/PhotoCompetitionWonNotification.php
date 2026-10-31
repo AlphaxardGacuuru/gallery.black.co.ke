@@ -57,7 +57,6 @@ class PhotoCompetitionWonNotification extends Notification implements ShouldQueu
 	public function toMail($notifiable): MailMessage
 	{
 		return (new MailMessage)
-			->from('al@mail.black.co.ke', 'Alphaxard from Black Gallery')
 			->subject($this->subject())
 			->greeting(($this->isFirstPlace() ? 'Congratulations ' : 'Nice shot, ') . $notifiable->name . '!')
 			->line($this->bodyLine())
