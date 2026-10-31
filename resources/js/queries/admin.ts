@@ -183,6 +183,7 @@ export type AdminPhotoCompetitionsData = {
 		totalCompetitions: number
 		totalPhotos: number
 		totalLikes: number
+		totalSlotPurchases: number
 	}
 	prizeTiers: number[]
 	schedule: PhotoCompetitionSchedule
@@ -718,5 +719,140 @@ export function useToggleAdminPhotoLike(photoId: string) {
 			queryClient.invalidateQueries({ queryKey: ["photos", "discover"] })
 			queryClient.invalidateQueries({ queryKey: ["photos", "show", photoId] })
 		},
+	})
+}
+
+export type AdminNoticeAudience =
+	| "all"
+	| "never_referred"
+	| "not_entered_active_competition"
+
+export type AdminNoticeInput = {
+	key: string
+	title: string
+	body: string
+	icon: string
+	primaryLabel: string
+	primaryUrl: string | null
+	secondaryLabel: string | null
+	audience: AdminNoticeAudience
+	priority: number
+	cooldownHours: number
+	maxImpressions: number | null
+	stopAfterClick: boolean
+	isActive: boolean
+	startsAt: string | null
+	endsAt: string | null
+}
+
+export type AdminNotice = AdminNoticeInput & {
+	id: string
+	stats: {
+		shown: number
+		uniqueViewers: number
+		primaryClicks: number
+		secondaryClicks: number
+		dismissed: number
+	}
+}
+
+export type AdminNoticeLimits = {
+	dailyLimit: number
+	minGapHours: number
+}
+
+export type AdminNoticeVariable = {
+	name: string
+	description: string
+	/** The value it would render as right now, for the admin. */
+	example: string | null
+}
+
+export type AdminNoticesData = {
+	notices: AdminNotice[]
+	limits: AdminNoticeLimits
+	variables: AdminNoticeVariable[]
+	audiences: AdminNoticeAudience[]
+	icons: string[]
+}
+
+export function useAdminNotices() {
+	return useQuery({
+		queryKey: ["admin", "notices"],
+		queryFn: () =>
+			Axios.get<{ data: AdminNoticesData }>("api/admin/notices").then(
+				(res) => res.data.data
+			),
+	})
+}
+
+export function useSaveNotice() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: ({ id, ...payload }: AdminNoticeInput & { id?: string }) =>
+			id
+				? Axios.put(`api/admin/notices/${id}`, payload)
+				: Axios.post("api/admin/notices", payload),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "notices"] })
+		},
+	})
+}
+
+export function useDeleteNotice() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (id: string) => Axios.delete(`api/admin/notices/${id}`),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "notices"] })
+		},
+	})
+}
+
+export function useUpdateNoticeLimits() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (payload: AdminNoticeLimits) =>
+			Axios.put("api/admin/notices/limits", payload),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "notices"] })
+		},
+	})
+}
+
+export type AdminNoticeEvent = {
+	id: string
+	noticeKey: string | null
+	userName: string | null
+	userPhone: string | null
+	version: string
+	action: "shown" | "primary_click" | "secondary_click" | "dismissed"
+	createdAt: string
+}
+
+type AdminNoticeEventsResponse = {
+	data: AdminNoticeEvent[]
+	meta: { current_page: number; last_page: number; total: number }
+}
+
+export function useAdminNoticeEvents(
+	page = 1,
+	perPage = 20,
+	filters: { noticeId?: string; action?: string } = {}
+) {
+	return useQuery({
+		queryKey: ["admin", "notices", "events", page, perPage, filters],
+		queryFn: () =>
+			Axios.get<AdminNoticeEventsResponse>("api/admin/notices/events", {
+				params: {
+					page,
+					per_page: perPage,
+					notice_id: filters.noticeId || undefined,
+					action: filters.action || undefined,
+				},
+			}).then((res) => res.data),
 	})
 }

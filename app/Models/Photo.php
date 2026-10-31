@@ -133,6 +133,15 @@ class Photo extends Model
     }
 
     /**
+     * Photos posted by real people, leaving out the seed accounts' Unsplash
+     * entries (see User::scopeReal), so admin stats reflect real activity.
+     */
+    public function scopeReal(Builder $query): Builder
+    {
+        return $query->whereHas('user', fn($query) => $query->real());
+    }
+
+    /**
      * Annotate each photo with whether the given user has liked it, via a
      * correlated exists() subquery rather than N+1 relation checks.
      */

@@ -1,4 +1,11 @@
-import { Images, Loader2, Pencil, ThumbsUp, Trophy } from "lucide-react"
+import {
+	Images,
+	Loader2,
+	Pencil,
+	ShoppingCart,
+	ThumbsUp,
+	Trophy,
+} from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Head } from "@/lib/spa"
@@ -1043,8 +1050,8 @@ export default function AdminPhotoCompetitions() {
 				/>
 
 				{isLoading || !data ? (
-					<div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-						{Array.from({ length: 3 }).map((_, index) => (
+					<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+						{Array.from({ length: 4 }).map((_, index) => (
 							<Skeleton
 								key={index}
 								className="h-20"
@@ -1053,7 +1060,7 @@ export default function AdminPhotoCompetitions() {
 					</div>
 				) : (
 					<>
-						<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 							<AdminStatCard
 								label="Competitions run"
 								value={data.totals.totalCompetitions}
@@ -1069,6 +1076,12 @@ export default function AdminPhotoCompetitions() {
 								label="Total likes"
 								value={data.totals.totalLikes}
 								icon={ThumbsUp}
+							/>
+							<AdminStatCard
+								label="Slot & photo purchases"
+								value={data.totals.totalSlotPurchases}
+								icon={ShoppingCart}
+								tone="success"
 							/>
 						</div>
 

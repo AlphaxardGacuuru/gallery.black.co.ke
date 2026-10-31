@@ -25,7 +25,7 @@ import toast from "@/lib/toast"
 const DISMISSED_KEY = "notifications-prompt-dismissed"
 
 // sessionStorage writes don't notify the current tab, so dismissing fires
-// this event to let useIsPermissionsStepSettled() subscribers (the referral
+// this event to let useIsPermissionsStepSettled() subscribers (the notice
 // modal) re-render and open right after "Not now".
 const DISMISSED_EVENT = "notifications-prompt-dismissed"
 
@@ -38,9 +38,8 @@ function subscribeToDismissal(callback: () => void): () => void {
 	return () => window.removeEventListener(DISMISSED_EVENT, callback)
 }
 
-// Mirrors useIsInstallStepSettled() — the referral onboarding modal waits on
-// this so it never appears ahead of, or stacked on top of, the
-// notifications prompt.
+// Mirrors useIsInstallStepSettled(). The notice modal waits on this so it
+// never appears ahead of, or stacked on top of, the notifications prompt.
 export function useIsPermissionsStepSettled(): boolean {
 	const { isSupported, permission } = usePushNotifications()
 	const { isInstalled } = usePwaInstall()

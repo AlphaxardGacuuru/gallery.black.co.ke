@@ -3,8 +3,8 @@ import type { ReactNode } from "react"
 import { BackdropLines } from "@/components/backdrop-lines"
 import { FloatingUserAvatar } from "@/components/floating-user-avatar"
 import InstallAppOnboardingModal from "@/components/install-app-onboarding-modal"
+import NoticeModal from "@/components/notice-modal"
 import PermissionsOnboardingModal from "@/components/permissions-onboarding-modal"
-import ReferralOnboardingModal from "@/components/referral-onboarding-modal"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import type { AppVariant } from "@/types"
 
@@ -30,7 +30,7 @@ export function AppShell({ children, variant = "sidebar" }: Props) {
 					<>
 						<InstallAppOnboardingModal />
 						<PermissionsOnboardingModal />
-						<ReferralOnboardingModal />
+						<NoticeModal />
 					</>
 				)}
 			</div>
@@ -48,7 +48,7 @@ export function AppShell({ children, variant = "sidebar" }: Props) {
 				<>
 					<InstallAppOnboardingModal />
 					<PermissionsOnboardingModal />
-					<ReferralOnboardingModal />
+					<NoticeModal />
 				</>
 			)}
 		</div>

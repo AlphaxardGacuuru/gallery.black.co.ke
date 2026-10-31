@@ -7,6 +7,7 @@ use App\Models\KopokopoTransfer;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoCompetitionWinner;
+use App\Models\PhotoLike;
 use App\Models\PhotoPurchase;
 use App\Models\PhotoSlotPurchase;
 use App\Models\Referral;
@@ -17,17 +18,20 @@ class AdminDashboardController extends Controller
 {
     public function index(): JsonResponse
     {
+        // Seed accounts, their photos and their likes are left out so the
+        // stats only reflect real activity.
         $totals = [
-            'totalUsers' => (int) User::query()->count(),
+            'totalUsers' => (int) User::query()->real()->count(),
             'totalCompetitions' => (int) PhotoCompetition::query()->count(),
-            'totalPhotos' => (int) Photo::query()->count(),
-            'totalLikes' => (int) Photo::query()->sum('likes_count'),
+            'totalPhotos' => (int) Photo::query()->real()->count(),
+            'totalLikes' => PhotoLike::realCount(),
         ];
 
         $days = collect(range(13, 0))
             ->map(fn(int $offset) => now()->subDays($offset)->toDateString());
 
         $dailyRows = Photo::query()
+            ->real()
             ->where('created_at', '>=', now()->subDays(13)->startOfDay())
             ->selectRaw('DATE(created_at) as date, count(*) as aggregate')
             ->groupBy('date')

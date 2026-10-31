@@ -26,4 +26,16 @@ class PhotoLike extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Likes real people gave to real people's photos, for admin stats. Seed
+     * accounts' likes, and likes on their Unsplash entries, are left out.
+     */
+    public static function realCount(): int
+    {
+        return static::query()
+            ->whereHas('user', fn($query) => $query->real())
+            ->whereHas('photo', fn($query) => $query->real())
+            ->count();
+    }
 }

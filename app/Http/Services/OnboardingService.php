@@ -34,20 +34,6 @@ class OnboardingService extends Service
         return [true, 'Onboarding Updated', $user];
     }
 
-    public function completeReferralStep(): array
-    {
-        $user = User::query()->findOrFail($this->id);
-
-        // Merge rather than replace: settings may already hold unrelated
-        // keys (theme, other future onboarding steps, ...).
-        $settings = (array) ($user->settings ?? []);
-        $settings['referralOnboardedAt'] = now()->toIso8601String();
-        $user->settings = $settings;
-        $user->save();
-
-        return [true, 'Onboarding Updated', $user];
-    }
-
     /**
      * Distinct from installOnboardedAt (which just means the install prompt
      * was shown/resolved, however it was resolved): this is only ever

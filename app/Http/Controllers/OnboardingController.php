@@ -32,17 +32,6 @@ class OnboardingController extends Controller
         ]);
     }
 
-    public function completeReferral(): JsonResponse
-    {
-        [$status, $message, $user] = $this->service->completeReferralStep();
-
-        return response()->json([
-            'status' => $status,
-            'message' => $message,
-            'data' => UserResource::make($user),
-        ]);
-    }
-
     public function recordPwaInstalled(): JsonResponse
     {
         [$status, $message, $user] = $this->service->recordPwaInstalled();

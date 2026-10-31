@@ -8,6 +8,7 @@ use App\Http\Services\MPESATransactionService;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoCompetitionWinner;
+use App\Models\PhotoLike;
 use App\Models\PhotoSlotPurchase;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
@@ -32,10 +33,17 @@ class AdminPhotoCompetitionController extends Controller
     {
         $current = PhotoCompetition::active()->withCount('photos')->first();
 
+        // Seed accounts, their photos and their likes are left out so the
+        // stats only reflect real activity.
         $totals = [
             'totalCompetitions' => PhotoCompetition::query()->count(),
-            'totalPhotos' => Photo::query()->count(),
-            'totalLikes' => (int) Photo::query()->sum('likes_count'),
+            'totalPhotos' => Photo::query()->real()->count(),
+            'totalLikes' => PhotoLike::realCount(),
+            // Paid extra entries and extra photos per post, combined.
+            'totalSlotPurchases' => PhotoSlotPurchase::query()
+                ->where('status', PhotoSlotPurchase::STATUS_PAID)
+                ->whereHas('user', fn($query) => $query->real())
+                ->count(),
         ];
 
         return response()->json([

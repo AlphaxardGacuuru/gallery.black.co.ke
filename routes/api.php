@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminNoticeController;
 use App\Http\Controllers\Admin\AdminPhotoCompetitionController;
 use App\Http\Controllers\Admin\AdminPhotoLikeController;
 use App\Http\Controllers\Admin\AdminPhotoPurchaseController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\KopokopoRecipientController;
 use App\Http\Controllers\KopokopoTransferController;
 use App\Http\Controllers\MPESATransactionController;
+use App\Http\Controllers\NoticeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PhotoCompetitionController;
@@ -68,7 +70,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('onboarding/install', [OnboardingController::class, 'completeInstall']);
     Route::post('onboarding/permissions', [OnboardingController::class, 'completePermissions']);
-    Route::post('onboarding/referral', [OnboardingController::class, 'completeReferral']);
     Route::post('onboarding/pwa-installed', [OnboardingController::class, 'recordPwaInstalled']);
 
     Route::get('photos/{id}', [PhotoController::class, 'show']);
@@ -86,6 +87,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('referrals/settings', [ReferralController::class, 'settings'])->name('referrals.settings');
     Route::get('referrals/mine', [ReferralController::class, 'mine'])->name('referrals.mine');
+
+    Route::get('notices/next', [NoticeController::class, 'next'])->name('notices.next');
+    Route::post('notices/{notice}/events', [NoticeController::class, 'storeEvent'])->name('notices.events.store');
 });
 
 Route::middleware(['auth:sanctum', 'admin'])
@@ -119,6 +123,12 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::post('users/{user}/referrer', [AdminReferralController::class, 'attach'])->name('users.referrer');
         Route::get('photos/{photo}/likes', [AdminPhotoLikeController::class, 'index'])->name('photos.likes.index');
         Route::post('photos/{photo}/likes/{user}', [AdminPhotoLikeController::class, 'toggle'])->name('photos.likes.toggle');
+        Route::get('notices', [AdminNoticeController::class, 'index'])->name('notices.index');
+        Route::post('notices', [AdminNoticeController::class, 'store'])->name('notices.store');
+        Route::put('notices/limits', [AdminNoticeController::class, 'updateLimits'])->name('notices.limits');
+        Route::get('notices/events', [AdminNoticeController::class, 'events'])->name('notices.events');
+        Route::put('notices/{notice}', [AdminNoticeController::class, 'update'])->name('notices.update');
+        Route::delete('notices/{notice}', [AdminNoticeController::class, 'destroy'])->name('notices.destroy');
     });
 
 // Signed, short-lived links handed out by PhotoPurchaseController::downloads(),
