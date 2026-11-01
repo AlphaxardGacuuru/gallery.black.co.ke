@@ -35,7 +35,7 @@ export function SupportStatusBadge({
 }) {
 	return (
 		<Badge
-			variant="outline"
+			variant={status === "open" ? "secondary" : "outline"}
 			className={cn(
 				"shrink-0",
 				status === "needs_agent" &&
@@ -78,7 +78,7 @@ export function SupportMessageBubble({
 		<div className={cn("flex flex-col gap-1", mine ? "items-end" : "items-start")}>
 			<div
 				className={cn(
-					"max-w-[85%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap break-words",
+					"max-w-[85%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap wrap-break-word",
 					mine
 						? "rounded-br-sm bg-primary text-primary-foreground"
 						: "rounded-bl-sm bg-muted text-foreground",

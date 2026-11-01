@@ -40,7 +40,7 @@ export function SupportLauncher({
 				onClick={() => setOpen(true)}
 				className={cn(
 					"fixed right-4 z-40 inline-flex h-12 items-center gap-2 rounded-full bg-primary pr-5 pl-4 text-sm font-semibold text-primary-foreground shadow-lg ring-1 ring-black/5 transition-transform duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-					aboveFloatingAvatar ? "bottom-36 md:bottom-20" : "bottom-24 md:bottom-6"
+					aboveFloatingAvatar ? "bottom-40 md:bottom-20" : "bottom-26 md:bottom-6"
 				)}
 				aria-label="Get help">
 				<MessageCircleQuestion className="size-5" />
