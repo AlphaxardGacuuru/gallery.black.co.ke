@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Services\TemporaryUploadService;
-use App\Http\Services\UserService;
+use App\Models\Photo;
 use App\Models\Submission;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -13,24 +13,8 @@ class FilePondController extends Controller
 {
     public function __construct(
         protected TemporaryUploadService $temporaryUploadService,
-        protected UserService $userService,
     ) {
         //
-    }
-
-    /*
-     * Handle Profile Pic Upload */
-    public function updateAvatar(Request $request, int|string $id): Response
-    {
-        $this->validate($request, [
-            'filepond-avatar' => 'required|image',
-        ]);
-
-        $avatar = $request->file('filepond-avatar')->store('avatars', 'public');
-
-        $this->userService->updateAvatar($id, $avatar);
-
-        return response("Account updated", 200);
     }
 
     /*
@@ -151,6 +135,7 @@ class FilePondController extends Controller
 
         $temporaryUpload = $this->temporaryUploadService->store(
             $request->file('filepond-support-ticket-attachments'),
+            $request->user(),
             'temporary-uploads/support-tickets'
         );
 
@@ -158,9 +143,9 @@ class FilePondController extends Controller
         return response((string) $temporaryUpload->id, 200);
     }
 
-    public function destroySupportTicketAttachment(int|string $id): Response
+    public function destroySupportTicketAttachment(Request $request, int|string $id): Response
     {
-        if (! $this->temporaryUploadService->destroy($id)) {
+        if (! $this->temporaryUploadService->destroy($request->user(), $id)) {
             return response('Attachment already removed', 200);
         }
 
@@ -174,20 +159,21 @@ class FilePondController extends Controller
     public function storePhoto(Request $request): Response
     {
         $this->validate($request, [
-            'filepond-photo' => 'required|image|max:25600',
+            'filepond-photo' => 'required|image|max:' . Photo::MAX_UPLOAD_KB,
         ]);
 
         $temporaryUpload = $this->temporaryUploadService->store(
             $request->file('filepond-photo'),
+            $request->user(),
             'temporary-uploads/photos'
         );
 
         return response((string) $temporaryUpload->id, 200);
     }
 
-    public function destroyPhoto(int|string $id): Response
+    public function destroyPhoto(Request $request, int|string $id): Response
     {
-        if (! $this->temporaryUploadService->destroy($id)) {
+        if (! $this->temporaryUploadService->destroy($request->user(), $id)) {
             return response('Upload already removed', 200);
         }
 

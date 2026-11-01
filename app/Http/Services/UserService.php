@@ -161,22 +161,6 @@ class UserService extends Service
 		])->save();
 	}
 
-	/**
-	 * Replace a user's avatar with an already-stored file, deleting the old
-	 * one unless it's the default.
-	 */
-	public function updateAvatar(int|string $id, string $avatarPath): void
-	{
-		$user = User::findOrFail($id);
-
-		if ($user->avatar != '/storage/avatars/male_avatar.png') {
-			Storage::disk('public')->delete(substr($user->avatar, 9));
-		}
-
-		$user->avatar = $avatarPath;
-		$user->save();
-	}
-
 	public function auth(): UserResource|Response
 	{
 		if (! auth('sanctum')->check()) {

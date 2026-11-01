@@ -3,7 +3,7 @@ import { useState } from "react"
 import { Link } from "@/components/ui/link"
 import axios from "@/lib/axios"
 import toast from "@/lib/toast"
-import { Home, LogOut, Settings } from "lucide-react"
+import { Home, LifeBuoy, LogOut, Settings } from "lucide-react"
 import { useNavigate } from "@tanstack/react-router"
 import {
 	DropdownMenuGroup,
@@ -94,6 +94,16 @@ export function UserMenuContent({ user }: Props) {
 						onClick={cleanup}>
 						<Settings className="mr-2" />
 						Settings
+					</Link>
+				</DropdownMenuItem>
+				<DropdownMenuItem asChild>
+					<Link
+						variant="unstyled"
+						className="block w-full cursor-pointer"
+						href="/support"
+						onClick={cleanup}>
+						<LifeBuoy className="mr-2" />
+						Help & support
 					</Link>
 				</DropdownMenuItem>
 			</DropdownMenuGroup>

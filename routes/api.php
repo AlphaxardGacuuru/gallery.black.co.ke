@@ -1,13 +1,14 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminAiUsageController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminNoticeController;
 use App\Http\Controllers\Admin\AdminPhotoCompetitionController;
 use App\Http\Controllers\Admin\AdminPhotoLikeController;
 use App\Http\Controllers\Admin\AdminPhotoPurchaseController;
 use App\Http\Controllers\Admin\AdminReferralController;
+use App\Http\Controllers\Admin\AdminSupportTicketController;
 use App\Http\Controllers\FilePondController;
-use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\KopokopoRecipientController;
 use App\Http\Controllers\KopokopoTransferController;
 use App\Http\Controllers\MPESATransactionController;
@@ -22,7 +23,6 @@ use App\Http\Controllers\PhotoPurchaseController;
 use App\Http\Controllers\PhotoSlotPurchaseController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReferralController;
-use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
@@ -58,12 +58,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('leaderboard', [PhotoCompetitionController::class, 'leaderboard']);
 
     Route::apiResources([
-        "users" => UserController::class,
         "notifications" => NotificationController::class,
-        "integrations" => IntegrationController::class,
-        "support-tickets" => SupportTicketController::class,
-        "settings" => SettingController::class,
     ]);
+
+    // Throttled because every customer message costs an AI reply.
+    Route::get('support-tickets', [SupportTicketController::class, 'index'])->name('support-tickets.index');
+    Route::post('support-tickets', [SupportTicketController::class, 'store'])->middleware('throttle:6,1')->name('support-tickets.store');
+    Route::get('support-tickets/{id}', [SupportTicketController::class, 'show'])->name('support-tickets.show');
+    Route::delete('support-tickets/{id}', [SupportTicketController::class, 'destroy'])->name('support-tickets.destroy');
+    Route::post('support-tickets/{id}/messages', [SupportTicketController::class, 'storeMessage'])->middleware('throttle:10,1')->name('support-tickets.messages.store');
+    Route::post('support-tickets/{id}/escalate', [SupportTicketController::class, 'escalate'])->name('support-tickets.escalate');
+    Route::post('support-tickets/{id}/close', [SupportTicketController::class, 'close'])->name('support-tickets.close');
 
     Route::post('push-subscriptions', [PushSubscriptionController::class, 'store']);
     Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy']);
@@ -129,7 +134,16 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::get('notices/events', [AdminNoticeController::class, 'events'])->name('notices.events');
         Route::put('notices/{notice}', [AdminNoticeController::class, 'update'])->name('notices.update');
         Route::delete('notices/{notice}', [AdminNoticeController::class, 'destroy'])->name('notices.destroy');
+        Route::get('support-tickets', [AdminSupportTicketController::class, 'index'])->name('support-tickets.index');
+        Route::get('support-tickets/{supportTicket}', [AdminSupportTicketController::class, 'show'])->name('support-tickets.show');
+        Route::post('support-tickets/{supportTicket}/messages', [AdminSupportTicketController::class, 'storeMessage'])->name('support-tickets.messages.store');
+        Route::put('support-tickets/{supportTicket}/status', [AdminSupportTicketController::class, 'updateStatus'])->name('support-tickets.status');
     });
+
+// Gated like Telescope rather than by the single-admin `admin` middleware.
+Route::middleware(['auth:sanctum', 'can:viewAiUsage'])
+    ->get('admin/ai-usage', [AdminAiUsageController::class, 'index'])
+    ->name('admin.ai-usage.index');
 
 // Signed, short-lived links handed out by PhotoPurchaseController::downloads(),
 // so a plain browser download works without the API's bearer token.
@@ -146,16 +160,15 @@ Route::post('mpesa-transactions', [MPESATransactionController::class, 'store']);
 /*
  * Filepond Controller
  */
-Route::prefix('filepond')->group(function () {
-    Route::controller(FilePondController::class)->group(function () {
-        // User
-        Route::post('avatar/{id}', 'updateAvatar');
+Route::prefix('filepond')
+    ->middleware('auth:sanctum')
+    ->group(function () {
+        Route::controller(FilePondController::class)->group(function () {
+            // Support Tickets
+            Route::post('support-tickets/attachments', 'storeSupportTicketAttachment')->middleware('throttle:10,1');
+            Route::delete('support-tickets/attachments/{id}', 'destroySupportTicketAttachment');
 
-        // Support Tickets
-        Route::post('support-tickets/attachments', 'storeSupportTicketAttachment');
-        Route::delete('support-tickets/attachments/{id}', 'destroySupportTicketAttachment');
-
-        Route::post('photos', 'storePhoto')->middleware('auth:sanctum');
-        Route::delete('photos/{id}', 'destroyPhoto')->middleware('auth:sanctum');
+            Route::post('photos', 'storePhoto');
+            Route::delete('photos/{id}', 'destroyPhoto');
+        });
     });
-});

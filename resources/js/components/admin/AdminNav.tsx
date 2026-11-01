@@ -1,8 +1,10 @@
 import {
 	Activity,
 	ChevronRight,
+	Coins,
 	Gauge,
 	LayoutDashboard,
+	LifeBuoy,
 	Megaphone,
 	Send,
 	ShieldCheck,
@@ -10,6 +12,7 @@ import {
 	Trophy,
 	UserPlus,
 	Users,
+	type LucideIcon,
 } from "lucide-react"
 import { Link } from "@/components/ui/link"
 import {
@@ -26,25 +29,47 @@ import {
 	SidebarMenuSubButton,
 	SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
+import { useApp } from "@/contexts/AppContext"
 import { useCurrentUrl } from "@/hooks/use-current-url"
 
 // Telescope, Horizon and Pulse are Laravel-rendered dashboards, opened in a
 // new tab so the app stays open behind them.
-const ADMIN_ITEMS = [
+type AdminItem = {
+	title: string
+	href: string
+	icon: LucideIcon
+	newTab?: boolean
+	/** A flag on the auth user (from /api/auth) the item needs to be shown. */
+	ability?: "can_view_ai_usage"
+}
+
+const ADMIN_ITEMS: AdminItem[] = [
 	{ title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
 	{ title: "Users", href: "/admin/users", icon: Users },
 	{ title: "Photo challenge", href: "/admin/photo-competitions", icon: Trophy },
 	{ title: "Payouts", href: "/admin/kopokopo-transfers", icon: Send },
 	{ title: "Referrals", href: "/admin/referrals", icon: UserPlus },
 	{ title: "Notices", href: "/admin/notices", icon: Megaphone },
+	{ title: "Support", href: "/admin/support", icon: LifeBuoy },
+	{
+		title: "AI usage",
+		href: "/admin/ai-usage",
+		icon: Coins,
+		ability: "can_view_ai_usage",
+	},
 	{ title: "Telescope", href: "/telescope", icon: Telescope, newTab: true },
 	{ title: "Horizon", href: "/horizon", icon: Activity, newTab: true },
 	{ title: "Pulse", href: "/pulse", icon: Gauge, newTab: true },
 ]
 
 export function AdminNav() {
+	const { auth } = useApp()
 	const { isCurrentOrParentUrl } = useCurrentUrl()
-	const isActive = ADMIN_ITEMS.some((item) => isCurrentOrParentUrl(item.href))
+	// Items with an ability are only listed when /api/auth grants it.
+	const items = ADMIN_ITEMS.filter(
+		(item) => !item.ability || Boolean(auth?.[item.ability])
+	)
+	const isActive = items.some((item) => isCurrentOrParentUrl(item.href))
 
 	return (
 		<SidebarGroup className="px-3 py-0">
@@ -62,7 +87,7 @@ export function AdminNav() {
 						</CollapsibleTrigger>
 						<CollapsibleContent>
 							<SidebarMenuSub>
-								{ADMIN_ITEMS.map((item) => (
+								{items.map((item) => (
 									<SidebarMenuSubItem key={item.href}>
 										<SidebarMenuSubButton
 											asChild

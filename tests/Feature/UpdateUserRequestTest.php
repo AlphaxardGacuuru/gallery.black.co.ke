@@ -18,8 +18,11 @@ class UpdateUserRequestTest extends TestCase
             'phone' => '0712345678',
         ]);
 
-        $this->actingAs($user, 'sanctum')
-            ->putJson('/api/users/' . $user->id, [
+        // UpdateUserRequest now only backs the admin route.
+        $admin = User::factory()->create(['email' => config('admin.email')]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->patchJson('/api/admin/users/' . $user->id . '/verify', [
                 'name' => null,
                 'email' => null,
                 'phone' => '0798765432',

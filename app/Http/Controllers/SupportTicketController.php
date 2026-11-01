@@ -7,103 +7,97 @@ use App\Enums\SupportTicketPriority;
 use App\Enums\SupportTicketStatus;
 use App\Http\Resources\SupportTicketResource;
 use App\Http\Services\SupportTicketService;
+use App\Models\SupportTicketMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
+/**
+ * The signed-in user's own support conversations. The admin side lives in
+ * Admin\AdminSupportTicketController.
+ */
 class SupportTicketController extends Controller
 {
     public function __construct(protected SupportTicketService $service) {}
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request): AnonymousResourceCollection
     {
-        [$status, $message, $supportTickets, $categories, $priorities, $statuses] = $this->service->index($request);
-
-        return SupportTicketResource::collection($supportTickets)
-            ->additional([
-                "status" => $status,
-                "message" => $message,
-                "categories" => $categories,
-                "priorities" => $priorities,
-                "statuses" => $statuses,
-            ]);
+        return SupportTicketResource::collection($this->service->index($request->user()));
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Start a conversation. The AI assistant replies in the background;
+     * the client polls show() until the reply lands.
      */
     public function store(Request $request): SupportTicketResource
     {
         $this->validate($request, [
-            "category" => "required|in:".implode(',', SupportTicketCategory::values()),
-            "subject" => "required|string|max:255",
+            "message" => "required|string|max:2000",
+            "category" => "nullable|in:".implode(',', SupportTicketCategory::values()),
+            "subject" => "nullable|string|max:255",
             "priority" => "nullable|in:".implode(',', SupportTicketPriority::values()),
-            "description" => "nullable|string",
             "temporaryUploadIds" => "nullable|array",
             "temporaryUploadIds.*" => "integer|exists:temporary_uploads,id",
         ]);
 
-        [$saved, $message, $supportTicket] = $this->service->store($request);
+        $supportTicket = $this->service->store($request, $request->user());
 
-        return SupportTicketResource::make($supportTicket)
-            ->additional([
-                "saved" => $saved,
-                "message" => $message,
-            ]);
+        // The assistant may already have replied (sync queue), so reload the
+        // conversation without losing wasRecentlyCreated (the 201).
+        return SupportTicketResource::make($supportTicket->load('messages'));
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(int|string $id): SupportTicketResource
+    public function show(Request $request, string $id): SupportTicketResource
     {
-        [$status, $message, $supportTicket, $categories, $statuses, $priorities] = $this->service->show($id);
-
-        return (new SupportTicketResource($supportTicket))
-            ->additional([
-                "status" => $status,
-                "message" => $message,
-                "categories" => $categories,
-                "priorities" => $priorities,
-                "statuses" => $statuses,
-            ]);
+        return SupportTicketResource::make($this->service->findForUser($request->user(), $id));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, int|string $id): SupportTicketResource
+    public function storeMessage(Request $request, string $id): SupportTicketResource
     {
         $this->validate($request, [
-            "category" => "nullable|in:".implode(',', SupportTicketCategory::values()),
-            "subject" => "nullable|string|max:255",
-            "priority" => "nullable|in:".implode(',', SupportTicketPriority::values()),
-            "description" => "nullable|string",
-            "status" => "nullable|in:".implode(',', SupportTicketStatus::values()),
+            "message" => "required|string|max:2000",
         ]);
 
-        [$saved, $message, $supportTicket] = $this->service->update($request, $id);
+        $supportTicket = $this->service->findForUser($request->user(), $id);
 
-        return SupportTicketResource::make($supportTicket)
-            ->additional([
-                "saved" => $saved,
-                "message" => $message,
-            ]);
+        $this->service->addMessage(
+            $supportTicket,
+            SupportTicketMessage::AUTHOR_USER,
+            $request->input('message'),
+            $request->user(),
+        );
+
+        return SupportTicketResource::make($supportTicket->fresh(['user', 'messages']));
     }
 
     /**
-     * Remove the specified resource from storage.
+     * The customer asked to talk to a person.
      */
-    public function destroy(int|string $id): JsonResponse
+    public function escalate(Request $request, string $id): SupportTicketResource
     {
-        [$deleted, $message] = $this->service->destroyMany(explode(",", $id));
+        $supportTicket = $this->service->findForUser($request->user(), $id);
+
+        $this->service->escalate($supportTicket);
+
+        return SupportTicketResource::make($supportTicket->fresh(['user', 'messages']));
+    }
+
+    public function close(Request $request, string $id): SupportTicketResource
+    {
+        $supportTicket = $this->service->findForUser($request->user(), $id);
+
+        $supportTicket->update(['status' => SupportTicketStatus::RESOLVED->value]);
+
+        return SupportTicketResource::make($supportTicket->fresh(['user', 'messages']));
+    }
+
+    public function destroy(Request $request, string $id): JsonResponse
+    {
+        $deleted = $this->service->destroy($this->service->findForUser($request->user(), $id));
 
         return response()->json([
             "deleted" => $deleted,
-            "message" => $message,
-        ], 200);
+            "message" => "Support Ticket Deleted Successfully",
+        ]);
     }
 }

@@ -22,6 +22,9 @@ class Photo extends Model
      */
     public const MAX_IMAGES_PER_ENTRY = 5;
 
+    /** Largest photo upload, in kilobytes (Laravel's `max` file rule unit). */
+    public const MAX_UPLOAD_KB = 25600;
+
     protected $fillable = [
         'competition_id',
         'user_id',

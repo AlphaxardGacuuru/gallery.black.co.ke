@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\SupportTicketMessage;
 use Carbon\Carbon;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\Request;
@@ -24,10 +25,9 @@ class SupportTicketResource extends JsonResource
             "id" => $this->id,
             "number" => $this->number,
             "userId" => $this->user_id,
-            "tenantName" => $this->user?->name,
-            "tenantAvatar" => $this->user?->avatar,
-            "unitName" => null,
-            "propertyName" => null,
+            "userName" => $this->user?->name,
+            "userAvatar" => $this->user?->avatar,
+            "userPhone" => $this->user?->phone,
             "category" => $this->category,
             "subject" => $this->subject,
             "priority" => $this->priority,
@@ -36,6 +36,25 @@ class SupportTicketResource extends JsonResource
             "status" => $this->status,
             "canDelete" => $canDelete,
             "createdAt" => $this->created_at,
+            "lastActivityAt" => Carbon::parse($this->getRawOriginal('updated_at'))->toIso8601String(),
+            "latestMessage" => $this->whenLoaded(
+                'latestMessage',
+                fn () => $this->latestMessage ? $this->presentMessage($this->latestMessage) : null,
+            ),
+            "messages" => $this->whenLoaded(
+                'messages',
+                fn () => $this->messages->map(fn ($message) => $this->presentMessage($message)),
+            ),
+        ];
+    }
+
+    private function presentMessage(SupportTicketMessage $message): array
+    {
+        return [
+            "id" => $message->id,
+            "author" => $message->author,
+            "body" => $message->body,
+            "createdAt" => $message->created_at?->toIso8601String(),
         ];
     }
 }

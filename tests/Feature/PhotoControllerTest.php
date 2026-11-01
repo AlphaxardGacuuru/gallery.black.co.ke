@@ -21,12 +21,14 @@ class PhotoControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function temporaryUpload(): TemporaryUpload
+    /** Uploaded by $owner, or by whoever the test is signed in as. */
+    private function temporaryUpload(?User $owner = null): TemporaryUpload
     {
         $file = UploadedFile::fake()->image('photo.jpg');
         $path = $file->store('temporary-uploads/photos', 'public');
 
         return TemporaryUpload::create([
+            'user_id' => ($owner ?? auth()->user())?->id,
             'disk' => 'public',
             'path' => $path,
             'original_name' => $file->getClientOriginalName(),
@@ -168,9 +170,9 @@ class PhotoControllerTest extends TestCase
         ]);
 
         $ids = [
-            $this->temporaryUpload()->id,
-            $this->temporaryUpload()->id,
-            $this->temporaryUpload()->id,
+            $this->temporaryUpload($user)->id,
+            $this->temporaryUpload($user)->id,
+            $this->temporaryUpload($user)->id,
         ];
 
         $response = $this->actingAs($user)->postJson('/api/photos', [
@@ -224,7 +226,7 @@ class PhotoControllerTest extends TestCase
 
         $this->artisan('app:start-photo-competition');
         $user = User::factory()->create(['phone' => '0700123456']);
-        $uploadId = $this->temporaryUpload()->id;
+        $uploadId = $this->temporaryUpload($user)->id;
 
         $this->actingAs($user)->postJson('/api/photos', [
             'temporaryUploadIds' => [$uploadId, $uploadId],

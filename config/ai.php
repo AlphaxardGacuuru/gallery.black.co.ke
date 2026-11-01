@@ -40,6 +40,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Model Pricing
+    |--------------------------------------------------------------------------
+    |
+    | US dollars per million tokens, used to work out each AI request's cost
+    | (see AiUsageService). Every model the app prompts needs an entry here,
+    | or its requests are recorded at zero cost. List prices for the paid
+    | (standard) tier: https://ai.google.dev/gemini-api/docs/pricing
+    | Costs already recorded keep the price they were charged at.
+    |
+    */
+
+    'pricing' => [
+        'gemini-3.1-flash-lite' => [
+            'input' => (float) env('AI_PRICE_GEMINI_FLASH_LITE_INPUT', 0.25),
+            'cached_input' => (float) env('AI_PRICE_GEMINI_FLASH_LITE_CACHED_INPUT', 0.025),
+            'output' => (float) env('AI_PRICE_GEMINI_FLASH_LITE_OUTPUT', 1.50),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | AI Providers
     |--------------------------------------------------------------------------
     |

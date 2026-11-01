@@ -1,11 +1,14 @@
 import {
 	type InfiniteData,
+	keepPreviousData,
 	useInfiniteQuery,
 	useMutation,
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query"
 import Axios from "@/lib/axios"
+import { index as aiUsageIndex } from "@/routes/admin/ai-usage"
+import type { SupportTicket, SupportTicketStatus } from "@/queries/support"
 import type { UserSettings } from "@/types/auth"
 
 export type AdminDashboardData = {
@@ -854,5 +857,109 @@ export function useAdminNoticeEvents(
 					action: filters.action || undefined,
 				},
 			}).then((res) => res.data),
+	})
+}
+
+export type AdminSupportTicketsPage = {
+	data: SupportTicket[]
+	meta: {
+		current_page: number
+		last_page: number
+		total: number
+		counts: Record<SupportTicketStatus, number>
+	}
+}
+
+export function useAdminSupportTickets(
+	status: SupportTicketStatus | null,
+	page: number
+) {
+	return useQuery({
+		queryKey: ["admin", "support-tickets", status, page],
+		queryFn: () =>
+			Axios.get<AdminSupportTicketsPage>("api/admin/support-tickets", {
+				params: { status: status ?? undefined, page },
+			}).then((res) => res.data),
+		refetchInterval: 30_000,
+	})
+}
+
+export function useAdminSupportTicket(id: string | null) {
+	return useQuery({
+		queryKey: ["admin", "support-tickets", "show", id],
+		queryFn: () =>
+			Axios.get<{ data: SupportTicket }>(
+				`api/admin/support-tickets/${id}`
+			).then((res) => res.data.data),
+		enabled: Boolean(id),
+		refetchInterval: 15_000,
+	})
+}
+
+function useAdminSupportTicketMutation<Variables>(
+	request: (variables: Variables) => Promise<SupportTicket>
+) {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: request,
+		onSuccess: (ticket) => {
+			queryClient.setQueryData(
+				["admin", "support-tickets", "show", ticket.id],
+				ticket
+			)
+			queryClient.invalidateQueries({ queryKey: ["admin", "support-tickets"] })
+		},
+	})
+}
+
+export function useReplyToSupportTicket(id: string) {
+	return useAdminSupportTicketMutation((message: string) =>
+		Axios.post<{ data: SupportTicket }>(
+			`api/admin/support-tickets/${id}/messages`,
+			{ message }
+		).then((res) => res.data.data)
+	)
+}
+
+export function useUpdateSupportTicketStatus(id: string) {
+	return useAdminSupportTicketMutation((status: SupportTicketStatus) =>
+		Axios.put<{ data: SupportTicket }>(
+			`api/admin/support-tickets/${id}/status`,
+			{ status }
+		).then((res) => res.data.data)
+	)
+}
+
+export type AiUsageTotals = {
+	requests: number
+	supportReplies: number
+	inputTokens: number
+	outputTokens: number
+	costMicros: number
+}
+
+export type AiUsageUser = AiUsageTotals & {
+	userId: string
+	name: string
+	email: string
+}
+
+export type AiUsageReport = {
+	/** The month the report covers, as "YYYY-MM". */
+	month: string
+	users: AiUsageUser[]
+	totals: AiUsageTotals
+}
+
+/** AI requests, tokens and cost per user for a month ("YYYY-MM"). */
+export function useAdminAiUsage(month: string) {
+	return useQuery({
+		queryKey: ["admin", "ai-usage", month],
+		queryFn: () =>
+			Axios.get<AiUsageReport>(aiUsageIndex.url({ query: { month } })).then(
+				(res) => res.data
+			),
+		placeholderData: keepPreviousData,
 	})
 }

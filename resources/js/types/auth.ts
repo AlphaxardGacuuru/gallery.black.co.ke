@@ -21,6 +21,8 @@ export type User = {
 	twoFactorEnabled?: boolean
 	referralsCount?: number
 	settings?: UserSettings | null
+	/** Whether the AI usage admin page is open to this user (the viewAiUsage gate). */
+	can_view_ai_usage?: boolean
 	created_at: string
 	updated_at: string
 	[key: string]: unknown

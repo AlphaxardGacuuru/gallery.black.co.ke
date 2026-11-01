@@ -91,4 +91,14 @@ return [
             'baseUrl' => env('KOPOKOPO_BASE_URL'),
         ],
     ],
+
+    // The AI that answers support tickets (see App\Ai\Agents\SupportAgent).
+    // The provider's API key lives in config/ai.php.
+    'support_assistant' => [
+        'provider' => env('SUPPORT_AI_PROVIDER', 'gemini'),
+        'model' => env('SUPPORT_AI_MODEL', 'gemini-3.1-flash-lite'),
+        // After this many AI replies on one ticket, it goes to a person
+        // instead, so a stuck conversation can't run up the bill.
+        'max_replies' => (int) env('SUPPORT_AI_MAX_REPLIES', 8),
+    ],
 ];

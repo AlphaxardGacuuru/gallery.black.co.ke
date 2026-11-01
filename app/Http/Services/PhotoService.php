@@ -111,7 +111,11 @@ class PhotoService extends Service
 				]);
 			}
 
-			$temporaryUploads = TemporaryUpload::whereIn('id', $ids)->get()->keyBy('id');
+			$temporaryUploads = TemporaryUpload::query()
+			->ownedBy($request->user())
+			->whereIn('id', $ids)
+			->get()
+			->keyBy('id');
 
 			if ($temporaryUploads->count() !== count($ids)) {
 				throw ValidationException::withMessages([
@@ -190,7 +194,11 @@ class PhotoService extends Service
 			]);
 		}
 
-		$temporaryUploads = TemporaryUpload::whereIn('id', $ids)->get()->keyBy('id');
+		$temporaryUploads = TemporaryUpload::query()
+			->ownedBy($request->user())
+			->whereIn('id', $ids)
+			->get()
+			->keyBy('id');
 
 		if ($temporaryUploads->count() !== count($ids)) {
 			throw ValidationException::withMessages([

@@ -54,4 +54,18 @@ class SupportTicket extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function messages()
+    {
+        // Ids are ordered UUIDs, which breaks ties between messages created
+        // in the same second.
+        return $this->hasMany(SupportTicketMessage::class)
+            ->orderBy('created_at')
+            ->orderBy('id');
+    }
+
+    public function latestMessage()
+    {
+        return $this->hasOne(SupportTicketMessage::class)->latestOfMany(['created_at', 'id']);
+    }
 }
