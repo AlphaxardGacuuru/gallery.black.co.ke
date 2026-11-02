@@ -3,6 +3,7 @@
 namespace App\Http\Services;
 
 use App\Enums\EmailNotificationCategory;
+use App\Events\UserVerifiedEvent;
 use App\Http\Resources\UserResource;
 use App\Models\Role;
 use App\Models\User;
@@ -10,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 
@@ -89,6 +89,10 @@ class UserService extends Service
 		}
 
 		$saved = $user->save();
+
+		if ($user->wasChanged('verified') && $user->verified) {
+			UserVerifiedEvent::dispatch($user);
+		}
 
 		if ($request->filled('userRoles')) {
 			$user->syncRoles($request->input('userRoles'));

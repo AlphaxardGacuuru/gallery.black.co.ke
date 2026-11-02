@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Events\PhotoCompetitionEnded;
+use App\Events\UserVerifiedEvent;
 use App\Models\User;
 use App\Notifications\PhotoCompetitionEndedNotification;
 use App\Notifications\PhotoCompetitionWonNotification;
@@ -39,10 +40,18 @@ class PhotoCompetitionEndedListener
             return;
         }
 
-        User::query()
+        // Fetched first so only users who weren't already verified hear
+        // about it.
+        $newlyVerified = User::query()
             ->whereIn('id', $userIds)
             ->where('verified', false)
+            ->get();
+
+        User::query()
+            ->whereKey($newlyVerified->modelKeys())
             ->update(['verified' => true]);
+
+        $newlyVerified->each(fn (User $user) => UserVerifiedEvent::dispatch($user));
     }
 
     private function notifyWinners(PhotoCompetitionEnded $event): void
