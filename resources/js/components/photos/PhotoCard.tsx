@@ -1,9 +1,18 @@
-import { AlignRight, Copy, Heart, Trash2, Trophy, Users } from "lucide-react"
+import {
+	AlignRight,
+	Copy,
+	Heart,
+	Pencil,
+	Trash2,
+	Trophy,
+	Users,
+} from "lucide-react"
 import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import type { Photo } from "@/types/photo"
 import { AvatarPreviewDialog } from "@/components/avatar-preview-dialog"
 import VerifiedBadge from "@/components/verified-badge"
+import { EditPhotoDialog } from "@/components/photos/EditPhotoDialog"
 import { ManageLikesDialog } from "@/components/photos/ManageLikesDialog"
 import { Button } from "@/components/ui/button"
 import {
@@ -61,6 +70,7 @@ export function PhotoCard({
 	const getInitials = useInitials()
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [manageLikesOpen, setManageLikesOpen] = useState(false)
+	const [editOpen, setEditOpen] = useState(false)
 
 	function handleDelete() {
 		deletePhoto.mutate(photo.id, {
@@ -119,6 +129,17 @@ export function PhotoCard({
 									)}
 									{canDelete && (
 										<DropdownMenuItem
+											className="cursor-pointer"
+											onSelect={(event) => {
+												event.preventDefault()
+												setEditOpen(true)
+											}}>
+											<Pencil />
+											Edit
+										</DropdownMenuItem>
+									)}
+									{canDelete && (
+										<DropdownMenuItem
 											variant="destructive"
 											className="cursor-pointer"
 											disabled={deletePhoto.isPending}
@@ -156,6 +177,13 @@ export function PhotoCard({
 										</DialogFooter>
 									</DialogContent>
 								</Dialog>
+							)}
+							{canDelete && (
+								<EditPhotoDialog
+									photo={photo}
+									open={editOpen}
+									onOpenChange={setEditOpen}
+								/>
 							)}
 							{isAdmin && (
 								<ManageLikesDialog

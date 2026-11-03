@@ -39,7 +39,7 @@ const BUSY_STATUSES = [
 
 /**
  * The FilePond instance shared by the create-post page (a fresh submission)
- * and AddPhotosDialog (adding to one already submitted), plus the inline "buy
+ * and EditPhotoDialog (adding to one already submitted), plus the inline "buy
  * another slot" control, since both need the same multi-file upload
  * tracking and the same way to unlock more capacity mid-upload.
  */
@@ -150,8 +150,8 @@ export function PhotoUploadField({
 			/>
 			{extraPhoto?.enabled &&
 				extraPhoto.maxPhotos < extraPhoto.maxPhotosCap && (
-				<BuyExtraPhotoSlotRow extraPhoto={extraPhoto} />
-			)}
+					<BuyExtraPhotoSlotRow extraPhoto={extraPhoto} />
+				)}
 		</div>
 	)
 }
@@ -159,7 +159,11 @@ export function PhotoUploadField({
 /** Unlike the entry-level "buy extra slot" button, this is repeatable: once
  *  a purchase settles (paid or failed), the control resets to idle so
  *  another slot can be bought right away, up to the overall cap. */
-export function BuyExtraPhotoSlotRow({ extraPhoto }: { extraPhoto: ExtraPhotoState }) {
+export function BuyExtraPhotoSlotRow({
+	extraPhoto,
+}: {
+	extraPhoto: ExtraPhotoState
+}) {
 	const queryClient = useQueryClient()
 	const buyExtraPhotoSlot = useBuyExtraPhotoSlot()
 	const [purchaseId, setPurchaseId] = useState<string | null>(

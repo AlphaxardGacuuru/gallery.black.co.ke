@@ -3,6 +3,7 @@ import {
 	ArrowLeft,
 	Download,
 	Heart,
+	Pencil,
 	ShoppingCart,
 	Trash2,
 	Trophy,
@@ -11,8 +12,8 @@ import {
 import { useCanGoBack, useNavigate, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { Head } from "@/lib/spa"
-import { AddPhotosDialog } from "@/components/photos/AddPhotosDialog"
 import { BuyPhotoDialog, canBuyPhoto } from "@/components/photos/BuyPhotoDialog"
+import { EditPhotoDialog } from "@/components/photos/EditPhotoDialog"
 import { ManageLikesDialog } from "@/components/photos/ManageLikesDialog"
 import { PhotoCarousel } from "@/components/photos/PhotoCarousel"
 import VerifiedBadge from "@/components/verified-badge"
@@ -36,12 +37,7 @@ import { useApp } from "@/contexts/AppContext"
 import { ADMIN_EMAIL } from "@/middleware/auth"
 import { cn } from "@/lib/utils"
 import toast from "@/lib/toast"
-import {
-	useCurrentCompetition,
-	useDeletePhoto,
-	useLikePhoto,
-	usePhoto,
-} from "@/queries/photos"
+import { useDeletePhoto, useLikePhoto, usePhoto } from "@/queries/photos"
 
 type Props = {
 	id: string
@@ -52,13 +48,13 @@ export default function PhotoShow({ id }: Props) {
 	const navigate = useNavigate()
 	const canGoBack = useCanGoBack()
 	const { data, isLoading } = usePhoto(id)
-	const { data: current } = useCurrentCompetition()
 	const { auth } = useApp()
 	const isAdmin = auth?.email === ADMIN_EMAIL
 	const likePhoto = useLikePhoto()
 	const deletePhoto = useDeletePhoto()
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [manageLikesOpen, setManageLikesOpen] = useState(false)
+	const [editOpen, setEditOpen] = useState(false)
 
 	function goBack() {
 		if (canGoBack) {
@@ -124,12 +120,6 @@ export default function PhotoShow({ id }: Props) {
 				)}
 				{(canDelete || isAdmin) && (
 					<div className="ml-auto flex shrink-0 items-center gap-2">
-						{canDelete && current?.extraPhoto && (
-							<AddPhotosDialog
-								photo={photo}
-								extraPhoto={current.extraPhoto}
-							/>
-						)}
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
 								<Button
@@ -149,6 +139,16 @@ export default function PhotoShow({ id }: Props) {
 										}}>
 										<Users />
 										Manage likes
+									</DropdownMenuItem>
+								)}
+								{canDelete && (
+									<DropdownMenuItem
+										onSelect={(event) => {
+											event.preventDefault()
+											setEditOpen(true)
+										}}>
+										<Pencil />
+										Edit
 									</DropdownMenuItem>
 								)}
 								{canDelete && (
@@ -189,6 +189,13 @@ export default function PhotoShow({ id }: Props) {
 									</DialogFooter>
 								</DialogContent>
 							</Dialog>
+						)}
+						{canDelete && (
+							<EditPhotoDialog
+								photo={photo}
+								open={editOpen}
+								onOpenChange={setEditOpen}
+							/>
 						)}
 						{isAdmin && (
 							<ManageLikesDialog

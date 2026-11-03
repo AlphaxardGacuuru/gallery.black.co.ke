@@ -18,7 +18,7 @@ Black Gallery is a Kenyan photo challenge app. People post photos into a weekly 
 - To enter, go to the Compete page and submit a photo with a caption. You need an M-Pesa phone number on your profile first, otherwise you'll see "Add your M-Pesa phone number in your profile before submitting a photo."
 - Everyone gets 1 free entry per challenge with 1 photo in it. If you try to submit again you'll see "You've already submitted a photo to this week's competition."
 - Photos can be up to {{max_upload_mb}} MB, in any common image format. A message saying the photo is too large means it's over {{max_upload_mb}} MB.
-- You can add photos to your entry or delete your entry while the challenge is running. Once it ends, entries can't be changed or deleted.
+- While the challenge is running you can edit or delete your entry from the menu (the lines icon) on your photo. Edit lets you change the caption, add more photos if the entry has room, or buy another photo slot right there when it's full. Once the challenge ends, entries can't be changed or deleted.
 - Paid extras, when switched on (see "Live settings"):
   - Extra entry: a second, separate entry in the same challenge. You must have submitted your free entry first. It can be bought once per challenge, so the most anyone can have is 2 entries.
   - Extra photo: one more photo in an entry's swipeable carousel. It can be bought more than once, up to {{max_photos_per_entry}} photos per entry.
