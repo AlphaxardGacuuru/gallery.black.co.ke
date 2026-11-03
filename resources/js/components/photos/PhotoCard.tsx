@@ -49,6 +49,18 @@ type Props = {
 	livePrizeAmount?: number
 }
 
+/** Width / height of the entry's tallest photo, so the carousel frame fits
+ *  every slide whole (shorter ones get space above and below). Photos
+ *  without stored dimensions fall back to the cover's ratio. */
+function tallestAspectRatio(photo: Photo): number {
+	return Math.min(
+		photo.aspectRatio,
+		...photo.images
+			.filter((image) => image.width && image.height)
+			.map((image) => image.width! / image.height!)
+	)
+}
+
 export function PhotoCard({
 	photo,
 	canDelete = false,
@@ -195,9 +207,8 @@ export function PhotoCard({
 				aria-label="View full photo"
 				className="relative block w-full">
 				{photo.images.length > 0 ? (
-					<div style={{ aspectRatio: photo.aspectRatio }}>
+					<div style={{ aspectRatio: tallestAspectRatio(photo) }}>
 						<PhotoCarousel
-							fit="cover"
 							slides={[photo, ...photo.images].map((image) => ({
 								url: image.thumbnailUrl,
 								alt: photo.caption ?? "Competition entry",

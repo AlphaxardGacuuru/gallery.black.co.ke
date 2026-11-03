@@ -10,18 +10,8 @@ type Slide = { url: string; alt: string }
  * this codebase), gives native momentum/touch scrolling for free, with a
  * scroll-position-driven dot indicator and desktop-only prev/next buttons
  * for when there's no touchscreen to swipe with.
- *
- * "contain" letterboxes each photo whole (the full-screen view); "cover"
- * fills a parent sized to the cover photo's aspect ratio, cropping the
- * rest to match (the grid cards).
  */
-export function PhotoCarousel({
-	slides,
-	fit = "contain",
-}: {
-	slides: Slide[]
-	fit?: "contain" | "cover"
-}) {
+export function PhotoCarousel({ slides }: { slides: Slide[] }) {
 	const trackRef = useRef<HTMLDivElement>(null)
 	const [index, setIndex] = useState(0)
 
@@ -73,11 +63,7 @@ export function PhotoCarousel({
 							src={slide.url}
 							alt={slide.alt}
 							loading={slideIndex === 0 ? "eager" : "lazy"}
-							className={
-								fit === "cover"
-									? "h-full w-full object-cover"
-									: "max-h-full max-w-full object-contain"
-							}
+							className="max-h-full max-w-full object-contain"
 						/>
 					</div>
 				))}
