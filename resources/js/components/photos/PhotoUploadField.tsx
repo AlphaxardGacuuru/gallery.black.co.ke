@@ -89,6 +89,12 @@ export function PhotoUploadField({
 				maxFileSize="25MB"
 				credits={false}
 				labelIdle={`<span class="filepond--label-action">Choose ${maxPhotos > 1 ? `up to ${maxPhotos} photos` : "a photo"}</span> or drag and drop`}
+				// Without this FilePond shows its fixed "Error during upload"
+				// and drops the reason filePondErrorMessage() worked out,
+				// which it passes along as the error's body.
+				labelFileProcessingError={(processingError: { body?: string }) =>
+					processingError?.body || "Upload failed"
+				}
 				server={{
 					process: (
 						fieldName,
