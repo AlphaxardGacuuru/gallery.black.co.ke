@@ -166,6 +166,27 @@ class PhotoService extends Service
 	}
 
 	/**
+	 * Edit an entry's description, owner only and while the competition is
+	 * still active (same window as adding photos or deleting the entry).
+	 */
+	public function update(Request $request, Photo $photo, string $caption): Photo
+	{
+		abort_unless($photo->user_id === $request->user()->id, 403);
+
+		$photo->loadMissing('competition');
+
+		if ($photo->competition->status !== PhotoCompetition::STATUS_ACTIVE) {
+			throw ValidationException::withMessages([
+				'caption' => 'You can only edit your entry while the challenge is still active.',
+			]);
+		}
+
+		$photo->update(['caption' => trim($caption)]);
+
+		return $photo->fresh(['user', 'images']);
+	}
+
+	/**
 	 * Add more photos to an already-submitted entry (e.g. after buying an
 	 * extra slot without wanting to delete and resubmit), while the
 	 * competition is still active and within the owner's current

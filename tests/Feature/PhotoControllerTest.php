@@ -386,6 +386,73 @@ class PhotoControllerTest extends TestCase
             ->assertJsonValidationErrors('temporaryUploadIds');
     }
 
+    public function test_owner_can_edit_the_description_while_the_competition_is_active(): void
+    {
+        $competition = PhotoCompetition::factory()->create(['status' => PhotoCompetition::STATUS_ACTIVE]);
+        $owner = User::factory()->create();
+        $photo = Photo::factory()->create([
+            'competition_id' => $competition->id,
+            'user_id' => $owner->id,
+            'caption' => 'Old description',
+        ]);
+
+        $this->actingAs($owner)
+            ->patchJson("/api/photos/{$photo->id}", ['caption' => '  New description  '])
+            ->assertOk()
+            ->assertJsonPath('data.caption', 'New description');
+
+        $this->assertSame('New description', $photo->fresh()->caption);
+    }
+
+    public function test_a_non_owner_cannot_edit_someone_elses_description(): void
+    {
+        $competition = PhotoCompetition::factory()->create(['status' => PhotoCompetition::STATUS_ACTIVE]);
+        $photo = Photo::factory()->create([
+            'competition_id' => $competition->id,
+            'user_id' => User::factory()->create()->id,
+            'caption' => 'Original',
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->patchJson("/api/photos/{$photo->id}", ['caption' => 'Hijacked'])
+            ->assertForbidden();
+
+        $this->assertSame('Original', $photo->fresh()->caption);
+    }
+
+    public function test_the_description_cannot_be_edited_once_the_competition_has_ended(): void
+    {
+        $competition = PhotoCompetition::factory()->ended()->create();
+        $owner = User::factory()->create();
+        $photo = Photo::factory()->create([
+            'competition_id' => $competition->id,
+            'user_id' => $owner->id,
+            'caption' => 'Original',
+        ]);
+
+        $this->actingAs($owner)
+            ->patchJson("/api/photos/{$photo->id}", ['caption' => 'Too late'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('caption');
+
+        $this->assertSame('Original', $photo->fresh()->caption);
+    }
+
+    public function test_the_description_cannot_be_emptied(): void
+    {
+        $competition = PhotoCompetition::factory()->create(['status' => PhotoCompetition::STATUS_ACTIVE]);
+        $owner = User::factory()->create();
+        $photo = Photo::factory()->create([
+            'competition_id' => $competition->id,
+            'user_id' => $owner->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->patchJson("/api/photos/{$photo->id}", ['caption' => '   '])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('caption');
+    }
+
     public function test_adding_photos_respects_the_remaining_capacity(): void
     {
         Storage::fake('public');

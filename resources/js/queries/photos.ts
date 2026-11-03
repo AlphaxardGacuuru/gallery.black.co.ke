@@ -254,6 +254,26 @@ export function useSubmitPhoto() {
  * Add more photos to an already-submitted entry (e.g. after buying an
  * extra slot without wanting to delete and resubmit it).
  */
+export function useUpdatePhoto(photoId: string) {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (caption: string) =>
+			Axios.patch<{ data: Photo }>(PhotoController.update.url(photoId), {
+				caption,
+			}).then((res) => res.data.data),
+		onSuccess: (photo) => {
+			updateCachedPhotos(queryClient, (photos) =>
+				photos.map((existing) => (existing.id === photo.id ? photo : existing))
+			)
+			queryClient.setQueryData<PhotoDetail>(
+				["photos", "show", photoId],
+				(current) => (current ? { ...current, photo } : current)
+			)
+		},
+	})
+}
+
 export function useAddPhotos(photoId: string) {
 	const queryClient = useQueryClient()
 

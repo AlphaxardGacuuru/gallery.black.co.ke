@@ -80,6 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('photos/{id}', [PhotoController::class, 'show']);
     Route::post('photos', [PhotoController::class, 'store']);
+    Route::patch('photos/{photo}', [PhotoController::class, 'update']);
     Route::delete('photos/{id}', [PhotoController::class, 'destroy']);
     Route::post('photos/{id}/like', [PhotoLikeController::class, 'store']);
     Route::post('photos/{photo}/images', [PhotoController::class, 'storeImages']);

@@ -148,7 +148,8 @@ export function PhotoUploadField({
 				onupdatefiles={syncUploads}
 				name="filepond-photo"
 			/>
-			{extraPhoto?.enabled && maxPhotos < extraPhoto.maxPhotosCap && (
+			{extraPhoto?.enabled &&
+				extraPhoto.maxPhotos < extraPhoto.maxPhotosCap && (
 				<BuyExtraPhotoSlotRow extraPhoto={extraPhoto} />
 			)}
 		</div>
@@ -158,7 +159,7 @@ export function PhotoUploadField({
 /** Unlike the entry-level "buy extra slot" button, this is repeatable: once
  *  a purchase settles (paid or failed), the control resets to idle so
  *  another slot can be bought right away, up to the overall cap. */
-function BuyExtraPhotoSlotRow({ extraPhoto }: { extraPhoto: ExtraPhotoState }) {
+export function BuyExtraPhotoSlotRow({ extraPhoto }: { extraPhoto: ExtraPhotoState }) {
 	const queryClient = useQueryClient()
 	const buyExtraPhotoSlot = useBuyExtraPhotoSlot()
 	const [purchaseId, setPurchaseId] = useState<string | null>(

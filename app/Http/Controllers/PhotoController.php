@@ -52,6 +52,23 @@ class PhotoController extends Controller
     }
 
     /**
+     * Edit the description of the authenticated user's own entry, while its
+     * competition is still active.
+     */
+    public function update(Request $request, Photo $photo): JsonResponse
+    {
+        $data = $request->validate([
+            'caption' => 'required|string|max:280',
+        ]);
+
+        $photo = $this->photoService->update($request, $photo, $data['caption']);
+
+        return response()->json([
+            'data' => new PhotoResource($photo),
+        ]);
+    }
+
+    /**
      * Add more photos to an already-submitted entry (e.g. after buying an
      * extra slot), while its competition is still active.
      */

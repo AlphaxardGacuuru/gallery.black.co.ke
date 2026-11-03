@@ -220,7 +220,7 @@ export function PhotoCard({
 						/>
 						<span
 							className={cn(
-								"tabular-nums",
+								"tabular-nums p-2",
 								photo.isLikedByViewer && "text-red-500"
 							)}>
 							{photo.likesCount}
