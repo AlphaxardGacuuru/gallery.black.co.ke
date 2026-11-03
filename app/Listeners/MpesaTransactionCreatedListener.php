@@ -39,16 +39,17 @@ class MpesaTransactionCreatedListener
     }
 
     /**
-     * If this transaction's Kopokopo reference matches a pending photo
-     * purchase, mark it paid. Transactions for anything else match nothing.
-     * Only pending rows match, so a webhook Kopokopo delivers twice can't
-     * pay the photographer twice.
+     * If this transaction's Kopokopo reference matches a pending (or
+     * expired, for a payment that landed late) photo purchase, mark it
+     * paid. Transactions for anything else match nothing. Paid rows never
+     * match again, so a webhook Kopokopo delivers twice can't pay the
+     * photographer twice.
      */
     private function confirmPhotoPurchase(MpesaTransactionCreatedEvent $event): void
     {
         $purchase = PhotoPurchase::query()
             ->where('kopokopo_reference', $event->mpesaTransaction->kopokopo_id)
-            ->where('status', PhotoPurchase::STATUS_PENDING)
+            ->whereIn('status', PhotoPurchase::UNSETTLED_STATUSES)
             ->first();
 
         if (! $purchase) {

@@ -435,13 +435,24 @@ export function useBuyExtraPhotoSlot() {
 	})
 }
 
+type PurchaseStatus = "pending" | "paid" | "failed"
+
+/** The server reports a prompt that was never approved as "expired"
+ *  (still payable by a late webhook, see PhotoSlotPurchase::STATUS_EXPIRED).
+ *  For the buyer that's the same as failed: stop waiting, offer a retry. */
+function settledStatus(status: PurchaseStatus | "expired"): {
+	status: PurchaseStatus
+} {
+	return { status: status === "expired" ? "failed" : status }
+}
+
 export function usePollSlotPurchase(purchaseId: string | null) {
 	return useQuery({
 		queryKey: ["photo-slot-purchases", purchaseId],
 		queryFn: () =>
-			Axios.get<{ data: { status: "pending" | "paid" | "failed" } }>(
+			Axios.get<{ data: { status: PurchaseStatus | "expired" } }>(
 				PhotoSlotPurchaseController.show.url(purchaseId!)
-			).then((res) => res.data.data),
+			).then((res) => settledStatus(res.data.data.status)),
 		enabled: !!purchaseId,
 		refetchInterval: (query) =>
 			query.state.data?.status === "pending" ? 3000 : false,
@@ -474,9 +485,9 @@ export function usePollPhotoPurchase(purchaseId: string | null) {
 	return useQuery({
 		queryKey: ["photo-purchases", purchaseId],
 		queryFn: () =>
-			Axios.get<{ data: { status: "pending" | "paid" | "failed" } }>(
+			Axios.get<{ data: { status: PurchaseStatus | "expired" } }>(
 				PhotoPurchaseController.show.url(purchaseId!)
-			).then((res) => res.data.data),
+			).then((res) => settledStatus(res.data.data.status)),
 		enabled: !!purchaseId,
 		refetchInterval: (query) =>
 			query.state.data?.status === "pending" ? 3000 : false,

@@ -19,6 +19,16 @@ class PhotoSlotPurchase extends Model
 
     public const STATUS_FAILED = 'failed';
 
+    /**
+     * Never confirmed either way, so written off by ExpireStalePurchasesJob.
+     * Unlike "failed" it can still turn "paid" if a late webhook arrives
+     * (see GrantPhotoSlotListener), since the buyer may have paid after all.
+     */
+    public const STATUS_EXPIRED = 'expired';
+
+    /** Statuses a payment webhook may still settle, paid or failed. */
+    public const UNSETTLED_STATUSES = [self::STATUS_PENDING, self::STATUS_EXPIRED];
+
     /** A second, independent competition entry. */
     public const TYPE_EXTRA_ENTRY = 'extra_entry';
 
@@ -31,11 +41,14 @@ class PhotoSlotPurchase extends Model
      * when Kopokopo reports the prompt was cancelled or failed. If neither
      * webhook ever arrives (the user ignores the prompt and Kopokopo stays
      * silent), a single abandoned prompt would otherwise block every future
-     * purchase attempt forever. Stale pending rows are never themselves
-     * marked failed, only ignored, since a late webhook would otherwise
-     * confirm a payment that was already written off.
+     * purchase attempt forever. Stale pending rows are only ignored here;
+     * ExpireStalePurchasesJob later marks them expired, which a late
+     * webhook can still turn into paid.
      */
     public const PENDING_TTL_MINUTES = 3;
+
+    /** How long a pending purchase sits before ExpireStalePurchasesJob marks it expired. */
+    public const EXPIRE_AFTER_MINUTES = 15;
 
     protected $fillable = [
         'user_id',
@@ -83,6 +96,19 @@ class PhotoSlotPurchase extends Model
         return $query
             ->where('status', self::STATUS_PENDING)
             ->where('created_at', '>=', now()->subMinutes(self::PENDING_TTL_MINUTES));
+    }
+
+    /**
+     * The status shown to the buyer while they wait: a pending purchase
+     * past PENDING_TTL_MINUTES reads as expired straight away, so their
+     * "check your phone" spinner stops before the job gets to it.
+     */
+    public function statusForBuyer(): string
+    {
+        return $this->status === self::STATUS_PENDING
+            && $this->created_at->lt(now()->subMinutes(self::PENDING_TTL_MINUTES))
+            ? self::STATUS_EXPIRED
+            : $this->status;
     }
 
     public static function paidExtraPhotoCount(string $competitionId, string $userId): int

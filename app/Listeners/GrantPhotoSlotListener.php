@@ -16,8 +16,9 @@ class GrantPhotoSlotListener
     }
 
     /**
-     * If this transaction's Kopokopo reference matches a pending extra-slot
-     * purchase, mark it paid. Every incoming M-Pesa transaction fires this,
+     * If this transaction's Kopokopo reference matches a pending (or
+     * expired, for a payment that landed late) extra-slot purchase, mark
+     * it paid. Paid rows never match again, so a repeated webhook is a no-op. Every incoming M-Pesa transaction fires this,
      * transactions unrelated to a slot purchase simply match nothing.
      */
     public function handle(MpesaTransactionCreatedEvent $event): void
@@ -26,7 +27,7 @@ class GrantPhotoSlotListener
             'kopokopo_reference',
             $event->mpesaTransaction->kopokopo_id
         )
-            ->where('status', PhotoSlotPurchase::STATUS_PENDING)
+            ->whereIn('status', PhotoSlotPurchase::UNSETTLED_STATUSES)
             ->first();
 
         if (! $purchase) {

@@ -34,6 +34,25 @@ class GrantPhotoSlotListenerTest extends TestCase
         $this->assertNotNull($purchase->paid_at);
     }
 
+    public function test_a_late_payment_still_grants_an_expired_purchase(): void
+    {
+        $purchase = PhotoSlotPurchase::factory()->create([
+            'status' => PhotoSlotPurchase::STATUS_EXPIRED,
+            'kopokopo_reference' => 'late-123',
+        ]);
+        $mpesaTransaction = MPESATransaction::factory()->create([
+            'user_id' => User::factory()->create()->id,
+            'kopokopo_id' => 'late-123',
+        ]);
+
+        (new GrantPhotoSlotListener)
+            ->handle(new MpesaTransactionCreatedEvent($mpesaTransaction));
+
+        $purchase->refresh();
+        $this->assertSame(PhotoSlotPurchase::STATUS_PAID, $purchase->status);
+        $this->assertSame($mpesaTransaction->id, $purchase->mpesa_transaction_id);
+    }
+
     public function test_it_ignores_a_non_matching_reference(): void
     {
         $purchase = PhotoSlotPurchase::factory()->create([

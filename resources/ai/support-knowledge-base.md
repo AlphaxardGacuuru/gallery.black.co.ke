@@ -53,7 +53,7 @@ Black Gallery is a Kenyan photo challenge app. People post photos into a weekly 
 - If the prompt never arrives: check that the phone number in Settings > Profile is correct and the phone is on, then wait about {{payment_retry_minutes}} minutes and try again.
 - Paying the till directly through "Buy Goods" in M-Pesa, instead of approving the prompt from the app, can't be matched to your purchase, so nothing unlocks. Always pay through the prompt.
 - When a payment is confirmed you get a "payment received" notification.
-- "I paid but nothing unlocked": check the customer's recent payments below. If the payment shows as paid, the extra should already be there, so ask them to refresh the app. If it shows as pending or failed, or isn't listed, and they say money left their M-Pesa, ask for the M-Pesa confirmation code and amount, then hand the ticket to the support team. Never promise a refund yourself.
+- "I paid but nothing unlocked": check the customer's recent payments below. If the payment shows as paid, the extra should already be there, so ask them to refresh the app. An "expired" payment is a prompt that was never approved; if the money arrives late it still unlocks the extra by itself. If it shows as pending, expired or failed, or isn't listed, and they say money left their M-Pesa, ask for the M-Pesa confirmation code and amount, then hand the ticket to the support team. Never promise a refund yourself.
 
 ## Referrals
 

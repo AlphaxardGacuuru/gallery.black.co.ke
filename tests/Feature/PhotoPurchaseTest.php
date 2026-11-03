@@ -216,6 +216,39 @@ class PhotoPurchaseTest extends TestCase
         });
     }
 
+    public function test_a_late_payment_on_an_expired_purchase_still_completes_the_sale_once(): void
+    {
+        Notification::fake();
+        $this->enableSales();
+        $photo = $this->endedPhoto();
+        $buyer = User::factory()->create(['phone' => '0700123456']);
+        $purchase = PhotoPurchase::factory()->create([
+            'photo_id' => $photo->id,
+            'buyer_id' => $buyer->id,
+            'amount' => 200,
+            'seller_amount' => 140,
+            'kopokopo_reference' => 'photo-payment-late',
+            'status' => PhotoPurchase::STATUS_EXPIRED,
+        ]);
+
+        // once(): a repeated webhook must not pay the photographer again.
+        $this->partialMock(KopokopoTransferService::class, function ($mock) {
+            $mock->shouldReceive('initiateTransfer')
+                ->once()
+                ->andReturn([true, 'Transfer initiated', [
+                    'status' => 'success',
+                    'location' => 'https://api.kopokopo.com/api/v1/send_money/photo-payout-late',
+                ]]);
+        });
+
+        $this->postPaymentWebhook('photo-payment-late', '0700123456', 200);
+        $this->postPaymentWebhook('photo-payment-late', '0700123456', 200);
+
+        $purchase->refresh();
+        $this->assertSame(PhotoPurchase::STATUS_PAID, $purchase->status);
+        $this->assertSame('photo-payout-late', $purchase->payout_reference);
+    }
+
     public function test_a_failed_payment_fails_the_pending_purchase(): void
     {
         $purchase = PhotoPurchase::factory()->create(['kopokopo_reference' => 'photo-payment-3']);

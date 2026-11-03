@@ -23,7 +23,7 @@ class MpesaPaymentFailedListener
     {
         PhotoSlotPurchase::query()
             ->where('kopokopo_reference', $event->kopokopoReference)
-            ->where('status', PhotoSlotPurchase::STATUS_PENDING)
+            ->whereIn('status', PhotoSlotPurchase::UNSETTLED_STATUSES)
             ->update(['status' => PhotoSlotPurchase::STATUS_FAILED]);
     }
 
@@ -34,7 +34,7 @@ class MpesaPaymentFailedListener
     {
         PhotoPurchase::query()
             ->where('kopokopo_reference', $event->kopokopoReference)
-            ->where('status', PhotoPurchase::STATUS_PENDING)
+            ->whereIn('status', PhotoPurchase::UNSETTLED_STATUSES)
             ->update(['status' => PhotoPurchase::STATUS_FAILED]);
     }
 }

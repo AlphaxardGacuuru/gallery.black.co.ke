@@ -25,6 +25,11 @@ class PhotoPurchase extends Model
 
     public const STATUS_FAILED = 'failed';
 
+    /** Same meaning as PhotoSlotPurchase::STATUS_EXPIRED. */
+    public const STATUS_EXPIRED = 'expired';
+
+    public const UNSETTLED_STATUSES = [self::STATUS_PENDING, self::STATUS_EXPIRED];
+
     protected $fillable = [
         'photo_id',
         'buyer_id',
@@ -75,6 +80,17 @@ class PhotoPurchase extends Model
         return $query
             ->where('status', self::STATUS_PENDING)
             ->where('created_at', '>=', now()->subMinutes(PhotoSlotPurchase::PENDING_TTL_MINUTES));
+    }
+
+    /**
+     * Same as PhotoSlotPurchase::statusForBuyer().
+     */
+    public function statusForBuyer(): string
+    {
+        return $this->status === self::STATUS_PENDING
+            && $this->created_at->lt(now()->subMinutes(PhotoSlotPurchase::PENDING_TTL_MINUTES))
+            ? self::STATUS_EXPIRED
+            : $this->status;
     }
 
     public function scopePaid(Builder $query): Builder

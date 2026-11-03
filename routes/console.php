@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\DeleteStaleTemporaryUploadsJob;
+use App\Jobs\ExpireStalePurchasesJob;
 use App\Models\PhotoCompetition;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -52,5 +53,10 @@ Schedule::command('app:post-seed-photos')
     ->withoutOverlapping();
 
 Schedule::command('app:reconcile-kopokopo-transfers')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+
+// Purchases whose M-Pesa prompt was ignored and never got a webhook.
+Schedule::job(new ExpireStalePurchasesJob)
     ->everyFiveMinutes()
     ->withoutOverlapping();
