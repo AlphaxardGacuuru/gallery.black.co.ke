@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { useRef, useState } from "react"
+import { type MouseEvent, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 
 type Slide = { url: string; alt: string }
@@ -10,8 +10,18 @@ type Slide = { url: string; alt: string }
  * this codebase), gives native momentum/touch scrolling for free, with a
  * scroll-position-driven dot indicator and desktop-only prev/next buttons
  * for when there's no touchscreen to swipe with.
+ *
+ * "contain" letterboxes each photo whole (the full-screen view); "cover"
+ * fills a parent sized to the cover photo's aspect ratio, cropping the
+ * rest to match (the grid cards).
  */
-export function PhotoCarousel({ slides }: { slides: Slide[] }) {
+export function PhotoCarousel({
+	slides,
+	fit = "contain",
+}: {
+	slides: Slide[]
+	fit?: "contain" | "cover"
+}) {
 	const trackRef = useRef<HTMLDivElement>(null)
 	const [index, setIndex] = useState(0)
 
@@ -25,7 +35,11 @@ export function PhotoCarousel({ slides }: { slides: Slide[] }) {
 		setIndex(Math.round(track.scrollLeft / track.clientWidth))
 	}
 
-	function goTo(nextIndex: number) {
+	function goTo(event: MouseEvent<HTMLButtonElement>, nextIndex: number) {
+		// On a card the carousel sits inside the link to the full view.
+		event.preventDefault()
+		event.stopPropagation()
+
 		const track = trackRef.current
 
 		if (!track) {
@@ -59,7 +73,11 @@ export function PhotoCarousel({ slides }: { slides: Slide[] }) {
 							src={slide.url}
 							alt={slide.alt}
 							loading={slideIndex === 0 ? "eager" : "lazy"}
-							className="max-h-full max-w-full object-contain"
+							className={
+								fit === "cover"
+									? "h-full w-full object-cover"
+									: "max-h-full max-w-full object-contain"
+							}
 						/>
 					</div>
 				))}
@@ -85,7 +103,7 @@ export function PhotoCarousel({ slides }: { slides: Slide[] }) {
 				type="button"
 				aria-label="Previous photo"
 				disabled={index === 0}
-				onClick={() => goTo(index - 1)}
+				onClick={(event) => goTo(event, index - 1)}
 				className="absolute top-1/2 left-2 hidden -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white disabled:opacity-0 md:flex">
 				<ChevronLeft className="size-5" />
 			</button>
@@ -93,7 +111,7 @@ export function PhotoCarousel({ slides }: { slides: Slide[] }) {
 				type="button"
 				aria-label="Next photo"
 				disabled={index === slides.length - 1}
-				onClick={() => goTo(index + 1)}
+				onClick={(event) => goTo(event, index + 1)}
 				className="absolute top-1/2 right-2 hidden -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white disabled:opacity-0 md:flex">
 				<ChevronRight className="size-5" />
 			</button>

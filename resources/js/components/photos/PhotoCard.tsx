@@ -1,12 +1,4 @@
-import {
-	AlignRight,
-	Copy,
-	Heart,
-	Pencil,
-	Trash2,
-	Trophy,
-	Users,
-} from "lucide-react"
+import { AlignRight, Heart, Pencil, Trash2, Trophy, Users } from "lucide-react"
 import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import type { Photo } from "@/types/photo"
@@ -14,6 +6,7 @@ import { AvatarPreviewDialog } from "@/components/avatar-preview-dialog"
 import VerifiedBadge from "@/components/verified-badge"
 import { EditPhotoDialog } from "@/components/photos/EditPhotoDialog"
 import { ManageLikesDialog } from "@/components/photos/ManageLikesDialog"
+import { PhotoCarousel } from "@/components/photos/PhotoCarousel"
 import { Button } from "@/components/ui/button"
 import {
 	Dialog,
@@ -201,12 +194,24 @@ export function PhotoCard({
 				to={`/photos/${photo.id}/show` as never}
 				aria-label="View full photo"
 				className="relative block w-full">
-				<img
-					src={photo.thumbnailUrl}
-					alt={photo.caption ?? "Competition entry"}
-					loading="lazy"
-					className="h-auto w-full"
-				/>
+				{photo.images.length > 0 ? (
+					<div style={{ aspectRatio: photo.aspectRatio }}>
+						<PhotoCarousel
+							fit="cover"
+							slides={[photo, ...photo.images].map((image) => ({
+								url: image.thumbnailUrl,
+								alt: photo.caption ?? "Competition entry",
+							}))}
+						/>
+					</div>
+				) : (
+					<img
+						src={photo.thumbnailUrl}
+						alt={photo.caption ?? "Competition entry"}
+						loading="lazy"
+						className="h-auto w-full"
+					/>
+				)}
 				{photo.isWinner ? (
 					<div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-amber-400 px-2 py-1 text-xs font-semibold text-amber-950 shadow">
 						<Trophy className="size-3.5" />
@@ -223,13 +228,6 @@ export function PhotoCard({
 							#{livePosition} · KES {livePrizeAmount}
 						</div>
 					)
-				)}
-				{photo.images.length > 0 && (
-					<div
-						className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white shadow"
-						aria-label={`${photo.images.length + 1} photos`}>
-						<Copy className="size-3.5" />
-					</div>
 				)}
 			</Link>
 			<figcaption className="flex flex-col gap-1">
