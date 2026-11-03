@@ -48,6 +48,25 @@ class KopokopoTransferStatusTest extends TestCase
         $this->assertTrue($transfer->isConfirmedFailure());
     }
 
+    public function test_failed_with_no_disbursements_is_failure(): void
+    {
+        $transfer = new KopokopoTransfer;
+        $transfer->status = 'Failed';
+        $transfer->transfer_batches = [];
+
+        $this->assertFalse($transfer->isConfirmedSuccess());
+        $this->assertTrue($transfer->isConfirmedFailure());
+    }
+
+    public function test_pending_with_no_disbursements_is_not_final(): void
+    {
+        $transfer = new KopokopoTransfer;
+        $transfer->status = 'Pending';
+        $transfer->transfer_batches = [];
+
+        $this->assertFalse($transfer->isConfirmedFailure());
+    }
+
     public function test_failed_top_level_with_pending_disbursement_is_not_final(): void
     {
         $transfer = $this->transfer('Failed', 'Pending');

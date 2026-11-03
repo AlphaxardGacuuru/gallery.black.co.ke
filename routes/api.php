@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\AdminPhotoLikeController;
 use App\Http\Controllers\Admin\AdminPhotoPurchaseController;
 use App\Http\Controllers\Admin\AdminReferralController;
 use App\Http\Controllers\Admin\AdminSupportTicketController;
+use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\FilePondController;
 use App\Http\Controllers\KopokopoRecipientController;
 use App\Http\Controllers\KopokopoTransferController;
@@ -126,6 +127,7 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::put('referrals/settings', [AdminReferralController::class, 'updateSettings'])->name('referrals.settings');
         Route::post('referrals/{user}/pay', [AdminReferralController::class, 'pay'])->name('referrals.pay');
         Route::post('users/{user}/referrer', [AdminReferralController::class, 'attach'])->name('users.referrer');
+        Route::post('users/{user}/request-phone', [AdminUserController::class, 'requestPhone'])->name('users.request-phone');
         Route::get('photos/{photo}/likes', [AdminPhotoLikeController::class, 'index'])->name('photos.likes.index');
         Route::post('photos/{photo}/likes/{user}', [AdminPhotoLikeController::class, 'toggle'])->name('photos.likes.toggle');
         Route::get('notices', [AdminNoticeController::class, 'index'])->name('notices.index');

@@ -272,6 +272,37 @@ class AdminReferralControllerTest extends TestCase
         $this->assertNull($referral->amount_paid);
     }
 
+    public function test_a_transfer_rejected_without_disbursements_frees_the_referrals_for_another_payout(): void
+    {
+        $referrer = User::factory()->create(['phone' => '0700123456']);
+        $referral = Referral::create([
+            'referrer_id' => $referrer->id,
+            'referred_id' => User::factory()->create()->id,
+            'kopokopo_reference' => 'referrer-transfer-789',
+            'amount_paid' => 50,
+        ]);
+
+        // e.g. the Kopokopo account didn't have enough balance.
+        $this->postJson('/api/kopokopo-transfers', [
+            'data' => [
+                'id' => 'referrer-transfer-789',
+                'attributes' => [
+                    'status' => 'Failed',
+                    'created_at' => now()->toIso8601String(),
+                    'currency' => 'KES',
+                    'destinations' => [['amount' => 50]],
+                    'metadata' => [],
+                    'transfer_batches' => [],
+                ],
+            ],
+        ])->assertOk();
+
+        $referral->refresh();
+        $this->assertNull($referral->kopokopo_reference);
+        $this->assertNull($referral->amount_paid);
+        $this->assertSame([$referral->id], Referral::eligiblePayout($referrer->id, 1)['referralIds']);
+    }
+
     public function test_admin_can_set_the_photo_bonus_next_to_the_referral_reward(): void
     {
         $admin = User::factory()->create(['email' => config('admin.email')]);

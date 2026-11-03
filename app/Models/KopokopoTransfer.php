@@ -80,19 +80,33 @@ class KopokopoTransfer extends Model
             || $this->hasOnlyTransferredDisbursements();
     }
 
+    /**
+     * A transfer Kopokopo rejects as a whole (e.g. insufficient balance)
+     * can come back failed with no disbursements at all, so the top-level
+     * status decides then. Otherwise every disbursement must have failed.
+     */
     public function isConfirmedFailure(): bool
     {
         if ($this->hasOnlyTransferredDisbursements()) {
             return false;
         }
 
+        if ($this->disbursements()->isEmpty()) {
+            return (bool) preg_match('/fail|reject|declin|error|cancel/i', (string) $this->status);
+        }
+
         return $this->hasOnlyFailedDisbursements();
+    }
+
+    private function disbursements()
+    {
+        return collect($this->transfer_batches ?? [])
+            ->flatMap(fn ($batch) => $batch['disbursements'] ?? []);
     }
 
     public function hasOnlyTransferredDisbursements(): bool
     {
-        $disbursements = collect($this->transfer_batches ?? [])
-            ->flatMap(fn ($batch) => $batch['disbursements'] ?? []);
+        $disbursements = $this->disbursements();
 
         return $disbursements->isNotEmpty()
             && $disbursements->every(fn ($disbursement) => strcasecmp((string) ($disbursement['status'] ?? ''), 'Transferred') === 0);
@@ -100,8 +114,7 @@ class KopokopoTransfer extends Model
 
     private function hasOnlyFailedDisbursements(): bool
     {
-        $disbursements = collect($this->transfer_batches ?? [])
-            ->flatMap(fn ($batch) => $batch['disbursements'] ?? []);
+        $disbursements = $this->disbursements();
 
         return $disbursements->isNotEmpty()
             && $disbursements->every(fn ($disbursement) => (bool) preg_match('/fail|reject|declin|error/i', (string) ($disbursement['status'] ?? '')));

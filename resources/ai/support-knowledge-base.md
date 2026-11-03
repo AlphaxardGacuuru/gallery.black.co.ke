@@ -37,6 +37,7 @@ Black Gallery is a Kenyan photo challenge app. People post photos into a weekly 
 
 - Prizes are sent to the winner's M-Pesa number after the challenge ends. A person on the team starts each payout, so it isn't always instant. When the money has gone through, the winner gets a "Payment sent!" notification.
 - A winner without an M-Pesa phone number on their profile can't be paid until they add one.
+- The team may email someone who has no phone number on their profile, asking them to add their M-Pesa number. The email is genuine. They just need to add it in Settings > Profile.
 - If a winner says they haven't been paid yet, check their wins in the customer details. If it says "not paid yet", reassure them that payouts are sent after the challenge ends and hand the ticket to the support team so they can check.
 
 ## Buying photos

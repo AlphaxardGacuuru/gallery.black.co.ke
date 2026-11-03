@@ -33,6 +33,7 @@ import {
 	useAdminKopokopoRecipients,
 	useAdminUsers,
 	useAttachReferrer,
+	useRequestUserPhone,
 	useToggleUserVerified,
 } from "@/queries/admin"
 
@@ -97,13 +98,36 @@ function KopokopoRecipientCell({
 	isRegistered: boolean
 }) {
 	const addRecipient = useAddKopokopoRecipient()
+	const requestPhone = useRequestUserPhone()
 
 	if (isRegistered) {
 		return <Badge variant="default">Recipient</Badge>
 	}
 
 	if (!user.phone) {
-		return <span className="text-xs text-muted-foreground">No phone</span>
+		return (
+			<Button
+				variant="outline"
+				size="sm"
+				disabled={requestPhone.isPending}
+				onClick={() =>
+					requestPhone.mutate(user.id, {
+						onSuccess: () =>
+							toast.success(`Asked ${user.name} to add their phone number`),
+						onError: (error) =>
+							toast.error("Couldn't send the request", {
+								description: isAxiosError<{ message?: string }>(error)
+									? error.response?.data?.message
+									: undefined,
+							}),
+					})
+				}>
+				{requestPhone.isPending && (
+					<Loader2 className="size-3.5 animate-spin" />
+				)}
+				Request phone
+			</Button>
+		)
 	}
 
 	function handleClick() {

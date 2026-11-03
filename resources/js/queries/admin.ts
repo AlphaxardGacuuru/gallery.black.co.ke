@@ -124,6 +124,17 @@ export function useAttachReferrer() {
 	})
 }
 
+/**
+ * Email a user without a phone number asking them to add the M-Pesa number
+ * that prizes and payouts are sent to.
+ */
+export function useRequestUserPhone() {
+	return useMutation({
+		mutationFn: (userId: string) =>
+			Axios.post(`api/admin/users/${userId}/request-phone`),
+	})
+}
+
 export type PhotoCompetitionSchedule = {
 	startDay: number
 	startTime: string
