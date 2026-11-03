@@ -65,6 +65,22 @@ class SupportTicketTest extends TestCase
         Notification::assertSentTo($admin, AdminSupportTicketEscalatedNotification::class);
     }
 
+    public function test_asking_for_a_person_notifies_the_admin(): void
+    {
+        $admin = User::factory()->create(['email' => config('admin.email')]);
+        $customer = User::factory()->create();
+        SupportAgent::fake([['reply' => 'Try entering from the challenge page.', 'escalate' => false]]);
+
+        $ticketId = $this->start($customer)->json('data.id');
+
+        $this->actingAs($customer, 'sanctum')
+            ->postJson("/api/support-tickets/{$ticketId}/escalate")
+            ->assertOk()
+            ->assertJsonPath('data.status', SupportTicketStatus::NEEDS_AGENT->value);
+
+        Notification::assertSentTo($admin, AdminSupportTicketEscalatedNotification::class);
+    }
+
     public function test_an_ai_failure_hands_the_ticket_to_a_person(): void
     {
         SupportAgent::fake(fn () => throw new RuntimeException('Gemini is down'));

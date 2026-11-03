@@ -25,3 +25,17 @@ Events and listeners must carry the matching suffix: an event class ends in `Eve
 # Support assistant knowledge base
 
 The AI support assistant answers customers from `resources/ai/support-knowledge-base.md`. When you change anything a customer can see (a flow, an error message, a limit, a settings page), update that file in the same change. Write numbers that already exist as constants as `{{placeholders}}` filled in `SupportAgent::knowledgeBase()`, not as literals. Admin-editable values (prices, prizes, schedule) are read live in `SupportAgent::liveSettings()` and don't belong in the file.
+
+# Form inputs
+
+Wrap every form input in JSX comments marking where it starts and ends, named after the field:
+
+```tsx
+{/* Name Start */}
+<Input
+	label="Name"
+	value={name}
+	onChange={(e) => setName(e.target.value)}
+/>
+{/* Name End */}
+```

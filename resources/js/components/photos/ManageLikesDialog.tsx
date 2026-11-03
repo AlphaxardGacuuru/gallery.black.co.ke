@@ -14,7 +14,17 @@ import { Spinner } from "@/components/ui/spinner"
 import { VerifiedAvatar } from "@/components/verified-badge"
 import { useInitials } from "@/hooks/use-initials"
 import { cn } from "@/lib/utils"
-import { useAdminPhotoLikers, useToggleAdminPhotoLike } from "@/queries/admin"
+import {
+	type AdminPhotoLikersSeedFilter,
+	useAdminPhotoLikers,
+	useToggleAdminPhotoLike,
+} from "@/queries/admin"
+
+const SEED_FILTERS: { value: AdminPhotoLikersSeedFilter; label: string }[] = [
+	{ value: null, label: "All" },
+	{ value: "exclude", label: "Real users" },
+	{ value: "only", label: "Seed accounts" },
+]
 
 /** Admin-only: browse/search users and toggle whether each one likes this
  *  photo, on their behalf (a moderation tool, not the public like button). */
@@ -45,8 +55,9 @@ export function ManageLikesDialog({
 
 function ManageLikesBody({ photoId }: { photoId: string }) {
 	const [search, setSearch] = useState("")
+	const [seed, setSeed] = useState<AdminPhotoLikersSeedFilter>(null)
 	const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-		useAdminPhotoLikers(photoId, search)
+		useAdminPhotoLikers(photoId, search, seed)
 	const toggleLike = useToggleAdminPhotoLike(photoId)
 	const getInitials = useInitials()
 	const users = data?.pages.flatMap((page) => page.data) ?? []
@@ -58,6 +69,22 @@ function ManageLikesBody({ photoId }: { photoId: string }) {
 				value={search}
 				onChange={(event) => setSearch(event.target.value)}
 			/>
+			<div className="flex flex-wrap gap-1.5">
+				{SEED_FILTERS.map((filter) => (
+					<button
+						key={filter.label}
+						type="button"
+						onClick={() => setSeed(filter.value)}
+						className={cn(
+							"rounded-full border px-3 py-1 text-xs transition-colors",
+							seed === filter.value
+								? "border-primary bg-primary text-primary-foreground"
+								: "hover:bg-muted"
+						)}>
+						{filter.label}
+					</button>
+				))}
+			</div>
 			<div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
 				{isLoading ? (
 					<div className="flex justify-center py-6">

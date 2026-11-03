@@ -39,8 +39,8 @@ class AdminReferralController extends Controller
             ->orderByDesc('referrals_made_count')
             ->limit(20)
             ->get()
-            ->map(function (User $user) use ($threshold, $rewardAmount, $photoBonusAmount) {
-                $payout = Referral::eligiblePayout($user->id, $threshold, $rewardAmount, $photoBonusAmount);
+            ->map(function (User $user) use ($threshold) {
+                $payout = Referral::eligiblePayout($user->id, $threshold);
 
                 return [
                     'userId' => $user->id,
@@ -175,18 +175,13 @@ class AdminReferralController extends Controller
      */
     public function pay(User $user): JsonResponse
     {
-        ['threshold' => $threshold, 'rewardAmount' => $rewardAmount, 'photoBonusAmount' => $photoBonusAmount]
-            = $this->referralService->settings();
-
-        $payout = Referral::eligiblePayout($user->id, $threshold, $rewardAmount, $photoBonusAmount);
+        $payout = Referral::eligiblePayout($user->id, $this->referralService->settings()['threshold']);
 
         [$status, $message, $data] = $this->kopokopoTransferService->payReferrer(
             $user,
             $payout['totalAmount'],
             $payout['referralIds'],
-            $payout['perReferralAmount'],
             $payout['photoBonusReferralIds'],
-            $payout['photoBonusAmount'],
         );
 
         return response()->json([

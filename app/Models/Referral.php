@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Services\ReferralService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,6 +16,8 @@ class Referral extends Model
     protected $fillable = [
         'referrer_id',
         'referred_id',
+        'reward_rate',
+        'photo_bonus_rate',
         'paid_at',
         'amount_paid',
         'kopokopo_reference',
@@ -24,11 +27,32 @@ class Referral extends Model
     ];
 
     protected $casts = [
+        'reward_rate' => 'decimal:2',
+        'photo_bonus_rate' => 'decimal:2',
         'paid_at' => 'datetime',
         'amount_paid' => 'decimal:2',
         'photo_bonus_amount' => 'decimal:2',
         'photo_bonus_paid_at' => 'datetime',
     ];
+
+    /**
+     * Fix the referral's worth at the price in effect when it's made, so
+     * raising (or lowering) the reward later only affects new referrals.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Referral $referral) {
+            if ($referral->reward_rate !== null && $referral->photo_bonus_rate !== null) {
+                return;
+            }
+
+            ['threshold' => $threshold, 'rewardAmount' => $rewardAmount, 'photoBonusAmount' => $photoBonusAmount]
+                = app(ReferralService::class)->settings();
+
+            $referral->reward_rate ??= $threshold > 0 ? round($rewardAmount / $threshold, 2) : 0;
+            $referral->photo_bonus_rate ??= $photoBonusAmount;
+        });
+    }
 
     public function referrer(): BelongsTo
     {
@@ -84,58 +108,50 @@ class Referral extends Model
     }
 
     /**
-     * How much $referrerId is currently owed: every full $threshold-sized
-     * group of their still-unpaid referrals splits $rewardAmount evenly
-     * (e.g. a threshold of 5 at KES 50 pays KES 10 per referral). Partial
-     * groups short of the threshold aren't paid yet. On top of that, each
-     * referral whose referred user has posted a photo earns a one-off
-     * $photoBonusAmount, with no threshold.
+     * How much $referrerId is currently owed. Every full $threshold-sized
+     * group of their still-unpaid referrals is paid, each referral at its
+     * own reward_rate (the price when it was made), so older referrals
+     * aren't re-priced when the reward changes. Partial groups short of
+     * the threshold aren't paid yet. On top of that, each referral whose
+     * referred user has posted a photo earns its photo_bonus_rate once,
+     * with no threshold.
      *
-     * @return array{batches: int, referralIds: array<int, string>, totalAmount: float, perReferralAmount: float, photoBonusReferralIds: array<int, string>, photoBonusAmount: float}
+     * @return array{batches: int, referralIds: array<int, string>, totalAmount: float, photoBonusReferralIds: array<int, string>}
      */
-    public static function eligiblePayout(
-        string $referrerId,
-        int $threshold,
-        float $rewardAmount,
-        float $photoBonusAmount = 0.0
-    ): array {
-        $photoBonusIds = $photoBonusAmount > 0
-            ? static::query()
-                ->where('referrer_id', $referrerId)
-                ->unpaidPhotoBonus()
-                ->oldest('created_at')
-                ->pluck('id')
-                ->all()
-            : [];
+    public static function eligiblePayout(string $referrerId, int $threshold): array
+    {
+        $photoBonuses = static::query()
+            ->where('referrer_id', $referrerId)
+            ->unpaidPhotoBonus()
+            ->where('photo_bonus_rate', '>', 0)
+            ->oldest('created_at')
+            ->get(['id', 'photo_bonus_rate']);
 
-        $photoBonusTotal = count($photoBonusIds) * $photoBonusAmount;
+        $photoBonusTotal = (float) $photoBonuses->sum('photo_bonus_rate');
 
         if ($threshold < 1) {
             return [
                 'batches' => 0,
                 'referralIds' => [],
                 'totalAmount' => $photoBonusTotal,
-                'perReferralAmount' => 0.0,
-                'photoBonusReferralIds' => $photoBonusIds,
-                'photoBonusAmount' => $photoBonusAmount,
+                'photoBonusReferralIds' => $photoBonuses->pluck('id')->all(),
             ];
         }
 
-        $unpaidIds = static::query()
+        $unpaid = static::query()
             ->where('referrer_id', $referrerId)
             ->unpaid()
             ->oldest('created_at')
-            ->pluck('id');
+            ->get(['id', 'reward_rate']);
 
-        $batches = intdiv($unpaidIds->count(), $threshold);
+        $batches = intdiv($unpaid->count(), $threshold);
+        $covered = $unpaid->take($batches * $threshold);
 
         return [
             'batches' => $batches,
-            'referralIds' => $unpaidIds->take($batches * $threshold)->values()->all(),
-            'totalAmount' => $batches * $rewardAmount + $photoBonusTotal,
-            'perReferralAmount' => round($rewardAmount / $threshold, 2),
-            'photoBonusReferralIds' => $photoBonusIds,
-            'photoBonusAmount' => $photoBonusAmount,
+            'referralIds' => $covered->pluck('id')->values()->all(),
+            'totalAmount' => round((float) $covered->sum('reward_rate') + $photoBonusTotal, 2),
+            'photoBonusReferralIds' => $photoBonuses->pluck('id')->all(),
         ];
     }
 

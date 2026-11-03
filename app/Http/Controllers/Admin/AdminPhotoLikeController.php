@@ -13,16 +13,29 @@ use Illuminate\Http\Request;
 class AdminPhotoLikeController extends Controller
 {
     /**
-     * Users matching an optional name search, each annotated with whether
-     * they already like this specific photo, the pool an admin picks from
-     * in the "manage likes" dialog.
+     * Users matching an optional name search and seed filter ("seed" is
+     * "only" or "exclude"), each annotated with whether they already like
+     * this specific photo, the pool an admin picks from in the "manage
+     * likes" dialog.
      */
     public function index(Request $request, Photo $photo): JsonResponse
     {
+        $request->validate([
+            'seed' => 'nullable|in:only,exclude',
+        ]);
+
         $users = User::query()
             ->when(
                 $request->filled('name'),
                 fn($query) => $query->where('name', 'LIKE', '%' . $request->input('name') . '%')
+            )
+            ->when(
+                $request->input('seed') === 'only',
+                fn($query) => $query->where('is_seed', true)
+            )
+            ->when(
+                $request->input('seed') === 'exclude',
+                fn($query) => $query->real()
             )
             ->addSelect([
                 'likes_photo' => PhotoLike::query()

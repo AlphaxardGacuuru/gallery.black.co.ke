@@ -146,6 +146,56 @@ class AdminReferralControllerTest extends TestCase
         Event::assertNotDispatched(KopokopoTransferInitiated::class);
     }
 
+    public function test_referrals_keep_the_price_they_were_made_at_when_the_reward_changes(): void
+    {
+        $this->setThresholdAndReward(threshold: 2, rewardAmount: 100);
+        Setting::query()->updateOrCreate(['key' => 'referral_photo_bonus_amount'], ['value' => 20]);
+
+        $referrer = User::factory()->create(['phone' => '0700123456']);
+        $poster = User::factory()->create();
+        Photo::factory()->create(['user_id' => $poster->id]);
+        $old = collect([
+            Referral::create(['referrer_id' => $referrer->id, 'referred_id' => $poster->id]),
+            Referral::create(['referrer_id' => $referrer->id, 'referred_id' => User::factory()->create()->id]),
+            Referral::create(['referrer_id' => $referrer->id, 'referred_id' => User::factory()->create()->id]),
+        ]);
+
+        // The reward doubles and the photo bonus triples. Only referrals
+        // made from now on earn the new prices.
+        $this->setThresholdAndReward(threshold: 2, rewardAmount: 200);
+        Setting::query()->updateOrCreate(['key' => 'referral_photo_bonus_amount'], ['value' => 60]);
+        $new = Referral::create(['referrer_id' => $referrer->id, 'referred_id' => User::factory()->create()->id]);
+
+        $admin = User::factory()->create(['email' => config('admin.email')]);
+
+        // Two full batches: 3 old referrals at 50 each, 1 new one at 100,
+        // plus the old referral's photo bonus at 20 (not 60).
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/admin/referrals')
+            ->assertJsonPath('data.leaderboard.0.eligibleAmount', 270);
+
+        $this->partialMock(KopokopoTransferService::class, function ($mock) {
+            $mock->shouldReceive('initiateTransfer')
+                ->once()
+                ->withArgs(fn($request) => (int) $request->input('amount') === 270)
+                ->andReturn([true, 'Transfer initiated', [
+                    'status' => 'success',
+                    'location' => 'https://api.kopokopo.com/api/v1/send_money/frozen-prices',
+                ]]);
+        });
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/admin/referrals/{$referrer->id}/pay")
+            ->assertOk()
+            ->assertJsonPath('status', true);
+
+        foreach ($old as $referral) {
+            $this->assertEquals(50.0, (float) $referral->fresh()->amount_paid);
+        }
+        $this->assertEquals(100.0, (float) $new->fresh()->amount_paid);
+        $this->assertEquals(20.0, (float) $old->first()->fresh()->photo_bonus_amount);
+    }
+
     public function test_a_confirmed_webhook_marks_referrals_paid_and_notifies_the_referrer(): void
     {
         Event::fake([KopokopoTransferInitiated::class]);

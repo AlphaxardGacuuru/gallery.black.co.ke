@@ -676,12 +676,22 @@ type AdminPhotoLikersPage = {
 // Only mounted while the dialog is open, and gcTime 0 drops the pages as
 // soon as it closes, so every open starts from page 1 with fresh like state
 // instead of flashing whatever was cached from the last time.
-export function useAdminPhotoLikers(photoId: string, search: string) {
+export type AdminPhotoLikersSeedFilter = "only" | "exclude" | null
+
+export function useAdminPhotoLikers(
+	photoId: string,
+	search: string,
+	seed: AdminPhotoLikersSeedFilter = null
+) {
 	return useInfiniteQuery({
-		queryKey: ["admin", "photo-likes", photoId, search],
+		queryKey: ["admin", "photo-likes", photoId, search, seed],
 		queryFn: ({ pageParam }) =>
 			Axios.get<AdminPhotoLikersPage>(`api/admin/photos/${photoId}/likes`, {
-				params: { name: search || undefined, page: pageParam },
+				params: {
+					name: search || undefined,
+					seed: seed ?? undefined,
+					page: pageParam,
+				},
 			}).then((res) => res.data),
 		initialPageParam: 1,
 		getNextPageParam: (lastPage) =>

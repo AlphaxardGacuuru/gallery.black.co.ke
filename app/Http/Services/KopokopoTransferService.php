@@ -11,6 +11,7 @@ use App\Models\Referral;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Kopokopo\SDK\K2;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -422,13 +423,14 @@ class KopokopoTransferService extends Service
      * Pay a referrer for however many complete referral-reward batches
      * they've accumulated (see Referral::eligiblePayout()). As with
      * payWinner(), a successful initiation only means Kopokopo accepted the
-     * request, so this records kopokopo_reference (and the per-referral
-     * amount they'll be paid) rather than marking the referrals paid
-     * outright; paid_at only gets set once the webhook confirms the
+     * request, so this records kopokopo_reference (and copies each
+     * referral's own reward_rate into amount_paid) rather than marking the
+     * referrals paid outright; paid_at only gets set once the webhook confirms the
      * transfer actually completed (see KopokopoTransferRecordedListener).
      *
      * Photo bonuses ride along in the same transfer, tracked through
-     * photo_bonus_reference/photo_bonus_amount the same way.
+     * photo_bonus_reference/photo_bonus_amount the same way (from each
+     * referral's photo_bonus_rate).
      *
      * @param  array<int, string>  $referralIds  The specific unpaid referrals this payout covers.
      * @param  array<int, string>  $photoBonusReferralIds  Referrals whose photo bonus this payout covers.
@@ -438,9 +440,7 @@ class KopokopoTransferService extends Service
         User $referrer,
         float $totalAmount,
         array $referralIds,
-        float $perReferralAmount,
         array $photoBonusReferralIds = [],
-        float $photoBonusAmount = 0.0
     ): array {
         if ($referralIds === [] && $photoBonusReferralIds === []) {
             return [false, $referrer->name . ' hasn\'t earned a referral reward yet', null];
@@ -465,14 +465,14 @@ class KopokopoTransferService extends Service
             Referral::query()
                 ->whereIn('id', $referralIds)
                 ->update([
-                    'amount_paid' => $perReferralAmount,
+                    'amount_paid' => DB::raw('reward_rate'),
                     'kopokopo_reference' => $reference,
                 ]);
 
             Referral::query()
                 ->whereIn('id', $photoBonusReferralIds)
                 ->update([
-                    'photo_bonus_amount' => $photoBonusAmount,
+                    'photo_bonus_amount' => DB::raw('photo_bonus_rate'),
                     'photo_bonus_reference' => $reference,
                 ]);
         }

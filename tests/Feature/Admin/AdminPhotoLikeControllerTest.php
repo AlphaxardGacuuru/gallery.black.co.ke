@@ -155,4 +155,28 @@ class AdminPhotoLikeControllerTest extends TestCase
 
         $this->assertSame(1, $photo->fresh()->likes_count);
     }
+
+    public function test_admin_can_filter_seed_accounts(): void
+    {
+        $photo = Photo::factory()->create();
+        $admin = $this->admin();
+        $seed = User::factory()->create(['is_seed' => true]);
+        $real = User::factory()->create(['is_seed' => false]);
+
+        $ids = fn (string $seedFilter) => collect(
+            $this->actingAs($admin, 'sanctum')
+                ->getJson("/api/admin/photos/{$photo->id}/likes?seed={$seedFilter}&per_page=100")
+                ->assertOk()
+                ->json('data')
+        )->pluck('id');
+
+        $this->assertTrue($ids('only')->contains($seed->id));
+        $this->assertFalse($ids('only')->contains($real->id));
+        $this->assertTrue($ids('exclude')->contains($real->id));
+        $this->assertFalse($ids('exclude')->contains($seed->id));
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/admin/photos/{$photo->id}/likes?seed=bogus")
+            ->assertUnprocessable();
+    }
 }
