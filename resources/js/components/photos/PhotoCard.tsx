@@ -206,27 +206,26 @@ export function PhotoCard({
 			</Link>
 			<figcaption className="flex flex-col gap-1">
 				<div className="flex items-center">
-					<Button
-						variant="ghost"
-						size="sm"
+					<button
+						type="button"
 						aria-label={photo.isLikedByViewer ? "Liked" : "Like photo"}
 						disabled={!canLike || photo.isLikedByViewer || likePhoto.isPending}
 						onClick={() => canLike && likePhoto.mutate(photo.id)}
-						className="flex shrink-0 items-center gap-1 px-1 text-sm transition-colors cursor-pointer">
+						className="flex shrink-0 cursor-pointer items-center gap-1 px-1 text-sm text-muted-foreground disabled:cursor-default">
 						<Heart
 							className={cn(
-								"size-4",
+								"size-4 shrink-0",
 								photo.isLikedByViewer && "fill-red-500 text-red-500"
 							)}
 						/>
 						<span
 							className={cn(
 								"tabular-nums",
-								photo.isLikedByViewer && "fill-red-500 text-red-500"
+								photo.isLikedByViewer && "text-red-500"
 							)}>
 							{photo.likesCount}
 						</span>
-					</Button>
+					</button>
 				</div>
 				{photo.caption && (
 					<p className="truncate text-xs text-muted-foreground px-2 pb-2">
