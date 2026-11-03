@@ -216,7 +216,7 @@ function BuyExtraPhotoSlotRow({ extraPhoto }: { extraPhoto: ExtraPhotoState }) {
 			) : (
 				<ShoppingCart className="size-4" />
 			)}
-			Add another photo slot (KES {extraPhoto.price})
+			Add another photo slot @ KES {extraPhoto.price}
 		</Button>
 	)
 }
