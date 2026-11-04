@@ -1,4 +1,12 @@
-import { AlignRight, Heart, Pencil, Trash2, Trophy, Users } from "lucide-react"
+import {
+	AlignRight,
+	Heart,
+	type LucideIcon,
+	Pencil,
+	Trash2,
+	Trophy,
+	Users,
+} from "lucide-react"
 import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import type { Photo } from "@/types/photo"
@@ -22,8 +30,16 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet"
 import { useApp } from "@/contexts/AppContext"
 import { useInitials } from "@/hooks/use-initials"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { ADMIN_EMAIL } from "@/middleware/auth"
 import { cn } from "@/lib/utils"
 import toast from "@/lib/toast"
@@ -76,6 +92,52 @@ export function PhotoCard({
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [manageLikesOpen, setManageLikesOpen] = useState(false)
 	const [editOpen, setEditOpen] = useState(false)
+	const [optionsOpen, setOptionsOpen] = useState(false)
+	const isMobile = useIsMobile()
+
+	// Rendered as a bottom sheet on small screens and a dropdown otherwise.
+	const options: {
+		label: string
+		icon: LucideIcon
+		destructive?: boolean
+		onSelect: () => void
+	}[] = [
+		...(isAdmin
+			? [
+					{
+						label: "Manage likes",
+						icon: Users,
+						onSelect: () => setManageLikesOpen(true),
+					},
+				]
+			: []),
+		...(canDelete
+			? [
+					{
+						label: "Edit",
+						icon: Pencil,
+						onSelect: () => setEditOpen(true),
+					},
+					{
+						label: "Delete",
+						icon: Trash2,
+						destructive: true,
+						onSelect: () => setDeleteDialogOpen(true),
+					},
+				]
+			: []),
+	]
+
+	const optionsTrigger = (
+		<Button
+			type="button"
+			variant="ghost"
+			size="sm"
+			aria-label="Photo options"
+			className="shrink-0 px-1">
+			<AlignRight className="size-4 text-muted-foreground" />
+		</Button>
+	)
 
 	function handleDelete() {
 		deletePhoto.mutate(photo.id, {
@@ -102,62 +164,77 @@ export function PhotoCard({
 					/>
 					<div className="flex min-w-0 items-center gap-1">
 						<p className="truncate text-sm font-medium">{photo.userName}</p>
-						{photo.userVerified && <VerifiedBadge className="size-3.5 shrink-0" />}
+						{photo.userVerified && (
+							<VerifiedBadge className="size-3.5 shrink-0" />
+						)}
 					</div>
 				</div>
 				<div className="flex justify-between items-center gap-1">
 					{/* Options Menu Start */}
 					{(canDelete || isAdmin) && (
 						<>
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button
-										type="button"
-										variant="ghost"
-										size="sm"
-										aria-label="Photo options"
-										className="shrink-0 px-1">
-										<AlignRight className="size-4 text-muted-foreground" />
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									{isAdmin && (
-										<DropdownMenuItem
-											className="cursor-pointer"
-											onSelect={(event) => {
-												event.preventDefault()
-												setManageLikesOpen(true)
-											}}>
-											<Users />
-											Manage likes
-										</DropdownMenuItem>
-									)}
-									{canDelete && (
-										<DropdownMenuItem
-											className="cursor-pointer"
-											onSelect={(event) => {
-												event.preventDefault()
-												setEditOpen(true)
-											}}>
-											<Pencil />
-											Edit
-										</DropdownMenuItem>
-									)}
-									{canDelete && (
-										<DropdownMenuItem
-											variant="destructive"
-											className="cursor-pointer"
-											disabled={deletePhoto.isPending}
-											onSelect={(event) => {
-												event.preventDefault()
-												setDeleteDialogOpen(true)
-											}}>
-											<Trash2 />
-											Delete
-										</DropdownMenuItem>
-									)}
-								</DropdownMenuContent>
-							</DropdownMenu>
+							{isMobile ? (
+								<Sheet
+									open={optionsOpen}
+									onOpenChange={setOptionsOpen}>
+									<SheetTrigger asChild>{optionsTrigger}</SheetTrigger>
+									<SheetContent
+										side="bottom"
+										overlayClassName="bg-black/20"
+										className="inset-x-2 bottom-2 gap-0 rounded-3xl border border-white/40 bg-white/34 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/12 dark:bg-slate-950/20">
+										<SheetTitle className="px-3 py-2 text-sm">
+											Photo options
+										</SheetTitle>
+										<SheetDescription className="sr-only">
+											Choose what to do with this photo
+										</SheetDescription>
+										{options.map(
+											({ label, icon: Icon, destructive, onSelect }) => (
+												<button
+													key={label}
+													type="button"
+													disabled={destructive && deletePhoto.isPending}
+													onClick={() => {
+														setOptionsOpen(false)
+														onSelect()
+													}}
+													className={cn(
+														"flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm hover:bg-white/30 active:bg-white/30 disabled:opacity-50 dark:hover:bg-white/10 dark:active:bg-white/10 [&_svg]:size-4 [&_svg]:text-muted-foreground",
+														destructive &&
+															"text-destructive-foreground [&_svg]:text-destructive-foreground"
+													)}>
+													<Icon />
+													{label}
+												</button>
+											)
+										)}
+									</SheetContent>
+								</Sheet>
+							) : (
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										{optionsTrigger}
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="end">
+										{options.map(
+											({ label, icon: Icon, destructive, onSelect }) => (
+												<DropdownMenuItem
+													key={label}
+													variant={destructive ? "destructive" : "default"}
+													className="cursor-pointer"
+													disabled={destructive && deletePhoto.isPending}
+													onSelect={(event) => {
+														event.preventDefault()
+														onSelect()
+													}}>
+													<Icon />
+													{label}
+												</DropdownMenuItem>
+											)
+										)}
+									</DropdownMenuContent>
+								</DropdownMenu>
+							)}
 							{canDelete && (
 								<Dialog
 									open={deleteDialogOpen}

@@ -3,6 +3,7 @@
 namespace App\Http\Services;
 
 use App\Models\Photo;
+use App\Models\PhotoImage;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -10,15 +11,18 @@ use RuntimeException;
 class UnsplashService extends Service
 {
 	/**
-	 * A random Unsplash photo matching one of the configured Nairobi/Kenya
-	 * searches that hasn't already been posted (photos.unsplash_id is
-	 * unique), trying a few searches before giving up.
+	 * Up to $count random Unsplash photos from one of the configured
+	 * Nairobi/Kenya searches that haven't already been posted, as a cover
+	 * or as an extra image (unsplash_id is unique on both tables). Tries a
+	 * few searches for a full set, then settles for the biggest set found
+	 * rather than posting nothing.
 	 *
-	 * @return array<string, mixed> The photo as returned by the Unsplash API
+	 * @return array<int, array<string, mixed>> Photos as returned by the Unsplash API
 	 */
-	public function randomUnusedPhoto(int $attempts = 3): array
+	public function randomUnusedPhotos(int $count, int $attempts = 3): array
 	{
 		$queries = collect(config('services.unsplash.queries'))->shuffle();
+		$best = [];
 
 		foreach ($queries->take($attempts) as $query) {
 			$candidates = $this->client()
@@ -30,18 +34,33 @@ class UnsplashService extends Service
 				->throw()
 				->json();
 
+			$ids = collect($candidates)->pluck('id');
 			$used = Photo::query()
-				->whereIn('unsplash_id', collect($candidates)->pluck('id'))
+				->whereIn('unsplash_id', $ids)
 				->pluck('unsplash_id')
+				->merge(PhotoImage::query()
+					->whereIn('unsplash_id', $ids)
+					->pluck('unsplash_id'))
 				->all();
 
-			$fresh = collect($candidates)->first(
-				fn(array $candidate) => ! in_array($candidate['id'], $used, true)
-			);
+			$fresh = collect($candidates)
+				->reject(fn(array $candidate) => in_array($candidate['id'], $used, true))
+				->unique('id')
+				->take($count)
+				->values()
+				->all();
 
-			if ($fresh) {
+			if (count($fresh) === $count) {
 				return $fresh;
 			}
+
+			if (count($fresh) > count($best)) {
+				$best = $fresh;
+			}
+		}
+
+		if ($best !== []) {
+			return $best;
 		}
 
 		throw new RuntimeException('Unsplash returned no photos that haven\'t been posted already.');
@@ -60,13 +79,20 @@ class UnsplashService extends Service
 	}
 
 	/**
-	 * The text credit Unsplash asks for, e.g. "Photo by Jane Doe on Unsplash".
+	 * The text credit Unsplash asks for, e.g. "Photo by Jane Doe (@jane) on
+	 * Unsplash", naming each photographer once across several photos.
 	 *
-	 * @param  array<string, mixed>  $photo
+	 * @param  array<string, mixed>  ...$photos
 	 */
-	public static function credit(array $photo): string
+	public static function credit(array ...$photos): string
 	{
-		return 'Photo by ' . $photo['user']['name'] . ' (@' . $photo['user']['username'] . ') on Unsplash';
+		$photographers = collect($photos)
+			->pluck('user')
+			->unique('username')
+			->map(fn(array $user) => $user['name'] . ' (@' . $user['username'] . ')')
+			->join(', ', ' and ');
+
+		return (count($photos) > 1 ? 'Photos' : 'Photo') . ' by ' . $photographers . ' on Unsplash';
 	}
 
 	private function client(): PendingRequest

@@ -6,6 +6,7 @@ use App\Console\Commands\PostSeedPhotos;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoCompetitionWinner;
+use App\Models\PhotoImage;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\PhotoCompetitionReminderNotification;
@@ -93,7 +94,7 @@ class PostSeedPhotosTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_posts_a_hotlinked_unsplash_photo_credited_to_the_photographer(): void
+    public function test_posts_two_hotlinked_unsplash_photos_credited_to_the_photographer(): void
     {
         $this->fakeUnsplash();
         $competition = $this->competition();
@@ -109,12 +110,43 @@ class PostSeedPhotosTest extends TestCase
         $this->assertStringStartsWith('https://images.unsplash.com/photo-unsplash-1?ixid=abc&w=2160', $photo->url);
         $this->assertStringStartsWith('https://images.unsplash.com/photo-unsplash-1?ixid=abc&w=1080', $photo->thumbnail_url);
         $this->assertSame(
-            'Matatus on Moi Avenue at dusk. Photo by Jane Mwangi (@janem) on Unsplash',
+            'Matatus on Moi Avenue at dusk. Photos by Jane Mwangi (@janem) on Unsplash',
             $photo->caption,
         );
 
+        $image = PhotoImage::where('photo_id', $photo->id)->sole();
+        $this->assertSame('unsplash-2', $image->unsplash_id);
+        $this->assertSame(1, $image->position);
+        $this->assertStringStartsWith('https://images.unsplash.com/photo-unsplash-2?ixid=abc&w=2160', $image->url);
+        $this->assertStringStartsWith('https://images.unsplash.com/photo-unsplash-2?ixid=abc&w=1080', $image->thumbnail_url);
+
         Http::assertSent(fn($request) => str_contains($request->url(), '/photos/unsplash-1/download')
             && $request->header('Authorization') === ['Client-ID test-key']);
+        Http::assertSent(fn($request) => str_contains($request->url(), '/photos/unsplash-2/download'));
+    }
+
+    public function test_photos_by_different_photographers_credit_each_one(): void
+    {
+        $other = array_merge($this->unsplashPhoto('y'), ['user' => ['name' => 'Otieno Ouma', 'username' => 'otieno']]);
+
+        $this->assertSame(
+            'Matatus on Moi Avenue at dusk. Photos by Jane Mwangi (@janem) and Otieno Ouma (@otieno) on Unsplash',
+            PostSeedPhotos::caption($this->unsplashPhoto('x'), $other),
+        );
+    }
+
+    public function test_an_unsplash_photo_used_as_a_second_image_is_not_posted_again(): void
+    {
+        $this->fakeUnsplash(['used-as-image', 'fresh-1', 'fresh-2']);
+        $competition = $this->competition();
+        PhotoImage::factory()->create(['unsplash_id' => 'used-as-image']);
+        $this->travelToDue($competition, 0);
+
+        $this->artisan('app:post-seed-photos')->assertSuccessful();
+
+        $photo = Photo::where('competition_id', $competition->id)->sole();
+        $this->assertSame('fresh-1', $photo->unsplash_id);
+        $this->assertSame('fresh-2', PhotoImage::where('photo_id', $photo->id)->sole()->unsplash_id);
     }
 
     public function test_posts_one_photo_per_day_for_three_days_from_the_same_seed_user(): void
@@ -180,7 +212,9 @@ class PostSeedPhotosTest extends TestCase
 
         $this->artisan('app:post-seed-photos')->assertSuccessful();
 
-        $this->assertTrue(Photo::where('competition_id', $competition->id)->where('unsplash_id', 'brand-new')->exists());
+        // Only one unused photo came back, so the post goes up with just that one.
+        $photo = Photo::where('competition_id', $competition->id)->where('unsplash_id', 'brand-new')->sole();
+        $this->assertSame(0, $photo->images()->count());
     }
 
     public function test_a_long_description_is_trimmed_but_the_credit_is_kept_whole(): void

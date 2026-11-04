@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Http\Services\UnsplashService;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
+use App\Models\PhotoImage;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Console\Attributes\Description;
@@ -17,6 +18,9 @@ use Illuminate\Support\Str;
 class PostSeedPhotos extends Command
 {
     public const PHOTOS_PER_COMPETITION = 3;
+
+    /** Each seed post is a carousel: a cover plus extra images. */
+    public const IMAGES_PER_POST = 2;
 
     /**
      * Runs every few minutes (routes/console.php) and posts at most one
@@ -56,25 +60,42 @@ class PostSeedPhotos extends Command
             return self::SUCCESS;
         }
 
-        $unsplashPhoto = $unsplash->randomUnusedPhoto();
+        $unsplashPhotos = $unsplash->randomUnusedPhotos(self::IMAGES_PER_POST);
+        [$cover, $extras] = [$unsplashPhotos[0], array_slice($unsplashPhotos, 1)];
 
         $photo = Photo::create([
             'competition_id' => $competition->id,
             'user_id' => $user->id,
             'disk' => Photo::DISK_REMOTE,
-            'path' => static::sizedUrl($unsplashPhoto['urls']['raw'], 2160, 80),
-            'thumbnail_path' => static::sizedUrl($unsplashPhoto['urls']['raw'], 1080, 75),
-            'caption' => static::caption($unsplashPhoto),
-            'unsplash_id' => $unsplashPhoto['id'],
-            'width' => $unsplashPhoto['width'],
-            'height' => $unsplashPhoto['height'],
+            'path' => static::sizedUrl($cover['urls']['raw'], 2160, 80),
+            'thumbnail_path' => static::sizedUrl($cover['urls']['raw'], 1080, 75),
+            'caption' => static::caption(...$unsplashPhotos),
+            'unsplash_id' => $cover['id'],
+            'width' => $cover['width'],
+            'height' => $cover['height'],
         ]);
 
-        // The photo is already live, so a failed download ping shouldn't
-        // fail the run (and make the next run post a duplicate).
-        rescue(fn() => $unsplash->trackDownload($unsplashPhoto));
+        collect($extras)->each(fn(array $extra, int $index) => PhotoImage::create([
+            'photo_id' => $photo->id,
+            'disk' => Photo::DISK_REMOTE,
+            'path' => static::sizedUrl($extra['urls']['raw'], 2160, 80),
+            'thumbnail_path' => static::sizedUrl($extra['urls']['raw'], 1080, 75),
+            'unsplash_id' => $extra['id'],
+            'width' => $extra['width'],
+            'height' => $extra['height'],
+            'position' => $index + 1,
+        ]));
 
-        $this->components->info("{$user->name} posted seed photo {$photo->id} ({$unsplashPhoto['id']}).");
+        // The photos are already live, so a failed download ping shouldn't
+        // fail the run (and make the next run post a duplicate).
+        collect($unsplashPhotos)->each(fn(array $unsplashPhoto) => rescue(fn() => $unsplash->trackDownload($unsplashPhoto)));
+
+        $this->components->info(sprintf(
+            '%s posted seed photo %s (%s).',
+            $user->name,
+            $photo->id,
+            collect($unsplashPhotos)->pluck('id')->join(', '),
+        ));
 
         return self::SUCCESS;
     }
@@ -112,16 +133,17 @@ class PostSeedPhotos extends Command
     }
 
     /**
-     * The photo's own description (when it has one) followed by the
-     * photographer credit, kept within the 255-character caption column
-     * without ever truncating the credit.
+     * The cover's own description (when it has one) followed by the credit
+     * for every photographer in the post, kept within the 255-character
+     * caption column without ever truncating the credit.
      *
-     * @param  array<string, mixed>  $unsplashPhoto
+     * @param  array<string, mixed>  ...$unsplashPhotos  The cover first
      */
-    public static function caption(array $unsplashPhoto): string
+    public static function caption(array ...$unsplashPhotos): string
     {
-        $credit = UnsplashService::credit($unsplashPhoto);
-        $description = trim((string) ($unsplashPhoto['description'] ?? $unsplashPhoto['alt_description'] ?? ''));
+        $credit = UnsplashService::credit(...$unsplashPhotos);
+        $cover = $unsplashPhotos[0];
+        $description = trim((string) ($cover['description'] ?? $cover['alt_description'] ?? ''));
 
         if ($description === '') {
             return $credit;

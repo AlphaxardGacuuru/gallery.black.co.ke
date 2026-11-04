@@ -24,6 +24,7 @@ class PhotoImage extends Model
         'disk',
         'path',
         'thumbnail_path',
+        'unsplash_id',
         'width',
         'height',
         'position',
@@ -43,14 +44,22 @@ class PhotoImage extends Model
     protected function url(): Attribute
     {
         return Attribute::make(
-            get: fn() => Storage::disk($this->disk)->url($this->path),
+            get: fn() => $this->resolveUrl($this->path),
         );
     }
 
     protected function thumbnailUrl(): Attribute
     {
         return Attribute::make(
-            get: fn() => Storage::disk($this->disk)->url($this->thumbnail_path ?? $this->path),
+            get: fn() => $this->resolveUrl($this->thumbnail_path ?? $this->path),
         );
+    }
+
+    /** Hotlinked seed images (Photo::DISK_REMOTE) store the full URL as their path. */
+    private function resolveUrl(string $path): string
+    {
+        return $this->disk === Photo::DISK_REMOTE
+            ? $path
+            : Storage::disk($this->disk)->url($path);
     }
 }
