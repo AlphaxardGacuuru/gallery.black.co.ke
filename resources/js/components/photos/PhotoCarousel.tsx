@@ -44,7 +44,7 @@ export function PhotoCarousel({ slides }: { slides: Slide[] }) {
 			<img
 				src={slides[0]?.url}
 				alt={slides[0]?.alt}
-				className="max-h-full max-w-full object-contain"
+				className="h-full w-full object-contain"
 			/>
 		)
 	}
@@ -63,7 +63,7 @@ export function PhotoCarousel({ slides }: { slides: Slide[] }) {
 							src={slide.url}
 							alt={slide.alt}
 							loading={slideIndex === 0 ? "eager" : "lazy"}
-							className="max-h-full max-w-full object-contain"
+							className="h-full w-full object-contain"
 						/>
 					</div>
 				))}

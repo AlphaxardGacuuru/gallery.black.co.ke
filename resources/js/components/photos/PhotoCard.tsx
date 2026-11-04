@@ -284,7 +284,9 @@ export function PhotoCard({
 				aria-label="View full photo"
 				className="relative block w-full">
 				{photo.images.length > 0 ? (
-					<div style={{ aspectRatio: tallestAspectRatio(photo) }}>
+					<div
+						className="w-full"
+						style={{ aspectRatio: tallestAspectRatio(photo) }}>
 						<PhotoCarousel
 							slides={[photo, ...photo.images].map((image) => ({
 								url: image.thumbnailUrl,
@@ -325,7 +327,7 @@ export function PhotoCard({
 						aria-label={photo.isLikedByViewer ? "Liked" : "Like photo"}
 						disabled={!canLike || photo.isLikedByViewer || likePhoto.isPending}
 						onClick={() => canLike && likePhoto.mutate(photo.id)}
-						className="flex shrink-0 cursor-pointer items-center gap-1 px-1 text-sm text-muted-foreground disabled:cursor-default">
+						className="flex shrink-0 cursor-pointer items-center gap-1.5 p-2 text-sm text-muted-foreground disabled:cursor-default">
 						<Heart
 							className={cn(
 								"size-4 shrink-0",
@@ -334,7 +336,7 @@ export function PhotoCard({
 						/>
 						<span
 							className={cn(
-								"tabular-nums p-2",
+								"tabular-nums",
 								photo.isLikedByViewer && "text-red-500"
 							)}>
 							{photo.likesCount}
