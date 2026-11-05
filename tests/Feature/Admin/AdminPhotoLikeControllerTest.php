@@ -179,4 +179,34 @@ class AdminPhotoLikeControllerTest extends TestCase
             ->getJson("/api/admin/photos/{$photo->id}/likes?seed=bogus")
             ->assertUnprocessable();
     }
+
+    public function test_admin_can_filter_to_users_who_like_the_photo(): void
+    {
+        $photo = Photo::factory()->create();
+        $otherPhoto = Photo::factory()->create();
+        $liker = User::factory()->create(['name' => 'Alice Liker']);
+        $seedLiker = User::factory()->create(['name' => 'Sam Seed']);
+        $seedLiker->forceFill(['is_seed' => true])->save();
+        $otherLiker = User::factory()->create(['name' => 'Olive Other']);
+        $nonLiker = User::factory()->create(['name' => 'Bob Bystander']);
+
+        collect([[$photo, $liker], [$photo, $seedLiker], [$otherPhoto, $otherLiker]])
+            ->each(fn (array $like) => PhotoLike::create(['photo_id' => $like[0]->id, 'user_id' => $like[1]->id]));
+
+        $admin = $this->admin();
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/admin/photos/{$photo->id}/likes?liked=1&per_page=50")
+            ->assertOk()
+            ->assertJsonPath('meta.total', 2)
+            ->assertJsonPath('data.0.id', $liker->id)
+            ->assertJsonPath('data.0.likesPhoto', true)
+            ->assertJsonPath('data.1.id', $seedLiker->id);
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/admin/photos/{$photo->id}/likes?liked=1&seed=exclude&per_page=50")
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.id', $liker->id);
+    }
 }

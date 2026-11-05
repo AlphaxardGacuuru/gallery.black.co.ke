@@ -13,8 +13,9 @@ use Illuminate\Http\Request;
 class AdminPhotoLikeController extends Controller
 {
     /**
-     * Users matching an optional name search and seed filter ("seed" is
-     * "only" or "exclude"), each annotated with whether they already like
+     * Users matching an optional name search, seed filter ("seed" is
+     * "only" or "exclude") and "liked" filter (only users who already like
+     * this photo), each annotated with whether they already like
      * this specific photo, the pool an admin picks from in the "manage
      * likes" dialog.
      */
@@ -22,6 +23,7 @@ class AdminPhotoLikeController extends Controller
     {
         $request->validate([
             'seed' => 'nullable|in:only,exclude',
+            'liked' => 'nullable|boolean',
         ]);
 
         $users = User::query()
@@ -36,6 +38,15 @@ class AdminPhotoLikeController extends Controller
             ->when(
                 $request->input('seed') === 'exclude',
                 fn($query) => $query->real()
+            )
+            ->when(
+                $request->boolean('liked'),
+                fn($query) => $query->whereIn(
+                    'id',
+                    PhotoLike::query()
+                        ->select('user_id')
+                        ->where('photo_id', $photo->id)
+                )
             )
             ->addSelect([
                 'likes_photo' => PhotoLike::query()

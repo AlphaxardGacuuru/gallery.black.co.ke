@@ -56,8 +56,9 @@ export function ManageLikesDialog({
 function ManageLikesBody({ photoId }: { photoId: string }) {
 	const [search, setSearch] = useState("")
 	const [seed, setSeed] = useState<AdminPhotoLikersSeedFilter>(null)
+	const [likedOnly, setLikedOnly] = useState(false)
 	const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-		useAdminPhotoLikers(photoId, search, seed)
+		useAdminPhotoLikers(photoId, search, seed, likedOnly)
 	const toggleLike = useToggleAdminPhotoLike(photoId)
 	const getInitials = useInitials()
 	const users = data?.pages.flatMap((page) => page.data) ?? []
@@ -84,6 +85,20 @@ function ManageLikesBody({ photoId }: { photoId: string }) {
 						{filter.label}
 					</button>
 				))}
+				{/* Combines with the seed filters above. */}
+				<button
+					type="button"
+					aria-pressed={likedOnly}
+					onClick={() => setLikedOnly((current) => !current)}
+					className={cn(
+						"flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition-colors",
+						likedOnly
+							? "border-primary bg-primary text-primary-foreground"
+							: "hover:bg-muted"
+					)}>
+					<Heart className={cn("size-3", likedOnly && "fill-current")} />
+					Liked
+				</button>
 			</div>
 			<div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
 				{isLoading ? (
@@ -92,7 +107,7 @@ function ManageLikesBody({ photoId }: { photoId: string }) {
 					</div>
 				) : users.length === 0 ? (
 					<p className="py-6 text-center text-sm text-muted-foreground">
-						No users found.
+						{likedOnly ? "No one has liked this photo yet." : "No users found."}
 					</p>
 				) : (
 					<>

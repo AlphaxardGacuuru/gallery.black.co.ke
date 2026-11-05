@@ -692,15 +692,17 @@ export type AdminPhotoLikersSeedFilter = "only" | "exclude" | null
 export function useAdminPhotoLikers(
 	photoId: string,
 	search: string,
-	seed: AdminPhotoLikersSeedFilter = null
+	seed: AdminPhotoLikersSeedFilter = null,
+	likedOnly = false
 ) {
 	return useInfiniteQuery({
-		queryKey: ["admin", "photo-likes", photoId, search, seed],
+		queryKey: ["admin", "photo-likes", photoId, search, seed, likedOnly],
 		queryFn: ({ pageParam }) =>
 			Axios.get<AdminPhotoLikersPage>(`api/admin/photos/${photoId}/likes`, {
 				params: {
 					name: search || undefined,
 					seed: seed ?? undefined,
+					liked: likedOnly ? 1 : undefined,
 					page: pageParam,
 				},
 			}).then((res) => res.data),
