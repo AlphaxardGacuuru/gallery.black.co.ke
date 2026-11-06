@@ -19,6 +19,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { SelectField, SelectItem } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import VerifiedBadge from "@/components/verified-badge"
@@ -36,6 +37,30 @@ import {
 	useRequestUserPhone,
 	useToggleUserVerified,
 } from "@/queries/admin"
+
+type UserFilterKey = "verified" | "hasPhone" | "seed" | "installed" | "referred"
+type UserFilterValue = "any" | "yes" | "no"
+
+const USER_FILTERS: {
+	key: UserFilterKey
+	label: string
+	yes: string
+	no: string
+}[] = [
+	{ key: "verified", label: "Verified", yes: "Verified", no: "Not verified" },
+	{ key: "hasPhone", label: "Phone", yes: "Has phone", no: "No phone" },
+	{ key: "seed", label: "Account", yes: "Seed accounts", no: "Real users" },
+	{ key: "installed", label: "App", yes: "Installed", no: "Not installed" },
+	{ key: "referred", label: "Referral", yes: "Referred", no: "Not referred" },
+]
+
+const DEFAULT_FILTERS: Record<UserFilterKey, UserFilterValue> = {
+	verified: "any",
+	hasPhone: "any",
+	seed: "any",
+	installed: "any",
+	referred: "any",
+}
 
 function initials(name?: string | null): string {
 	return (name?.trim() || "?").slice(0, 2).toUpperCase()
@@ -173,7 +198,7 @@ function ReferredByCell({ user }: { user: AdminUser }) {
 	const [open, setOpen] = useState(false)
 	const [search, setSearch] = useState("")
 	const [referrer, setReferrer] = useState<AdminUser | null>(null)
-	const { data, isFetching } = useAdminUsers(search, 1, 8, open)
+	const { data, isFetching } = useAdminUsers({ name: search }, 1, 8, open)
 	const attachReferrer = useAttachReferrer()
 
 	if (user.referredBy) {
@@ -290,7 +315,28 @@ export default function AdminUsers() {
 	const [search, setSearch] = useState("")
 	const [page, setPage] = useState(1)
 	const [perPage, setPerPage] = useState(20)
-	const { data, isLoading } = useAdminUsers(search, page, perPage)
+	const [filters, setFilters] =
+		useState<Record<UserFilterKey, UserFilterValue>>(DEFAULT_FILTERS)
+	const { data, isLoading } = useAdminUsers(
+		{
+			search,
+			...(Object.fromEntries(
+				Object.entries(filters)
+					.filter(([, value]) => value !== "any")
+					.map(([key, value]) => [key, value === "yes"])
+			) as Partial<Record<UserFilterKey, boolean>>),
+		},
+		page,
+		perPage
+	)
+	const hasActiveFilters =
+		search !== "" || Object.values(filters).some((value) => value !== "any")
+
+	function resetFilters() {
+		setSearch("")
+		setFilters(DEFAULT_FILTERS)
+		setPage(1)
+	}
 	// The table's own total shrinks while searching, so the card reads the
 	// unfiltered count the dashboard already computes.
 	const { data: dashboard } = useAdminDashboard()
@@ -439,7 +485,7 @@ export default function AdminUsers() {
 				<Heading
 					variant="small"
 					title="Users"
-					description="Grant or revoke the verified badge shown next to a user's avatar"
+					description="Find users, manage verified badges, referrers and M-Pesa payouts"
 				/>
 
 				<div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
@@ -455,15 +501,48 @@ export default function AdminUsers() {
 				</div>
 
 				<Card>
-					<CardContent className="flex flex-wrap items-center gap-4">
-						<Input
-							label="Search by name"
-							value={search}
-							onChange={(event) => {
-								setSearch(event.target.value)
-								setPage(1)
-							}}
-						/>
+					<CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+						<div className="sm:col-span-2">
+							{/* Search Start */}
+							<Input
+								label="Search name, email or phone"
+								value={search}
+								onChange={(event) => {
+									setSearch(event.target.value)
+									setPage(1)
+								}}
+							/>
+							{/* Search End */}
+						</div>
+						{USER_FILTERS.map((filter) => (
+							<div key={filter.key}>
+								{/* Filter Select Start */}
+								<SelectField
+									label={filter.label}
+									value={filters[filter.key]}
+									onValueChange={(value) => {
+										setFilters((current) => ({
+											...current,
+											[filter.key]: value as UserFilterValue,
+										}))
+										setPage(1)
+									}}>
+									<SelectItem value="any">Any</SelectItem>
+									<SelectItem value="yes">{filter.yes}</SelectItem>
+									<SelectItem value="no">{filter.no}</SelectItem>
+								</SelectField>
+								{/* Filter Select End */}
+							</div>
+						))}
+						{hasActiveFilters && (
+							<div className="flex items-center">
+								<Button
+									variant="ghost"
+									onClick={resetFilters}>
+									Clear filters
+								</Button>
+							</div>
+						)}
 					</CardContent>
 				</Card>
 

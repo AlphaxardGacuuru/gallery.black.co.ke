@@ -73,18 +73,42 @@ type AdminUsersResponse = {
 	meta: { current_page: number; last_page: number; total: number }
 }
 
+/** Each yes/no filter is left out of the request when undefined ("any"). */
+export type AdminUserFilters = {
+	/** Name only. */
+	name?: string
+	/** Name, email or phone. */
+	search?: string
+	verified?: boolean
+	hasPhone?: boolean
+	seed?: boolean
+	installed?: boolean
+	referred?: boolean
+}
+
 export function useAdminUsers(
-	search: string,
+	filters: AdminUserFilters,
 	page = 1,
 	perPage = 20,
 	enabled = true
 ) {
 	return useQuery({
 		enabled,
-		queryKey: ["admin", "users", search, page, perPage],
+		queryKey: ["admin", "users", filters, page, perPage],
 		queryFn: () =>
 			Axios.get<AdminUsersResponse>("api/admin/users", {
-				params: { name: search || undefined, page, per_page: perPage },
+				params: {
+					...Object.fromEntries(
+						Object.entries(filters)
+							.filter(([, value]) => value !== undefined && value !== "")
+							.map(([key, value]) => [
+								key,
+								typeof value === "boolean" ? Number(value) : value,
+							])
+					),
+					page,
+					per_page: perPage,
+				},
 			}).then((res) => res.data),
 	})
 }

@@ -174,17 +174,65 @@ class UserService extends Service
 		return new UserResource(auth('sanctum')->user());
 	}
 
+	/**
+	 * Filters for the admin users table. Each yes/no filter is skipped when
+	 * absent, so "any" is simply not sending it.
+	 */
 	protected function search($query, Request $request)
 	{
-		if ($request->filled('roleId')) {
-			$roleName = Role::query()->findOrFail($request->input('roleId'))->name;
-			$query = $query->role($roleName);
-		}
-
-		if ($request->filled('name')) {
-			$query = $query->where('name', 'LIKE', '%' . $request->input('name') . '%');
-		}
-
-		return $query;
+		return $query
+			->when(
+				$request->filled('roleId'),
+				fn($query) => $query->role(
+					Role::query()
+						->findOrFail($request->input('roleId'))
+						->name
+				)
+			)
+			->when(
+				$request->filled('name'),
+				fn($query) => $query->where('name', 'LIKE', '%' . $request->input('name') . '%')
+			)
+			->when(
+				$request->filled('search'),
+				fn($query) => $query->where(
+					fn($query) => $query
+						->where('name', 'LIKE', '%' . $request->input('search') . '%')
+						->orWhere('email', 'LIKE', '%' . $request->input('search') . '%')
+						->orWhere('phone', 'LIKE', '%' . $request->input('search') . '%')
+				)
+			)
+			->when(
+				$request->filled('verified'),
+				fn($query) => $query->where('verified', $request->boolean('verified'))
+			)
+			->when(
+				$request->filled('hasPhone'),
+				fn($query) => $request->boolean('hasPhone')
+					? $query
+						->whereNotNull('phone')
+						->where('phone', '!=', '')
+					: $query->where(
+						fn($query) => $query
+							->whereNull('phone')
+							->orWhere('phone', '')
+					)
+			)
+			->when(
+				$request->filled('seed'),
+				fn($query) => $query->where('is_seed', $request->boolean('seed'))
+			)
+			->when(
+				$request->filled('installed'),
+				fn($query) => $request->boolean('installed')
+					? $query->whereNotNull('settings->pwaInstalledAt')
+					: $query->whereNull('settings->pwaInstalledAt')
+			)
+			->when(
+				$request->filled('referred'),
+				fn($query) => $request->boolean('referred')
+					? $query->whereHas('referral')
+					: $query->whereDoesntHave('referral')
+			);
 	}
 }
