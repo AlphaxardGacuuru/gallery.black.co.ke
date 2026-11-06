@@ -199,9 +199,9 @@ function KopokopoRecipientCell({
 }
 
 /**
- * Flag a user for suspected abuse (their likes stop counting, they can't
- * win or be paid, and they're notified on every channel), or lift it.
- * Flagging asks for confirmation and an admin-only reason.
+ * Flag switch: turning it on opens a confirmation dialog with an
+ * admin-only reason (their likes stop counting, they can't win or be paid,
+ * and they're notified on every channel); turning it off lifts the flag.
  */
 function FlagCell({ user }: { user: AdminUser }) {
 	const [open, setOpen] = useState(false)
@@ -224,77 +224,71 @@ function FlagCell({ user }: { user: AdminUser }) {
 		)
 	}
 
-	if (user.flaggedAt) {
-		return (
-			<div className="flex flex-wrap items-center gap-1.5">
-				<Badge
-					variant="destructive"
-					title={user.flagReason ?? undefined}>
-					Flagged
-				</Badge>
-				{user.flagRefutedAt && (
-					<Badge
-						variant="outline"
-						title="Updated their phone number to dispute the flag">
-						Refuted
-					</Badge>
-				)}
-				<Button
-					variant="outline"
-					size="sm"
-					disabled={flagUser.isPending}
-					onClick={() => submit(false)}>
-					Unflag
-				</Button>
-			</div>
-		)
-	}
-
 	return (
-		<Dialog
-			open={open}
-			onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button
+		<div
+			className="flex items-center gap-1.5"
+			title={user.flagReason ?? undefined}>
+			<Switch
+				checked={!!user.flaggedAt}
+				disabled={flagUser.isPending}
+				// Turning it on asks for confirmation first; turning it off
+				// lifts the flag straight away.
+				onCheckedChange={(checked) => (checked ? setOpen(true) : submit(false))}
+				aria-label={
+					user.flaggedAt ? `Unflag ${user.name}` : `Flag ${user.name}`
+				}
+			/>
+			{user.flagRefutedAt && (
+				<Badge
 					variant="outline"
-					size="sm">
-					Flag
-				</Button>
-			</DialogTrigger>
-			<DialogContent>
-				<DialogTitle>Flag {user.name}?</DialogTitle>
-				<DialogDescription>
-					Their likes stop counting in the running challenge, and they can't
-					like, win or be paid until you unflag them. They'll get an email, push
-					and in-app notification asking them to update their phone number if
-					it's a mistake.
-				</DialogDescription>
+					title="Updated their phone number to dispute the flag">
+					Refuted
+				</Badge>
+			)}
+			<Dialog
+				open={open}
+				onOpenChange={(nextOpen) => {
+					setOpen(nextOpen)
 
-				{/* Reason Start */}
-				<Input
-					label="Reason (only admins see this)"
-					value={reason}
-					onChange={(event) => setReason(event.target.value)}
-					maxLength={255}
-				/>
-				{/* Reason End */}
+					if (!nextOpen) {
+						setReason("")
+					}
+				}}>
+				<DialogContent>
+					<DialogTitle>Flag {user.name}?</DialogTitle>
+					<DialogDescription>
+						Their likes stop counting in the running challenge, and they can't
+						like, win or be paid until you unflag them. They'll get an email,
+						push and in-app notification asking them to update their phone
+						number if it's a mistake.
+					</DialogDescription>
 
-				<DialogFooter className="gap-2">
-					<DialogClose asChild>
-						<Button variant="secondary">Cancel</Button>
-					</DialogClose>
-					<Button
-						variant="destructive"
-						disabled={flagUser.isPending}
-						onClick={() => submit(true)}>
-						{flagUser.isPending && (
-							<Loader2 className="size-3.5 animate-spin" />
-						)}
-						Flag user
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+					{/* Reason Start */}
+					<Input
+						label="Reason (only admins see this)"
+						value={reason}
+						onChange={(event) => setReason(event.target.value)}
+						maxLength={255}
+					/>
+					{/* Reason End */}
+
+					<DialogFooter className="gap-2">
+						<DialogClose asChild>
+							<Button variant="secondary">Cancel</Button>
+						</DialogClose>
+						<Button
+							variant="destructive"
+							disabled={flagUser.isPending}
+							onClick={() => submit(true)}>
+							{flagUser.isPending && (
+								<Loader2 className="size-3.5 animate-spin" />
+							)}
+							Flag user
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</div>
 	)
 }
 
