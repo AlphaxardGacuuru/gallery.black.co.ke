@@ -38,6 +38,25 @@ type CurrentCompetitionData = {
 	extraPhoto: ExtraPhotoState
 }
 
+/** Which optional, admin-switchable features are on. Public, so the
+ *  welcome page can read it before anyone signs in. */
+export type AppFeatures = {
+	photoSales: boolean
+	extraEntry: boolean
+	extraPhotos: boolean
+	maxPhotosPerEntry: number
+}
+
+export function useAppFeatures() {
+	return useQuery({
+		queryKey: ["photos", "features"],
+		queryFn: () =>
+			Axios.get<{ data: AppFeatures }>("api/photos/features").then(
+				(res) => res.data.data
+			),
+	})
+}
+
 export function useCurrentCompetition() {
 	return useQuery({
 		queryKey: ["photos", "current"],

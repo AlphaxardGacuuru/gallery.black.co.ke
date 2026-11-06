@@ -3,8 +3,11 @@
 namespace App\Http\Services;
 
 use App\Enums\EmailNotificationCategory;
+use App\Events\UserFlaggedEvent;
 use App\Events\UserVerifiedEvent;
 use App\Http\Resources\UserResource;
+use App\Models\Photo;
+use App\Models\PhotoLike;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -101,6 +104,55 @@ class UserService extends Service
 		return [$saved, 'Account Updated', $user->fresh()];
 	}
 
+	/**
+	 * Flag $user for suspected abuse: their likes stop counting, they can't
+	 * like, win or be paid, and they're told how to dispute it.
+	 */
+	public function flag(User $user, ?string $reason): void
+	{
+		$user->forceFill([
+			'flagged_at' => now(),
+			'flag_reason' => $reason,
+			'flag_refuted_at' => null,
+		])->save();
+
+		$this->recountLikedPhotos($user);
+
+		UserFlaggedEvent::dispatch($user);
+	}
+
+	/**
+	 * Lift the flag, so $user's likes count again.
+	 */
+	public function unflag(User $user): void
+	{
+		$user->forceFill([
+			'flagged_at' => null,
+			'flag_reason' => null,
+			'flag_refuted_at' => null,
+		])->save();
+
+		$this->recountLikedPhotos($user);
+	}
+
+	/**
+	 * Recount every photo $user liked in the running challenge. Ended
+	 * challenges keep their counts, since their results are already decided.
+	 */
+	private function recountLikedPhotos(User $user): void
+	{
+		Photo::query()
+			->whereIn(
+				'id',
+				PhotoLike::query()
+					->select('photo_id')
+					->where('user_id', $user->id)
+			)
+			->whereHas('competition', fn($query) => $query->active())
+			->get()
+			->each(fn(Photo $photo) => $photo->recountLikes());
+	}
+
 	public function destroy(int|string $id): array
 	{
 		$user = User::query()->findOrFail($id);
@@ -143,6 +195,13 @@ class UserService extends Service
 
 		if ($user->isDirty('email')) {
 			$user->email_verified_at = null;
+		}
+
+		// A flagged user disputes the flag by updating their phone number
+		// (see UserFlaggedNotification). An admin reviews it from the users
+		// page; it doesn't lift the flag by itself.
+		if ($user->isFlagged() && $user->isDirty('phone') && $user->phone) {
+			$user->flag_refuted_at = now();
 		}
 
 		$user->save();
@@ -227,6 +286,12 @@ class UserService extends Service
 				fn($query) => $request->boolean('installed')
 					? $query->whereNotNull('settings->pwaInstalledAt')
 					: $query->whereNull('settings->pwaInstalledAt')
+			)
+			->when(
+				$request->filled('flagged'),
+				fn($query) => $request->boolean('flagged')
+					? $query->whereNotNull('flagged_at')
+					: $query->unflagged()
 			)
 			->when(
 				$request->filled('referred'),

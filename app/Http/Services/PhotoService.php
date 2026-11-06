@@ -324,6 +324,12 @@ class PhotoService extends Service
 			]);
 		}
 
+		if ($user->isFlagged()) {
+			throw ValidationException::withMessages([
+				'id' => 'Your account is flagged, so you can\'t like photos right now. Update your M-Pesa phone number in Settings > Profile to ask for a review.',
+			]);
+		}
+
 		if ($photo->likes()->where('user_id', $user->id)->exists()) {
 			return ['photo' => $photo, 'liked' => false];
 		}

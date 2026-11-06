@@ -61,6 +61,11 @@ export type AdminUser = {
 	gender: "male" | "female" | "other" | null
 	avatar: string | null
 	verified: boolean
+	flaggedAt: string | null
+	/** Admin-only note on why the user was flagged. */
+	flagReason?: string | null
+	/** When the flagged user disputed it by updating their phone number. */
+	flagRefutedAt: string | null
 	settings: UserSettings | null
 	pushSubscriptionsCount: number
 	/** Who this user is credited to as a referral, if anyone. */
@@ -84,6 +89,7 @@ export type AdminUserFilters = {
 	seed?: boolean
 	installed?: boolean
 	referred?: boolean
+	flagged?: boolean
 }
 
 export function useAdminUsers(
@@ -144,6 +150,31 @@ export function useAttachReferrer() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
 			queryClient.invalidateQueries({ queryKey: ["admin", "referrals"] })
+		},
+	})
+}
+
+/**
+ * Flag a user for suspected abuse (their likes stop counting and they're
+ * notified on every channel) or lift the flag. Likes change too, so the
+ * photo lists refresh along with the users table.
+ */
+export function useFlagUser() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: ({
+			userId,
+			flagged,
+			reason,
+		}: {
+			userId: string
+			flagged: boolean
+			reason?: string
+		}) => Axios.put(`api/admin/users/${userId}/flag`, { flagged, reason }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
+			queryClient.invalidateQueries({ queryKey: ["photos"] })
 		},
 	})
 }
@@ -700,6 +731,7 @@ export type AdminPhotoLiker = {
 	avatar: string | null
 	verified: boolean
 	isSeed: boolean
+	isFlagged: boolean
 	likesPhoto: boolean
 }
 
@@ -717,16 +749,26 @@ export function useAdminPhotoLikers(
 	photoId: string,
 	search: string,
 	seed: AdminPhotoLikersSeedFilter = null,
-	likedOnly = false
+	likedOnly = false,
+	flaggedOnly = false
 ) {
 	return useInfiniteQuery({
-		queryKey: ["admin", "photo-likes", photoId, search, seed, likedOnly],
+		queryKey: [
+			"admin",
+			"photo-likes",
+			photoId,
+			search,
+			seed,
+			likedOnly,
+			flaggedOnly,
+		],
 		queryFn: ({ pageParam }) =>
 			Axios.get<AdminPhotoLikersPage>(`api/admin/photos/${photoId}/likes`, {
 				params: {
 					name: search || undefined,
 					seed: seed ?? undefined,
 					liked: likedOnly ? 1 : undefined,
+					flagged: flaggedOnly ? 1 : undefined,
 					page: pageParam,
 				},
 			}).then((res) => res.data),
@@ -736,6 +778,24 @@ export function useAdminPhotoLikers(
 				? lastPage.meta.current_page + 1
 				: undefined,
 		gcTime: 0,
+	})
+}
+
+/** Delete every like on this photo from flagged users, then refetch. */
+export function useRemoveFlaggedLikes(photoId: string) {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: () =>
+			Axios.delete<{ data: { removed: number; likesCount: number } }>(
+				`api/admin/photos/${photoId}/likes/flagged`
+			).then((res) => res.data.data),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "photo-likes", photoId],
+			})
+			queryClient.invalidateQueries({ queryKey: ["photos"] })
+		},
 	})
 }
 

@@ -52,6 +52,13 @@ Schedule::command('app:post-seed-photos')
     ->everyTenMinutes()
     ->withoutOverlapping();
 
+// Seed users like every photo in the active challenge, a few at a time
+// across the days it runs (more for seed users' own photos). The command
+// works out which likes are due, so it's safe to run often.
+Schedule::command('app:post-seed-likes')
+    ->everyTenMinutes()
+    ->withoutOverlapping();
+
 Schedule::command('app:reconcile-kopokopo-transfers')
     ->everyFiveMinutes()
     ->withoutOverlapping();

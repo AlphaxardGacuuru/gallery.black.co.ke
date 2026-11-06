@@ -78,7 +78,7 @@ class PostSeedPhotosTest extends TestCase
     {
         $this->seed(SeedUserSeeder::class);
 
-        $this->assertSame(50, User::where('is_seed', true)->count());
+        $this->assertSame(100, User::where('is_seed', true)->count());
         $this->assertSame(0, User::real()->count());
     }
 

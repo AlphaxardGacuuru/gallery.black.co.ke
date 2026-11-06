@@ -347,6 +347,10 @@ class KopokopoTransferService extends Service
             return [false, 'This winner has no associated user', null];
         }
 
+        if ($user->isFlagged()) {
+            return [false, $user->name . ' is flagged. Unflag them before paying.', null];
+        }
+
         if (! $user->phone) {
             return [false, $user->name . ' has no M-Pesa phone number on file', null];
         }
@@ -399,6 +403,10 @@ class KopokopoTransferService extends Service
             return [false, 'This sale has no photographer to pay', null];
         }
 
+        if ($seller->isFlagged()) {
+            return [false, $seller->name . ' is flagged. Unflag them before paying.', null];
+        }
+
         if (! $seller->phone) {
             return [false, $seller->name . ' has no M-Pesa phone number on file', null];
         }
@@ -444,6 +452,10 @@ class KopokopoTransferService extends Service
     ): array {
         if ($referralIds === [] && $photoBonusReferralIds === []) {
             return [false, $referrer->name . ' hasn\'t earned a referral reward yet', null];
+        }
+
+        if ($referrer->isFlagged()) {
+            return [false, $referrer->name . ' is flagged. Unflag them before paying.', null];
         }
 
         if (! $referrer->phone) {

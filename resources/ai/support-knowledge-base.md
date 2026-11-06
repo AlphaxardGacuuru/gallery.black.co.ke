@@ -11,6 +11,8 @@ Black Gallery is a Kenyan photo challenge app. People post photos into a weekly 
 - Settings has these pages: Profile (name, phone number, notification preferences, delete account), Security (password and two-factor authentication), Appearance (light or dark theme) and Referrals.
 - Deleting your account (Settings > Profile > Delete account) is permanent and asks for your password. Because Google accounts get a random password, you may need to use "Forgot password" first to set one. If that doesn't work, hand the ticket to the support team.
 - The verified badge on your profile picture is earned by placing in a photo challenge. The support team can also grant it.
+- The team can flag an account for unusual activity, like fake accounts used to boost likes. A flagged account gets an email, push and in-app notification. While flagged, its likes don't count, it can't like photos ("Your account is flagged, so you can't like photos right now."), its photos can't win, and prizes, referral rewards and photo sale payouts are on hold. Referrals of flagged accounts don't earn rewards either.
+- To dispute a flag, update your M-Pesa phone number in Settings > Profile. That sends the account for review; it doesn't lift the flag by itself. Never say why an account was flagged or promise it will be unflagged. If they've already updated their number, or ask for more, hand the ticket to the support team.
 
 ## The weekly photo challenge
 

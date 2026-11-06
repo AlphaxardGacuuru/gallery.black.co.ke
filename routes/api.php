@@ -44,6 +44,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+// Public: the welcome page reads it before anyone signs in. Registered
+// ahead of the auth group so its photos/{id} route doesn't swallow it.
+Route::get('photos/features', [PhotoCompetitionController::class, 'features'])
+    ->name('photos.features');
+
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('auth', [UserController::class, 'auth']);
@@ -129,7 +134,9 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::post('referrals/{user}/pay', [AdminReferralController::class, 'pay'])->name('referrals.pay');
         Route::post('users/{user}/referrer', [AdminReferralController::class, 'attach'])->name('users.referrer');
         Route::post('users/{user}/request-phone', [AdminUserController::class, 'requestPhone'])->name('users.request-phone');
+        Route::put('users/{user}/flag', [AdminUserController::class, 'flag'])->name('users.flag');
         Route::get('photos/{photo}/likes', [AdminPhotoLikeController::class, 'index'])->name('photos.likes.index');
+        Route::delete('photos/{photo}/likes/flagged', [AdminPhotoLikeController::class, 'destroyFlagged'])->name('photos.likes.destroy-flagged');
         Route::post('photos/{photo}/likes/{user}', [AdminPhotoLikeController::class, 'toggle'])->name('photos.likes.toggle');
         Route::get('notices', [AdminNoticeController::class, 'index'])->name('notices.index');
         Route::post('notices', [AdminNoticeController::class, 'store'])->name('notices.store');

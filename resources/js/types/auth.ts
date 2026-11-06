@@ -17,6 +17,10 @@ export type User = {
 	phone: string | null
 	avatar?: string
 	verified?: boolean
+	/** Set while an admin has flagged the account for suspected abuse. */
+	flaggedAt?: string | null
+	/** When the user disputed the flag by updating their phone number. */
+	flagRefutedAt?: string | null
 	email_verified_at: string | null
 	twoFactorEnabled?: boolean
 	referralsCount?: number

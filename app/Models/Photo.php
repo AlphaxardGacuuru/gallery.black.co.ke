@@ -60,6 +60,19 @@ class Photo extends Model
     }
 
     /**
+     * Reset likes_count to the likes from users who aren't flagged, after
+     * a flag changes or an admin adds/removes likes by hand.
+     */
+    public function recountLikes(): void
+    {
+        $this->update([
+            'likes_count' => $this->likes()
+                ->whereHas('user', fn($query) => $query->unflagged())
+                ->count(),
+        ]);
+    }
+
+    /**
      * Images beyond the cover (this entry's own path/thumbnail_path),
      * ordered for the carousel.
      */

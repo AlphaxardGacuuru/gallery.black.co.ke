@@ -1,4 +1,20 @@
-import { Camera, Compass, Heart, Trophy } from "lucide-react"
+import {
+	Activity,
+	BadgeCheck,
+	Banknote,
+	Camera,
+	Compass,
+	Gift,
+	Heart,
+	Images,
+	type LucideIcon,
+	Medal,
+	MessageCircle,
+	ShoppingBag,
+	Smartphone,
+	SquarePlus,
+	Trophy,
+} from "lucide-react"
 import AppLogo from "@/components/app-logo"
 import { BackdropLines } from "@/components/backdrop-lines"
 import { CompetitionCountdown } from "@/components/photos/CompetitionCountdown"
@@ -10,7 +26,11 @@ import { Head } from "@/lib/spa"
 import { useApp } from "@/contexts/AppContext"
 import { activePrizeTiers, PRIZE_TIER_ORDINALS } from "@/lib/prize-tiers"
 import { cn } from "@/lib/utils"
-import { useCurrentCompetition } from "@/queries/photos"
+import {
+	type AppFeatures,
+	useAppFeatures,
+	useCurrentCompetition,
+} from "@/queries/photos"
 import { ScrollToTopButton } from "@/components/scroll-to-top-button"
 
 const howItWorks = [
@@ -34,11 +54,98 @@ const howItWorks = [
 	},
 ]
 
+type Feature = {
+	icon: LucideIcon
+	title: string
+	description: string
+	href?: string
+}
+
+/** Everything beyond the weekly basics in howItWorks. Features an admin can
+ *  switch off are only listed while they're on. */
+function featureList(features?: AppFeatures): Feature[] {
+	return [
+		{
+			icon: Banknote,
+			title: "Prizes paid to M-Pesa",
+			description:
+				"Winnings go straight to the M-Pesa number on your profile, no forms or bank details.",
+		},
+		{
+			icon: Activity,
+			title: "Live like counts",
+			description:
+				"Likes update in real time while the challenge runs, so you can watch the race for the top spot.",
+		},
+		{
+			icon: BadgeCheck,
+			title: "Earn the verified badge",
+			description:
+				"Place in a challenge and a verified badge shows on your profile picture and every photo you post.",
+		},
+		{
+			icon: Medal,
+			title: "Climb the leaderboard",
+			description:
+				"See who has won the most challenges, ranked by 1st places, then 2nd, and so on.",
+			href: "/leaderboard",
+		},
+		...(features?.extraPhotos
+			? [
+					{
+						icon: Images,
+						title: "Post a carousel",
+						description: `Add more shots to your entry, up to ${features.maxPhotosPerEntry} photos people can swipe through.`,
+					},
+				]
+			: []),
+		...(features?.extraEntry
+			? [
+					{
+						icon: SquarePlus,
+						title: "Enter twice",
+						description:
+							"Got two great shots? Add a second, separate entry to the same week's challenge.",
+					},
+				]
+			: []),
+		...(features?.photoSales
+			? [
+					{
+						icon: ShoppingBag,
+						title: "Sell your photos",
+						description:
+							"People can buy full-resolution originals from past challenges, and your share is sent to your M-Pesa automatically.",
+					},
+				]
+			: []),
+		{
+			icon: Gift,
+			title: "Refer friends, get paid",
+			description:
+				"Share your referral link and earn M-Pesa rewards as friends join.",
+		},
+		{
+			icon: Smartphone,
+			title: "Install it on your phone",
+			description:
+				"Add Black Gallery to your home screen and get notified about likes, results and payouts.",
+		},
+		{
+			icon: MessageCircle,
+			title: "Help when you need it",
+			description:
+				"Ask anything in the help chat for an instant answer, and our team steps in when needed.",
+		},
+	]
+}
+
 export default function Welcome() {
 	const { auth } = useApp()
 	const { data } = useCurrentCompetition()
 	const competition = data?.competition
 	const prizeTiers = activePrizeTiers(data?.prizeTiers ?? [])
+	const { data: features } = useAppFeatures()
 
 	const primaryCta = auth
 		? { href: "/compete", label: "View this week's challenge" }
@@ -207,6 +314,60 @@ export default function Welcome() {
 							))}
 						</CardContent>
 					</Card>
+				</div>
+			</section>
+
+			<section className="relative z-10 mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8 lg:pb-28">
+				<div className="mb-8 max-w-2xl space-y-3">
+					<p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
+						More than a contest
+					</p>
+					<h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+						Everything in Black Gallery
+					</h2>
+				</div>
+
+				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+					{featureList(features).map(
+						({ icon: Icon, title, description, href }) => {
+							const content = (
+								<GlassCard className="flex h-full items-start gap-4 p-5">
+									<div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+										<Icon className="size-5" />
+									</div>
+									<div>
+										<p className="font-semibold">{title}</p>
+										<p className="mt-1 text-sm leading-6 text-muted-foreground">
+											{description}
+										</p>
+									</div>
+								</GlassCard>
+							)
+
+							return href ? (
+								<Link
+									key={title}
+									href={href}
+									variant="unstyled"
+									size="none"
+									className="block h-full transition-transform hover:-translate-y-0.5">
+									{content}
+								</Link>
+							) : (
+								<div key={title}>{content}</div>
+							)
+						}
+					)}
+				</div>
+
+				<div className="mt-10 flex flex-wrap gap-3">
+					<Link
+						href={primaryCta.href}
+						variant="solid"
+						size="lg"
+						className="shadow-lg shadow-primary/20">
+						{primaryCta.label}
+					</Link>
 				</div>
 			</section>
 		</div>

@@ -34,11 +34,18 @@ import {
 	useAdminKopokopoRecipients,
 	useAdminUsers,
 	useAttachReferrer,
+	useFlagUser,
 	useRequestUserPhone,
 	useToggleUserVerified,
 } from "@/queries/admin"
 
-type UserFilterKey = "verified" | "hasPhone" | "seed" | "installed" | "referred"
+type UserFilterKey =
+	| "verified"
+	| "hasPhone"
+	| "seed"
+	| "installed"
+	| "referred"
+	| "flagged"
 type UserFilterValue = "any" | "yes" | "no"
 
 const USER_FILTERS: {
@@ -52,6 +59,7 @@ const USER_FILTERS: {
 	{ key: "seed", label: "Account", yes: "Seed accounts", no: "Real users" },
 	{ key: "installed", label: "App", yes: "Installed", no: "Not installed" },
 	{ key: "referred", label: "Referral", yes: "Referred", no: "Not referred" },
+	{ key: "flagged", label: "Flagged", yes: "Flagged", no: "Not flagged" },
 ]
 
 const DEFAULT_FILTERS: Record<UserFilterKey, UserFilterValue> = {
@@ -60,6 +68,7 @@ const DEFAULT_FILTERS: Record<UserFilterKey, UserFilterValue> = {
 	seed: "any",
 	installed: "any",
 	referred: "any",
+	flagged: "any",
 }
 
 function initials(name?: string | null): string {
@@ -186,6 +195,106 @@ function KopokopoRecipientCell({
 			{addRecipient.isPending && <Loader2 className="size-3.5 animate-spin" />}
 			Register
 		</Button>
+	)
+}
+
+/**
+ * Flag a user for suspected abuse (their likes stop counting, they can't
+ * win or be paid, and they're notified on every channel), or lift it.
+ * Flagging asks for confirmation and an admin-only reason.
+ */
+function FlagCell({ user }: { user: AdminUser }) {
+	const [open, setOpen] = useState(false)
+	const [reason, setReason] = useState("")
+	const flagUser = useFlagUser()
+
+	function submit(flagged: boolean) {
+		flagUser.mutate(
+			{ userId: user.id, flagged, reason: reason || undefined },
+			{
+				onSuccess: () => {
+					toast.success(
+						flagged ? `${user.name} flagged` : `${user.name} unflagged`
+					)
+					setOpen(false)
+					setReason("")
+				},
+				onError: () => toast.error("Couldn't update this user"),
+			}
+		)
+	}
+
+	if (user.flaggedAt) {
+		return (
+			<div className="flex flex-wrap items-center gap-1.5">
+				<Badge
+					variant="destructive"
+					title={user.flagReason ?? undefined}>
+					Flagged
+				</Badge>
+				{user.flagRefutedAt && (
+					<Badge
+						variant="outline"
+						title="Updated their phone number to dispute the flag">
+						Refuted
+					</Badge>
+				)}
+				<Button
+					variant="outline"
+					size="sm"
+					disabled={flagUser.isPending}
+					onClick={() => submit(false)}>
+					Unflag
+				</Button>
+			</div>
+		)
+	}
+
+	return (
+		<Dialog
+			open={open}
+			onOpenChange={setOpen}>
+			<DialogTrigger asChild>
+				<Button
+					variant="outline"
+					size="sm">
+					Flag
+				</Button>
+			</DialogTrigger>
+			<DialogContent>
+				<DialogTitle>Flag {user.name}?</DialogTitle>
+				<DialogDescription>
+					Their likes stop counting in the running challenge, and they can't
+					like, win or be paid until you unflag them. They'll get an email, push
+					and in-app notification asking them to update their phone number if
+					it's a mistake.
+				</DialogDescription>
+
+				{/* Reason Start */}
+				<Input
+					label="Reason (only admins see this)"
+					value={reason}
+					onChange={(event) => setReason(event.target.value)}
+					maxLength={255}
+				/>
+				{/* Reason End */}
+
+				<DialogFooter className="gap-2">
+					<DialogClose asChild>
+						<Button variant="secondary">Cancel</Button>
+					</DialogClose>
+					<Button
+						variant="destructive"
+						disabled={flagUser.isPending}
+						onClick={() => submit(true)}>
+						{flagUser.isPending && (
+							<Loader2 className="size-3.5 animate-spin" />
+						)}
+						Flag user
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	)
 }
 
@@ -452,6 +561,12 @@ export default function AdminUsers() {
 			accessorKey: "created_at",
 			header: "Created At",
 			cell: ({ row }) => <span className="">{row.original.createdAt}</span>,
+		},
+		{
+			id: "flagged",
+			header: "Flagged",
+			enableSorting: false,
+			cell: ({ row }) => <FlagCell user={row.original} />,
 		},
 		{
 			id: "verified",

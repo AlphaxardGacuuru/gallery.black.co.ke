@@ -47,6 +47,11 @@ class SupportUserContext
             '- Joined: '.$this->date($user->getRawOriginal('created_at')),
             '- M-Pesa phone number on profile: '.($user->phone ? 'yes' : 'no (needed to receive payouts)'),
             '- Verified badge: '.($user->verified ? 'yes' : 'no'),
+            '- Account flagged: '.match (true) {
+                ! $user->isFlagged() => 'no',
+                $user->flag_refuted_at !== null => 'yes, and they updated their phone number to dispute it (waiting for review)',
+                default => 'yes',
+            },
         ]);
     }
 

@@ -28,8 +28,10 @@ class EndPhotoCompetition extends Command
         }
 
         // Seed photos compete and place exactly like real entries, so the
-        // Unsplash photographers they promote can win any position.
+        // Unsplash photographers they promote can win any position. Flagged
+        // users' photos can't place.
         $topPhotos = $competition->photos()
+            ->whereHas('user', fn($query) => $query->unflagged())
             ->with('user:id,is_seed')
             ->orderByDesc('likes_count')
             ->orderBy('created_at')

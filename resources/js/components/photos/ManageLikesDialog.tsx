@@ -1,4 +1,4 @@
-import { Heart } from "lucide-react"
+import { Flag, Heart } from "lucide-react"
 import { useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -13,10 +13,12 @@ import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { VerifiedAvatar } from "@/components/verified-badge"
 import { useInitials } from "@/hooks/use-initials"
+import toast from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import {
 	type AdminPhotoLikersSeedFilter,
 	useAdminPhotoLikers,
+	useRemoveFlaggedLikes,
 	useToggleAdminPhotoLike,
 } from "@/queries/admin"
 
@@ -57,9 +59,11 @@ function ManageLikesBody({ photoId }: { photoId: string }) {
 	const [search, setSearch] = useState("")
 	const [seed, setSeed] = useState<AdminPhotoLikersSeedFilter>(null)
 	const [likedOnly, setLikedOnly] = useState(false)
+	const [flaggedOnly, setFlaggedOnly] = useState(false)
 	const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-		useAdminPhotoLikers(photoId, search, seed, likedOnly)
+		useAdminPhotoLikers(photoId, search, seed, likedOnly, flaggedOnly)
 	const toggleLike = useToggleAdminPhotoLike(photoId)
+	const removeFlaggedLikes = useRemoveFlaggedLikes(photoId)
 	const getInitials = useInitials()
 	const users = data?.pages.flatMap((page) => page.data) ?? []
 
@@ -99,7 +103,39 @@ function ManageLikesBody({ photoId }: { photoId: string }) {
 					<Heart className={cn("size-3", likedOnly && "fill-current")} />
 					Liked
 				</button>
+				<button
+					type="button"
+					aria-pressed={flaggedOnly}
+					onClick={() => setFlaggedOnly((current) => !current)}
+					className={cn(
+						"flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition-colors",
+						flaggedOnly
+							? "border-destructive bg-destructive text-white"
+							: "hover:bg-muted"
+					)}>
+					<Flag className="size-3" />
+					Flagged
+				</button>
 			</div>
+			{/* Flagged users' likes already don't count; this deletes them. */}
+			{flaggedOnly && users.some((user) => user.likesPhoto) && (
+				<Button
+					variant="destructive"
+					size="sm"
+					disabled={removeFlaggedLikes.isPending}
+					onClick={() =>
+						removeFlaggedLikes.mutate(undefined, {
+							onSuccess: ({ removed }) =>
+								toast.success(
+									`Removed ${removed} flagged ${removed === 1 ? "like" : "likes"}`
+								),
+							onError: () => toast.error("Couldn't remove the flagged likes"),
+						})
+					}>
+					{removeFlaggedLikes.isPending && <Spinner className="size-3.5" />}
+					Remove all flagged likes
+				</Button>
+			)}
 			<div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
 				{isLoading ? (
 					<div className="flex justify-center py-6">
@@ -107,7 +143,11 @@ function ManageLikesBody({ photoId }: { photoId: string }) {
 					</div>
 				) : users.length === 0 ? (
 					<p className="py-6 text-center text-sm text-muted-foreground">
-						{likedOnly ? "No one has liked this photo yet." : "No users found."}
+						{flaggedOnly && likedOnly
+							? "No flagged users like this photo."
+							: likedOnly
+								? "No one has liked this photo yet."
+								: "No users found."}
 					</p>
 				) : (
 					<>
@@ -132,6 +172,13 @@ function ManageLikesBody({ photoId }: { photoId: string }) {
 								<span className="min-w-0 flex-1 truncate font-medium">
 									{user.name}
 								</span>
+								{user.isFlagged && (
+									<Badge
+										variant="destructive"
+										className="shrink-0 text-xs font-normal">
+										Flagged
+									</Badge>
+								)}
 								{user.isSeed && (
 									<Badge
 										variant="outline"

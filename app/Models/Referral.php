@@ -114,7 +114,7 @@ class Referral extends Model
      * aren't re-priced when the reward changes. Partial groups short of
      * the threshold aren't paid yet. On top of that, each referral whose
      * referred user has posted a photo earns its photo_bonus_rate once,
-     * with no threshold.
+     * with no threshold. Referrals of flagged users don't count.
      *
      * @return array{batches: int, referralIds: array<int, string>, totalAmount: float, photoBonusReferralIds: array<int, string>}
      */
@@ -122,6 +122,7 @@ class Referral extends Model
     {
         $photoBonuses = static::query()
             ->where('referrer_id', $referrerId)
+            ->whereHas('referred', fn($query) => $query->unflagged())
             ->unpaidPhotoBonus()
             ->where('photo_bonus_rate', '>', 0)
             ->oldest('created_at')
@@ -140,6 +141,7 @@ class Referral extends Model
 
         $unpaid = static::query()
             ->where('referrer_id', $referrerId)
+            ->whereHas('referred', fn($query) => $query->unflagged())
             ->unpaid()
             ->oldest('created_at')
             ->get(['id', 'reward_rate']);

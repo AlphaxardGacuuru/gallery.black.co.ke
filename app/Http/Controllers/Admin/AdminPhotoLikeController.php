@@ -14,8 +14,8 @@ class AdminPhotoLikeController extends Controller
 {
     /**
      * Users matching an optional name search, seed filter ("seed" is
-     * "only" or "exclude") and "liked" filter (only users who already like
-     * this photo), each annotated with whether they already like
+     * "only" or "exclude"), "liked" filter (only users who already like
+     * this photo) and "flagged" filter, each annotated with whether they already like
      * this specific photo, the pool an admin picks from in the "manage
      * likes" dialog.
      */
@@ -24,6 +24,7 @@ class AdminPhotoLikeController extends Controller
         $request->validate([
             'seed' => 'nullable|in:only,exclude',
             'liked' => 'nullable|boolean',
+            'flagged' => 'nullable|boolean',
         ]);
 
         $users = User::query()
@@ -48,6 +49,10 @@ class AdminPhotoLikeController extends Controller
                         ->where('photo_id', $photo->id)
                 )
             )
+            ->when(
+                $request->boolean('flagged'),
+                fn($query) => $query->whereNotNull('flagged_at')
+            )
             ->addSelect([
                 'likes_photo' => PhotoLike::query()
                     ->selectRaw('1')
@@ -66,6 +71,7 @@ class AdminPhotoLikeController extends Controller
                 'avatar' => $user->avatar,
                 'verified' => (bool) $user->verified,
                 'isSeed' => (bool) $user->is_seed,
+                'isFlagged' => $user->isFlagged(),
                 'likesPhoto' => (bool) $user->likes_photo,
             ]),
             'meta' => [
@@ -91,19 +97,40 @@ class AdminPhotoLikeController extends Controller
 
         if ($like) {
             $like->delete();
-            $photo->decrement('likes_count');
         } else {
             PhotoLike::create(['photo_id' => $photo->id, 'user_id' => $user->id]);
-            $photo->increment('likes_count');
         }
 
-        $photo->refresh();
+        // A recount rather than +/-1, since a flagged user's like is
+        // stored but doesn't count.
+        $photo->recountLikes();
         broadcast(new PhotoLikedEvent($photo, $user, ! $like))->toOthers();
 
         return response()->json([
             'data' => [
                 'userId' => $user->id,
                 'liked' => ! $like,
+                'likesCount' => $photo->likes_count,
+            ],
+        ]);
+    }
+
+    /**
+     * Delete every like on this photo from flagged users. Their likes
+     * already don't count, this clears them out for good (e.g. once the
+     * admin is sure they were fake).
+     */
+    public function destroyFlagged(Photo $photo): JsonResponse
+    {
+        $removed = $photo->likes()
+            ->whereHas('user', fn($query) => $query->whereNotNull('flagged_at'))
+            ->delete();
+
+        $photo->recountLikes();
+
+        return response()->json([
+            'data' => [
+                'removed' => $removed,
                 'likesCount' => $photo->likes_count,
             ],
         ]);

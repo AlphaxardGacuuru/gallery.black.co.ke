@@ -60,6 +60,8 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         'email_verified_at' => 'datetime',
         'verified' => 'boolean',
         'is_seed' => 'boolean',
+        'flagged_at' => 'datetime',
+        'flag_refuted_at' => 'datetime',
         'updated_at' => 'datetime:d M Y',
         'created_at' => 'datetime:d M Y h:i:s',
     ];
@@ -123,6 +125,20 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     public function scopeReal(Builder $query): Builder
     {
         return $query->where('is_seed', false);
+    }
+
+    /**
+     * Users an admin hasn't flagged for suspected abuse. Only their likes
+     * count (see Photo::recountLikes()).
+     */
+    public function scopeUnflagged(Builder $query): Builder
+    {
+        return $query->whereNull('flagged_at');
+    }
+
+    public function isFlagged(): bool
+    {
+        return $this->flagged_at !== null;
     }
 
     public function photos(): HasMany

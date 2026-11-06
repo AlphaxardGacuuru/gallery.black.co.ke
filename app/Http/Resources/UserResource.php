@@ -35,6 +35,13 @@ class UserResource extends JsonResource
             "gender" => $this->gender,
             "avatar" => $this->avatar,
             "verified" => (bool) $this->verified,
+            "flaggedAt" => $this->flagged_at,
+            "flagRefutedAt" => $this->flag_refuted_at,
+            // An admin-only note, never shown to the flagged user.
+            "flagReason" => $this->when(
+                $request->user()?->email === config('admin.email'),
+                $this->flag_reason
+            ),
             "accountType" => $this->account_type,
             "emailVerifiedAt" => $this->email_verified_at,
             "settings" => $this->settings,

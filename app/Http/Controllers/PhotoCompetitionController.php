@@ -7,6 +7,8 @@ use App\Http\Resources\PhotoCompetitionResource;
 use App\Http\Resources\PhotoResource;
 use App\Http\Services\PhotoCompetitionService;
 use App\Http\Services\PhotoPurchaseService;
+use App\Models\Photo;
+use App\Models\PhotoCompetition;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -30,6 +32,25 @@ class PhotoCompetitionController extends Controller
             'prizeTiers' => $state['prizeTiers'],
             'extraSlot' => $state['extraSlot'],
             'extraPhoto' => $state['extraPhoto'],
+        ]);
+    }
+
+    /**
+     * Which optional, admin-switchable features are on right now, so the
+     * public welcome page only advertises what visitors can actually use.
+     * Public: carries no per-user state.
+     */
+    public function features(): JsonResponse
+    {
+        $offered = fn(array $setting) => $setting['enabled'] && $setting['price'] > 0;
+
+        return response()->json([
+            'data' => [
+                'photoSales' => $offered(Photo::saleSettings()),
+                'extraEntry' => $offered(PhotoCompetition::extraSlotSettings()),
+                'extraPhotos' => $offered(PhotoCompetition::extraPhotoSettings()),
+                'maxPhotosPerEntry' => Photo::MAX_IMAGES_PER_ENTRY,
+            ],
         ]);
     }
 

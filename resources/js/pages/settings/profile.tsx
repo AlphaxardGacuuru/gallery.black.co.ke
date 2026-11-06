@@ -9,6 +9,7 @@ import EmailNotificationSettings from "@/components/email-notification-settings"
 import Heading from "@/components/heading"
 import InputError from "@/components/input-error"
 import PushNotificationSettings from "@/components/push-notification-settings"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
@@ -97,6 +98,17 @@ export default function Profile({
 					title="Profile information"
 					description="Update your name and email address"
 				/>
+
+				{auth?.flaggedAt && (
+					<Alert variant="destructive">
+						<AlertTitle>Your account is flagged</AlertTitle>
+						<AlertDescription>
+							{auth.flagRefutedAt
+								? "Thanks for updating your phone number. We're reviewing your account. Until then your likes don't count and payouts are on hold."
+								: "We noticed unusual activity on your account, so your likes don't count and payouts are on hold. If this is a mistake, update your M-Pesa phone number below and we'll review your account."}
+						</AlertDescription>
+					</Alert>
+				)}
 
 				<form
 					onSubmit={handleSubmit}
