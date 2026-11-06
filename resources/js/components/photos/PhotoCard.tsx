@@ -147,11 +147,7 @@ export function PhotoCard({
 	}
 
 	return (
-		<figure
-			className={cn(
-				"overflow-hidden rounded-xl border bg-card shadow-sm",
-				photo.isWinner && "ring-1 ring-amber-400"
-			)}>
+		<figure className="overflow-hidden rounded-xl border bg-card shadow-sm">
 			<figcaption className="flex items-center justify-between gap-2 p-2">
 				<div className="flex min-w-0 items-center gap-2">
 					<AvatarPreviewDialog

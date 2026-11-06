@@ -15,16 +15,22 @@ use Illuminate\Support\Str;
  */
 class SeedUserSeeder extends Seeder
 {
-    private const NAMES = [
+    /**
+     * In posting order: PostSeedPhotos has the first POSTERS of these post
+     * each competition's photos, so changing that count always adds or
+     * drops names from the end of this list. Keep the first entries where
+     * they are, and add new names at the end.
+     */
+    public const NAMES = [
+        ['Mutua Musyoka', 'male'],
+        ['Chebet Jepkosgei', 'female'],
         ['Wanjiru Kamau', 'female'],
         ['Otieno Odhiambo', 'male'],
         ['Achieng Atieno', 'female'],
         ['Kiprono Kiptoo', 'male'],
         ['Njeri Mwangi', 'female'],
-        ['Mutua Musyoka', 'male'],
         ['Wairimu Njoroge', 'female'],
         ['Barasa Wekesa', 'male'],
-        ['Chebet Jepkosgei', 'female'],
         ['Omondi Ouma', 'male'],
         ['Akinyi Onyango', 'female'],
         ['Kamau Githinji', 'male'],
@@ -118,10 +124,15 @@ class SeedUserSeeder extends Seeder
         ['Kipkurui Chirchir', 'male'],
     ];
 
+    public static function email(string $name): string
+    {
+        return Str::slug($name, '.') . '@seed.black.co.ke';
+    }
+
     public function run(): void
     {
         foreach (self::NAMES as [$name, $gender]) {
-            $email = Str::slug($name, '.') . '@seed.black.co.ke';
+            $email = static::email($name);
 
             if (User::where('email', $email)->exists()) {
                 continue;

@@ -86,7 +86,10 @@ class PostSeedPhotosTest extends TestCase
     {
         $this->fakeUnsplash();
         $competition = $this->competition();
-        $this->travelTo(PostSeedPhotos::dueAt($competition, 0)->copy()->subMinute());
+        $firstDue = collect(range(0, PostSeedPhotos::POSTERS - 1))
+            ->map(fn(int $position) => PostSeedPhotos::dueAt($competition, 0, $position))
+            ->min();
+        $this->travelTo($firstDue->copy()->subMinute());
 
         $this->artisan('app:post-seed-photos')->assertSuccessful();
 
@@ -149,31 +152,67 @@ class PostSeedPhotosTest extends TestCase
         $this->assertSame('fresh-2', PhotoImage::where('photo_id', $photo->id)->sole()->unsplash_id);
     }
 
-    public function test_posts_one_photo_per_day_for_three_days_from_the_same_seed_user(): void
+    public function test_each_poster_posts_one_photo_a_day_for_three_days(): void
     {
         $this->fakeUnsplash();
-        $competition = $this->competition();
+        $competition = $this->competition([
+            'starts_at' => now()->startOfDay(),
+            'ends_at' => now()->startOfDay()->addDays(4),
+        ]);
 
-        $this->travelToDue($competition, 0);
-        $this->artisan('app:post-seed-photos');
+        $this->travelTo(PostSeedPhotos::dueAt($competition, 0)->copy()->addMinute());
         $this->artisan('app:post-seed-photos');
         $this->assertSame(1, Photo::count());
 
-        $this->travelToDue($competition, 1);
-        $this->artisan('app:post-seed-photos');
-        $this->assertSame(2, Photo::count());
+        // Run like the scheduler would, every ten minutes until the end.
+        while (now()->lessThan($competition->ends_at)) {
+            $this->artisan('app:post-seed-photos');
+            $this->travel(10)->minutes();
+        }
 
-        $this->travelToDue($competition, 2);
-        $this->artisan('app:post-seed-photos');
-        $this->travel(2)->days();
-        $this->artisan('app:post-seed-photos');
+        $posters = PostSeedPhotos::posters();
+        $this->assertCount(PostSeedPhotos::POSTERS, $posters);
+        $this->assertSame(PostSeedPhotos::POSTERS * PostSeedPhotos::PHOTOS_PER_COMPETITION, Photo::count());
+        $this->assertSame(Photo::count(), Photo::distinct()->count('unsplash_id'));
 
-        $this->assertSame(3, Photo::count());
-        $this->assertSame(1, Photo::distinct()->count('user_id'));
-        $this->assertSame(3, Photo::distinct()->count('unsplash_id'));
+        $posters->each(fn(User $poster) => $this->assertSame(
+            PostSeedPhotos::PHOTOS_PER_COMPETITION,
+            Photo::query()
+                ->where('user_id', $poster->id)
+                ->get()
+                ->map(fn(Photo $photo) => $photo->created_at->toDateString())
+                ->unique()
+                ->count()
+        ));
     }
 
-    public function test_every_competition_is_posted_by_the_same_seed_user(): void
+    public function test_the_posters_are_always_the_first_seed_users_in_the_list(): void
+    {
+        // Photo history and creation order don't matter, only list order.
+        $busy = User::query()
+            ->where('email', SeedUserSeeder::email(SeedUserSeeder::NAMES[10][0]))
+            ->sole();
+        Photo::factory()->count(5)->create(['user_id' => $busy->id]);
+
+        $this->assertSame(
+            collect(SeedUserSeeder::NAMES)
+                ->take(PostSeedPhotos::POSTERS)
+                ->map(fn(array $entry) => SeedUserSeeder::email($entry[0]))
+                ->all(),
+            PostSeedPhotos::posters()
+                ->pluck('email')
+                ->all()
+        );
+        $this->assertSame(
+            ['mutua.musyoka@seed.black.co.ke', 'chebet.jepkosgei@seed.black.co.ke'],
+            PostSeedPhotos::posters()
+                ->take(2)
+                ->pluck('email')
+                ->all()
+        );
+    }
+
+    public function test_every_competition_is_posted_by_the_same_seed_users(): void
     {
         $this->fakeUnsplash();
         $first = $this->competition();
@@ -188,19 +227,7 @@ class PostSeedPhotosTest extends TestCase
 
         $secondPoster = Photo::where('competition_id', $second->id)->sole()->user_id;
         $this->assertSame($firstPoster, $secondPoster);
-    }
-
-    public function test_the_seed_user_with_the_most_photos_is_featured(): void
-    {
-        $this->fakeUnsplash();
-        $established = User::where('is_seed', true)->latest('created_at')->latest('id')->first();
-        Photo::factory()->count(2)->create(['user_id' => $established->id]);
-        $competition = $this->competition();
-        $this->travelToDue($competition, 0);
-
-        $this->artisan('app:post-seed-photos')->assertSuccessful();
-
-        $this->assertSame($established->id, Photo::where('competition_id', $competition->id)->sole()->user_id);
+        $this->assertSame(PostSeedPhotos::posters()->first()->id, $firstPoster);
     }
 
     public function test_skips_unsplash_photos_that_were_already_posted(): void

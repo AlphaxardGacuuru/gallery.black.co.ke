@@ -8,15 +8,21 @@ use App\Models\PhotoCompetition;
 use App\Models\PhotoImage;
 use App\Models\User;
 use Carbon\CarbonInterface;
+use Database\Seeders\SeedUserSeeder;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 #[Signature('app:post-seed-photos')]
-#[Description('Posts the next Unsplash photo from this competition\'s seed user, one a day for its first three days.')]
+#[Description('Posts the next Unsplash photo from each of this competition\'s seed posters, one a day each for its first three days.')]
 class PostSeedPhotos extends Command
 {
+    /** How many seed users post, see posters(). */
+    public const POSTERS = 2;
+
+    /** Photos each poster posts per competition. */
     public const PHOTOS_PER_COMPETITION = 3;
 
     /** Each seed post is a carousel: a cover plus extra images. */
@@ -24,7 +30,8 @@ class PostSeedPhotos extends Command
 
     /**
      * Runs every few minutes (routes/console.php) and posts at most one
-     * photo per run, so it's safe to re-run and catches up after downtime.
+     * photo per run, from the first poster (in posters() order) with one
+     * due, so it's safe to re-run and catches up after downtime.
      */
     public function handle(UnsplashService $unsplash): int
     {
@@ -34,30 +41,61 @@ class PostSeedPhotos extends Command
             return self::SUCCESS;
         }
 
-        $seedPhotos = $competition->photos()
-            ->whereHas('user', fn($query) => $query->where('is_seed', true))
-            ->with('user')
-            ->orderBy('created_at')
-            ->get();
+        $posters = static::posters();
 
-        if ($seedPhotos->count() >= self::PHOTOS_PER_COMPETITION) {
-            return self::SUCCESS;
-        }
-
-        $dueAt = static::dueAt($competition, $seedPhotos->count());
-
-        if (now()->lessThan($dueAt) || $dueAt->greaterThanOrEqualTo($competition->ends_at)) {
-            return self::SUCCESS;
-        }
-
-        // Whoever posted this competition's first seed photo keeps posting
-        // the rest, which is normally the one featured seed user anyway.
-        $user = $seedPhotos->first()?->user ?? static::featuredSeedUser();
-
-        if (! $user) {
+        if ($posters->isEmpty()) {
             $this->components->warn('No seed users exist. Run: php artisan db:seed --class=SeedUserSeeder');
 
             return self::SUCCESS;
+        }
+
+        // first() stops at the first poster that actually posts.
+        $posters->first(fn(User $user, int $position) => $this->postNextPhoto($unsplash, $competition, $user, $position));
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * The seed users who post every competition's photos: the first
+     * POSTERS names in SeedUserSeeder::NAMES, in that order, so raising or
+     * lowering POSTERS only adds or drops users from the end and the same
+     * profiles keep building up a history.
+     *
+     * @return Collection<int, User>
+     */
+    public static function posters(): Collection
+    {
+        $emails = collect(SeedUserSeeder::NAMES)
+            ->take(self::POSTERS)
+            ->map(fn(array $entry) => SeedUserSeeder::email($entry[0]))
+            ->values();
+
+        return User::query()
+            ->where('is_seed', true)
+            ->whereIn('email', $emails)
+            ->get()
+            ->sortBy(fn(User $user) => $emails->search($user->email))
+            ->values();
+    }
+
+    /**
+     * Post $user's next photo in this competition if it's due. Returns
+     * whether it posted.
+     */
+    private function postNextPhoto(UnsplashService $unsplash, PhotoCompetition $competition, User $user, int $position): bool
+    {
+        $posted = $competition->photos()
+            ->where('user_id', $user->id)
+            ->count();
+
+        if ($posted >= self::PHOTOS_PER_COMPETITION) {
+            return false;
+        }
+
+        $dueAt = static::dueAt($competition, $posted, $position);
+
+        if (now()->lessThan($dueAt) || $dueAt->greaterThanOrEqualTo($competition->ends_at)) {
+            return false;
         }
 
         $unsplashPhotos = $unsplash->randomUnusedPhotos(self::IMAGES_PER_POST);
@@ -97,39 +135,27 @@ class PostSeedPhotos extends Command
             collect($unsplashPhotos)->pluck('id')->join(', '),
         ));
 
-        return self::SUCCESS;
+        return true;
     }
 
     /**
-     * When the photo at this index (0, 1, 2) is due: that many days after
-     * the competition starts, plus a 1 to 12 hour offset that varies per
-     * competition and photo, so posts don't land at the same minute every
-     * week.
+     * When the photo at this index (0, 1, 2) is due for the poster at this
+     * position: that many days after the competition starts, plus a 1 to
+     * 12 hour offset that varies per competition, photo and poster, so
+     * posts don't land at the same minute every week or all at once.
      */
-    public static function dueAt(PhotoCompetition $competition, int $index): CarbonInterface
+    public static function dueAt(PhotoCompetition $competition, int $index, int $position = 0): CarbonInterface
     {
-        $offsetMinutes = 60 + crc32("{$competition->id}:{$index}") % (11 * 60);
+        // The first poster keeps the key it had when there was only one.
+        $key = $position === 0
+            ? "{$competition->id}:{$index}"
+            : "{$competition->id}:{$index}:{$position}";
+        $offsetMinutes = 60 + crc32($key) % (11 * 60);
 
         return $competition->starts_at
             ->copy()
             ->addDays($index)
             ->addMinutes($offsetMinutes);
-    }
-
-    /**
-     * The one seed user who posts every competition's seed photos, so a
-     * single profile builds up a history: whoever has posted the most so
-     * far (the oldest seed user on a tie, e.g. before anyone has posted).
-     */
-    public static function featuredSeedUser(): ?User
-    {
-        return User::query()
-            ->where('is_seed', true)
-            ->withCount('photos')
-            ->orderByDesc('photos_count')
-            ->orderBy('created_at')
-            ->orderBy('id')
-            ->first();
     }
 
     /**
