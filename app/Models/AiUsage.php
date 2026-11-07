@@ -24,6 +24,11 @@ class AiUsage extends Model
      */
     public const FEATURE_SUPPORT_REPLY = 'support_reply';
 
+    /**
+     * Setting that switches every AI agent on or off, see agentsEnabled().
+     */
+    public const SETTING_AGENTS_ENABLED = 'ai_agents_enabled';
+
     protected $fillable = [
         'user_id',
         'subject_type',
@@ -62,5 +67,16 @@ class AiUsage extends Model
     public function subject(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /**
+     * Whether AI agents may run. On until an admin switches them off on
+     * the AI usage page.
+     */
+    public static function agentsEnabled(): bool
+    {
+        return (bool) (Setting::query()
+            ->where('key', self::SETTING_AGENTS_ENABLED)
+            ->value('value') ?? true);
     }
 }

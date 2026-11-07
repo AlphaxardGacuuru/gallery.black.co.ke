@@ -86,7 +86,7 @@ class PostSeedPhotosTest extends TestCase
     {
         $this->fakeUnsplash();
         $competition = $this->competition();
-        $firstDue = collect(range(0, PostSeedPhotos::POSTERS - 1))
+        $firstDue = collect(range(0, PostSeedPhotos::posterCount() - 1))
             ->map(fn(int $position) => PostSeedPhotos::dueAt($competition, 0, $position))
             ->min();
         $this->travelTo($firstDue->copy()->subMinute());
@@ -171,8 +171,8 @@ class PostSeedPhotosTest extends TestCase
         }
 
         $posters = PostSeedPhotos::posters();
-        $this->assertCount(PostSeedPhotos::POSTERS, $posters);
-        $this->assertSame(PostSeedPhotos::POSTERS * PostSeedPhotos::PHOTOS_PER_COMPETITION, Photo::count());
+        $this->assertCount(PostSeedPhotos::posterCount(), $posters);
+        $this->assertSame(PostSeedPhotos::posterCount() * PostSeedPhotos::PHOTOS_PER_COMPETITION, Photo::count());
         $this->assertSame(Photo::count(), Photo::distinct()->count('unsplash_id'));
 
         $posters->each(fn(User $poster) => $this->assertSame(
@@ -196,7 +196,7 @@ class PostSeedPhotosTest extends TestCase
 
         $this->assertSame(
             collect(SeedUserSeeder::NAMES)
-                ->take(PostSeedPhotos::POSTERS)
+                ->take(PostSeedPhotos::posterCount())
                 ->map(fn(array $entry) => SeedUserSeeder::email($entry[0]))
                 ->all(),
             PostSeedPhotos::posters()
@@ -210,6 +210,51 @@ class PostSeedPhotosTest extends TestCase
                 ->pluck('email')
                 ->all()
         );
+    }
+
+    public function test_changing_the_number_of_posters_keeps_the_same_users_at_the_top(): void
+    {
+        $admin = User::factory()->create(['email' => config('admin.email')]);
+        $setPosters = fn(int $count) => $this->actingAs($admin, 'sanctum')
+            ->putJson('/api/admin/photo-competitions/seed-posters', ['count' => $count])
+            ->assertOk();
+
+        $this->assertSame(PostSeedPhotos::DEFAULT_POSTERS, PostSeedPhotos::posterCount());
+        $two = PostSeedPhotos::posters()
+            ->pluck('id')
+            ->all();
+
+        $setPosters(4);
+        $this->assertSame(4, PostSeedPhotos::posterCount());
+        $this->assertSame($two, PostSeedPhotos::posters()
+            ->take(2)
+            ->pluck('id')
+            ->all());
+
+        $setPosters(1);
+        $this->assertSame([$two[0]], PostSeedPhotos::posters()
+            ->pluck('id')
+            ->all());
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/admin/photo-competitions')
+            ->assertJsonPath('data.seedPosters', 1);
+        $this->actingAs($admin, 'sanctum')
+            ->putJson('/api/admin/photo-competitions/seed-posters', ['count' => 101])
+            ->assertJsonValidationErrors('count');
+    }
+
+    public function test_no_photos_are_posted_with_zero_posters(): void
+    {
+        $this->fakeUnsplash();
+        Setting::query()
+            ->updateOrCreate(['key' => PostSeedPhotos::SETTING_POSTERS], ['value' => 0]);
+        $competition = $this->competition();
+        $this->travelTo($competition->ends_at->copy()->subMinute());
+
+        $this->artisan('app:post-seed-photos')->assertSuccessful();
+
+        $this->assertSame(0, Photo::count());
     }
 
     public function test_every_competition_is_posted_by_the_same_seed_users(): void

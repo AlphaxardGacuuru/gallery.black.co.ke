@@ -51,6 +51,7 @@ import {
 	useUpdatePhotoCompetitionSchedule,
 	useUpdatePhotoSale,
 	useUpdatePrizeTiers,
+	useUpdateSeedPosters,
 } from "@/queries/admin"
 
 const WEEKDAYS = [
@@ -346,6 +347,55 @@ function ExtraPhotoSettings({
 					disabled={updateExtraPhoto.isPending}
 					onClick={handleSave}>
 					{updateExtraPhoto.isPending && (
+						<Loader2 className="size-3.5 animate-spin" />
+					)}
+					Save
+				</Button>
+			</div>
+		</div>
+	)
+}
+
+function SeedPosterSettings({ seedPosters }: { seedPosters: number }) {
+	const updateSeedPosters = useUpdateSeedPosters()
+	const [count, setCount] = useState(String(seedPosters))
+
+	function handleSave() {
+		const parsedCount = Number(count)
+
+		if (!Number.isInteger(parsedCount) || parsedCount < 0) {
+			toast.error("Enter a whole number of seed users")
+			return
+		}
+
+		updateSeedPosters.mutate(parsedCount, {
+			onSuccess: () => toast.success("Seed users updated"),
+			onError: () => toast.error("Couldn't update the seed users"),
+		})
+	}
+
+	return (
+		<div className="w-full space-y-3 sm:max-w-sm sm:flex-1 rounded-lg border p-4">
+			<Heading
+				variant="small"
+				title="Seed users per competition"
+				description="How many seed users post 3 photos each competition. The same users always post, from the top of the seed list. Set 0 to stop seed photos."
+			/>
+			{/* Seed Users Start */}
+			<Input
+				type="number"
+				min={0}
+				max={100}
+				label="Seed users"
+				value={count}
+				onChange={(event) => setCount(event.target.value)}
+			/>
+			{/* Seed Users End */}
+			<div className="flex justify-end">
+				<Button
+					disabled={updateSeedPosters.isPending}
+					onClick={handleSave}>
+					{updateSeedPosters.isPending && (
 						<Loader2 className="size-3.5 animate-spin" />
 					)}
 					Save
@@ -1105,6 +1155,7 @@ export default function AdminPhotoCompetitions() {
 							<ExtraPhotoSettings extraPhoto={data.extraPhoto} />
 							<PhotoSaleSettings photoSale={data.photoSale} />
 							<ScheduleSettings schedule={data.schedule} />
+							<SeedPosterSettings seedPosters={data.seedPosters} />
 						</div>
 
 						<Card className="overflow-hidden">

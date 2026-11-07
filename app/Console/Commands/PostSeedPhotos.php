@@ -6,6 +6,7 @@ use App\Http\Services\UnsplashService;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoImage;
+use App\Models\Setting;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Database\Seeders\SeedUserSeeder;
@@ -19,8 +20,11 @@ use Illuminate\Support\Str;
 #[Description('Posts the next Unsplash photo from each of this competition\'s seed posters, one a day each for its first three days.')]
 class PostSeedPhotos extends Command
 {
-    /** How many seed users post, see posters(). */
-    public const POSTERS = 2;
+    /** Setting holding how many seed users post, see posterCount(). */
+    public const SETTING_POSTERS = 'seed_posters';
+
+    /** Posters until an admin sets a number. */
+    public const DEFAULT_POSTERS = 2;
 
     /** Photos each poster posts per competition. */
     public const PHOTOS_PER_COMPETITION = 3;
@@ -37,7 +41,8 @@ class PostSeedPhotos extends Command
     {
         $competition = PhotoCompetition::active()->first();
 
-        if (! $competition) {
+        // An admin can set the poster count to 0 to stop seed photos.
+        if (! $competition || static::posterCount() === 0) {
             return self::SUCCESS;
         }
 
@@ -56,17 +61,28 @@ class PostSeedPhotos extends Command
     }
 
     /**
+     * How many seed users post each competition, set by an admin on the
+     * Photo Competitions page.
+     */
+    public static function posterCount(): int
+    {
+        return (int) (Setting::query()
+            ->where('key', self::SETTING_POSTERS)
+            ->value('value') ?? self::DEFAULT_POSTERS);
+    }
+
+    /**
      * The seed users who post every competition's photos: the first
-     * POSTERS names in SeedUserSeeder::NAMES, in that order, so raising or
-     * lowering POSTERS only adds or drops users from the end and the same
-     * profiles keep building up a history.
+     * posterCount() names in SeedUserSeeder::NAMES, in that order, so
+     * raising or lowering the count only adds or drops users from the end
+     * and the same profiles keep building up a history.
      *
      * @return Collection<int, User>
      */
     public static function posters(): Collection
     {
         $emails = collect(SeedUserSeeder::NAMES)
-            ->take(self::POSTERS)
+            ->take(static::posterCount())
             ->map(fn(array $entry) => SeedUserSeeder::email($entry[0]))
             ->values();
 

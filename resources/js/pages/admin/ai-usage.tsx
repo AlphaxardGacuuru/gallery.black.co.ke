@@ -3,8 +3,10 @@ import { useState } from "react"
 import Heading from "@/components/heading"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
 import { Head } from "@/lib/spa"
-import { useAdminAiUsage } from "@/queries/admin"
+import toast from "@/lib/toast"
+import { useAdminAiUsage, useUpdateAiAgentsEnabled } from "@/queries/admin"
 
 function currentMonth(): string {
 	const now = new Date()
@@ -36,6 +38,40 @@ function formatCost(costMicros: number): string {
 }
 
 const formatNumber = (value: number) => value.toLocaleString("en-KE")
+
+/** Switches every AI agent on or off, to cap spend. */
+function AgentsToggle({ enabled }: { enabled: boolean }) {
+	const updateAgentsEnabled = useUpdateAiAgentsEnabled()
+
+	function handleChange(checked: boolean) {
+		updateAgentsEnabled.mutate(checked, {
+			onSuccess: () =>
+				toast.success(checked ? "AI agents switched on" : "AI agents switched off"),
+			onError: () => toast.error("Couldn't update AI agents"),
+		})
+	}
+
+	return (
+		<div className="flex items-center justify-between gap-4 rounded-xl border bg-card p-4 shadow-xs">
+			<div>
+				<p className="text-sm font-medium">Run AI agents</p>
+				<p className="mt-1 text-sm text-muted-foreground">
+					{enabled
+						? "The support assistant answers new messages."
+						: "Off. New support messages go straight to your team and no AI requests are made."}
+				</p>
+			</div>
+			{/* Run AI Agents Start */}
+			<Switch
+				checked={enabled}
+				disabled={updateAgentsEnabled.isPending}
+				onCheckedChange={handleChange}
+				aria-label="Run AI agents"
+			/>
+			{/* Run AI Agents End */}
+		</div>
+	)
+}
 
 export default function AdminAiUsage() {
 	const [month, setMonth] = useState(currentMonth)
@@ -103,6 +139,8 @@ export default function AdminAiUsage() {
 					</p>
 				) : (
 					<>
+						{report && <AgentsToggle enabled={report.agentsEnabled} />}
+
 						<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
 							{summary.map((stat) => (
 								<div

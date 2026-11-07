@@ -24,7 +24,8 @@ class SupportTicketService extends Service
 {
     /**
      * Shown to the customer when the assistant can't produce a reply (the
-     * AI provider is down, or the ticket hit its reply limit).
+     * AI provider is down, the ticket hit its reply limit, or an admin
+     * switched AI agents off).
      */
     public const HANDOFF_MESSAGE = "I've passed your question to our support team. Someone will reply here as soon as they can.";
 
@@ -153,7 +154,7 @@ class SupportTicketService extends Service
             ->where('author', SupportTicketMessage::AUTHOR_ASSISTANT)
             ->count();
 
-        if ($replies >= config('services.support_assistant.max_replies')) {
+        if (! AiUsage::agentsEnabled() || $replies >= config('services.support_assistant.max_replies')) {
             $this->escalate($supportTicket, self::HANDOFF_MESSAGE);
 
             return;

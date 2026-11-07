@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Ai\Agents\SupportAgent;
+use App\Enums\SupportTicketStatus;
+use App\Http\Services\SupportTicketService;
 use App\Models\AiUsage;
 use App\Models\SupportTicket;
 use App\Models\User;
@@ -163,6 +165,43 @@ class AiUsageTest extends TestCase
             ->getJson(route('admin.ai-usage.index', ['month' => '2026-09']))
             ->assertOk()
             ->assertJsonPath('totals.costMicros', 9999);
+    }
+
+    public function test_switching_ai_agents_off_hands_tickets_to_a_person_without_an_ai_request(): void
+    {
+        SupportAgent::fake();
+        $admin = User::factory()->create(['email' => self::ADMIN_EMAIL]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->putJson(route('admin.ai-usage.settings'), ['agentsEnabled' => false])
+            ->assertOk();
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson(route('admin.ai-usage.index'))
+            ->assertJsonPath('agentsEnabled', false);
+
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->postJson('/api/support-tickets', ['message' => 'How do I enter the challenge?'])
+            ->assertCreated();
+
+        $ticket = SupportTicket::query()
+            ->sole();
+        $this->assertSame(SupportTicketStatus::NEEDS_AGENT->value, $ticket->status);
+        $this->assertSame(SupportTicketService::HANDOFF_MESSAGE, $ticket->latestMessage->body);
+
+        SupportAgent::assertNeverPrompted();
+        $this->assertSame(0, AiUsage::query()->count());
+    }
+
+    public function test_ai_agents_are_on_by_default_and_only_admins_can_switch_them(): void
+    {
+        $this->assertTrue(AiUsage::agentsEnabled());
+
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->putJson(route('admin.ai-usage.settings'), ['agentsEnabled' => false])
+            ->assertForbidden();
+
+        $this->assertTrue(AiUsage::agentsEnabled());
     }
 
     public function test_the_month_must_be_valid(): void

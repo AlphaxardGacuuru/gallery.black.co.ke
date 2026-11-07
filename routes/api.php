@@ -117,6 +117,7 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::put('photo-competitions/prize-tiers', [AdminPhotoCompetitionController::class, 'updatePrizeTiers'])->name('photo-competitions.prize-tiers');
         Route::put('photo-competitions/extra-slot', [AdminPhotoCompetitionController::class, 'updateExtraSlot'])->name('photo-competitions.extra-slot');
         Route::put('photo-competitions/extra-photo', [AdminPhotoCompetitionController::class, 'updateExtraPhoto'])->name('photo-competitions.extra-photo');
+        Route::put('photo-competitions/seed-posters', [AdminPhotoCompetitionController::class, 'updateSeedPosters'])->name('photo-competitions.seed-posters');
         Route::put('photo-competitions/schedule', [AdminPhotoCompetitionController::class, 'updateSchedule'])->name('photo-competitions.schedule');
         Route::put('photo-competitions/active', [AdminPhotoCompetitionController::class, 'updateActive'])->name('photo-competitions.update-active');
         Route::post('photo-competition-winners/{winner}/pay', [AdminPhotoCompetitionController::class, 'payWinner'])->name('photo-competition-winners.pay');
@@ -152,8 +153,12 @@ Route::middleware(['auth:sanctum', 'admin'])
 
 // Gated like Telescope rather than by the single-admin `admin` middleware.
 Route::middleware(['auth:sanctum', 'can:viewAiUsage'])
-    ->get('admin/ai-usage', [AdminAiUsageController::class, 'index'])
-    ->name('admin.ai-usage.index');
+    ->prefix('admin/ai-usage')
+    ->name('admin.ai-usage.')
+    ->group(function () {
+        Route::get('/', [AdminAiUsageController::class, 'index'])->name('index');
+        Route::put('settings', [AdminAiUsageController::class, 'updateSettings'])->name('settings');
+    });
 
 // Signed, short-lived links handed out by PhotoPurchaseController::downloads(),
 // so a plain browser download works without the API's bearer token.

@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 class SeedUserSeeder extends Seeder
 {
     /**
-     * In posting order: PostSeedPhotos has the first POSTERS of these post
+     * In posting order: PostSeedPhotos has the first posterCount() of these post
      * each competition's photos, so changing that count always adds or
      * drops names from the end of this list. Keep the first entries where
      * they are, and add new names at the end.

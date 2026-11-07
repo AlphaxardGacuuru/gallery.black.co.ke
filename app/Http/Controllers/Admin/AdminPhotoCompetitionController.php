@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Console\Commands\PostSeedPhotos;
 use App\Http\Controllers\Controller;
 use App\Http\Services\KopokopoTransferService;
 use App\Http\Services\MPESATransactionService;
@@ -11,6 +12,7 @@ use App\Models\PhotoCompetitionWinner;
 use App\Models\PhotoLike;
 use App\Models\PhotoSlotPurchase;
 use App\Models\Setting;
+use Database\Seeders\SeedUserSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -59,6 +61,7 @@ class AdminPhotoCompetitionController extends Controller
                 'extraSlot' => PhotoCompetition::extraSlotSettings(),
                 'extraPhoto' => PhotoCompetition::extraPhotoSettings(),
                 'photoSale' => Photo::saleSettings(),
+                'seedPosters' => PostSeedPhotos::posterCount(),
             ],
         ]);
     }
@@ -191,6 +194,22 @@ class AdminPhotoCompetitionController extends Controller
         );
 
         return response()->json(['data' => $data]);
+    }
+
+    /**
+     * Set how many seed users post photos each competition, see
+     * PostSeedPhotos::posters().
+     */
+    public function updateSeedPosters(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'count' => ['required', 'integer', 'min:0', 'max:' . count(SeedUserSeeder::NAMES)],
+        ]);
+
+        Setting::query()
+            ->updateOrCreate(['key' => PostSeedPhotos::SETTING_POSTERS], ['value' => $data['count']]);
+
+        return response()->json(['data' => ['seedPosters' => $data['count']]]);
     }
 
     /**

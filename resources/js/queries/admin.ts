@@ -259,6 +259,8 @@ export type AdminPhotoCompetitionsData = {
 	extraSlot: AdminExtraSlotSettings
 	extraPhoto: AdminExtraPhotoSettings
 	photoSale: AdminPhotoSaleSettings
+	/** How many seed users post photos each competition. */
+	seedPosters: number
 }
 
 export function useAdminPhotoCompetitions() {
@@ -375,6 +377,20 @@ export function useUpdateExtraSlot() {
 	return useMutation({
 		mutationFn: (payload: AdminExtraSlotSettings) =>
 			Axios.put("api/admin/photo-competitions/extra-slot", payload),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "photo-competitions"],
+			})
+		},
+	})
+}
+
+export function useUpdateSeedPosters() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (count: number) =>
+			Axios.put("api/admin/photo-competitions/seed-posters", { count }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				queryKey: ["admin", "photo-competitions"],
@@ -1055,6 +1071,8 @@ export type AiUsageUser = AiUsageTotals & {
 export type AiUsageReport = {
 	/** The month the report covers, as "YYYY-MM". */
 	month: string
+	/** Whether AI agents (the support assistant) may run. */
+	agentsEnabled: boolean
 	users: AiUsageUser[]
 	totals: AiUsageTotals
 }
@@ -1068,5 +1086,18 @@ export function useAdminAiUsage(month: string) {
 				(res) => res.data
 			),
 		placeholderData: keepPreviousData,
+	})
+}
+
+/** Switch AI agents on or off. */
+export function useUpdateAiAgentsEnabled() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (agentsEnabled: boolean) =>
+			Axios.put("api/admin/ai-usage/settings", { agentsEnabled }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "ai-usage"] })
+		},
 	})
 }
