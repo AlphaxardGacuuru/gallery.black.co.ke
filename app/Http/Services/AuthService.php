@@ -102,6 +102,25 @@ class AuthService extends Service
 	 *
 	 * @throws ValidationException
 	 */
+	/**
+	 * Only the password login account may sign in with a password, so any
+	 * other email fails the same way a wrong password does.
+	 */
+	public function findPasswordLoginAdmin(string $email, string $password): User
+	{
+		$user = User::query()
+			->where('email', config('admin.password_login_email'))
+			->first();
+
+		if ($email !== config('admin.password_login_email') || ! $user || ! Hash::check($password, $user->password)) {
+			throw ValidationException::withMessages([
+				'email' => ['These credentials do not match our records.'],
+			]);
+		}
+
+		return $user;
+	}
+
 	public function findByCredentials(string $email, string $password): User
 	{
 		$user = User::query()->where('email', $email)->first();

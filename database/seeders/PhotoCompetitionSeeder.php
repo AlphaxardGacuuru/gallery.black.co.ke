@@ -56,7 +56,7 @@ class PhotoCompetitionSeeder extends Seeder
         // Known dev/demo accounts (if seeded) join the pool so their own
         // submissions and likes show up when browsing as them.
         $knownUsers = User::whereIn('email', [
-            'al@property.black.co.ke',
+            'al@gallery.black.co.ke',
             'alphaxardgacuuru47@gmail.com',
             'gacuuruwakarenge@gmail.com',
             'cikumuhandi@gmail.com',

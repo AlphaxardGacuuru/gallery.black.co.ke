@@ -65,6 +65,7 @@ Black Gallery is a Kenyan photo challenge app. People post photos into a weekly 
 ## The app and notifications
 
 - The "Feedback" button, bottom right on every page, opens this chat. Use it to get help or to suggest an idea for the app.
+- When a person on the support team replies, you get a push and in-app notification, so you can leave the chat and come back later. Messages you send after the ticket is handed to the team go straight to them.
 - Black Gallery is a web app you can install. Open the "Get the app" page for an install button or step-by-step instructions. On iPhone: open it in Safari, tap Share, then "Add to Home Screen". If you opened the link inside another app's browser (like Instagram or WhatsApp), open it in your phone's normal browser first.
 - Push notifications are switched on in Settings > Profile. If your browser blocked them, allow notifications for this site in your browser's settings.
 - Email notifications can be switched off per type in Settings > Profile, or with the unsubscribe link in any email.

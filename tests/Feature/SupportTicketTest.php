@@ -10,8 +10,10 @@ use App\Models\SupportTicket;
 use App\Models\SupportTicketMessage;
 use App\Models\User;
 use App\Notifications\AdminSupportTicketEscalatedNotification;
+use App\Notifications\AdminSupportTicketMessageNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -78,7 +80,36 @@ class SupportTicketTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.status', SupportTicketStatus::NEEDS_AGENT->value);
 
-        Notification::assertSentTo($admin, AdminSupportTicketEscalatedNotification::class);
+        Notification::assertSentTo(
+            $admin,
+            AdminSupportTicketEscalatedNotification::class,
+            fn ($notification, array $channels) => $channels === ['mail', 'database', WebPushChannel::class],
+        );
+    }
+
+    public function test_customer_messages_notify_the_admin_once_a_person_has_the_ticket(): void
+    {
+        $admin = User::factory()->create(['email' => config('admin.email')]);
+        $customer = User::factory()->create();
+        SupportAgent::fake([['reply' => 'Hi!', 'escalate' => false]]);
+
+        $ticketId = $this->start($customer)->json('data.id');
+
+        Notification::assertNotSentTo($admin, AdminSupportTicketMessageNotification::class);
+
+        $this->actingAs($customer, 'sanctum')
+            ->postJson("/api/support-tickets/{$ticketId}/escalate")
+            ->assertOk();
+
+        $this->actingAs($customer, 'sanctum')
+            ->postJson("/api/support-tickets/{$ticketId}/messages", ['message' => 'Hello?'])
+            ->assertOk();
+
+        Notification::assertSentTo(
+            $admin,
+            AdminSupportTicketMessageNotification::class,
+            fn ($notification, array $channels) => $channels === ['database', WebPushChannel::class],
+        );
     }
 
     public function test_an_ai_failure_hands_the_ticket_to_a_person(): void

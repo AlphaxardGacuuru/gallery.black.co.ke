@@ -39,9 +39,10 @@ class UserResource extends JsonResource
             "flagRefutedAt" => $this->flag_refuted_at,
             // An admin-only note, never shown to the flagged user.
             "flagReason" => $this->when(
-                $request->user()?->email === config('admin.email'),
+                (bool) $request->user()?->isAdmin(),
                 $this->flag_reason
             ),
+            "isAdmin" => $this->isAdmin(),
             "accountType" => $this->account_type,
             "emailVerifiedAt" => $this->email_verified_at,
             "settings" => $this->settings,

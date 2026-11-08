@@ -40,7 +40,6 @@ import {
 import { useApp } from "@/contexts/AppContext"
 import { useInitials } from "@/hooks/use-initials"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { ADMIN_EMAIL } from "@/middleware/auth"
 import { cn } from "@/lib/utils"
 import toast from "@/lib/toast"
 import { useDeletePhoto, useLikePhoto } from "@/queries/photos"
@@ -85,7 +84,7 @@ export function PhotoCard({
 	livePrizeAmount,
 }: Props) {
 	const { auth } = useApp()
-	const isAdmin = auth?.email === ADMIN_EMAIL
+	const isAdmin = Boolean(auth?.isAdmin)
 	const likePhoto = useLikePhoto()
 	const deletePhoto = useDeletePhoto()
 	const getInitials = useInitials()

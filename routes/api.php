@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AdminPhotoPurchaseController;
 use App\Http\Controllers\Admin\AdminReferralController;
 use App\Http\Controllers\Admin\AdminSupportTicketController;
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Auth\AdminPasswordLoginController;
 use App\Http\Controllers\FilePondController;
 use App\Http\Controllers\KopokopoRecipientController;
 use App\Http\Controllers\KopokopoTransferController;
@@ -109,6 +110,7 @@ Route::middleware(['auth:sanctum', 'admin'])
     ->name('admin.')
     ->group(function () {
         Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::post('password-login-link', [AdminPasswordLoginController::class, 'link'])->name('password-login-link');
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::patch('users/{id}/verify', [UserController::class, 'update'])->name('users.verify');
         Route::get('photo-competitions', [AdminPhotoCompetitionController::class, 'index'])->name('photo-competitions.index');

@@ -58,11 +58,11 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'name' => 'Super Admin',
-            'email' => 'al@property.black.co.ke',
+            'email' => 'al@gallery.black.co.ke',
             'email_verified_at' => now(),
             'avatar' => 'avatars/male-avatar.png',
             // 'phone' => '0700364446',
-            'password' => Hash::make('al@property.black.co.ke'),
+            'password' => Hash::make('al@gallery.black.co.ke'),
             'remember_token' => Str::random(10),
             'gender' => 'male',
         ]);

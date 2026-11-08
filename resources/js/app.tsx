@@ -52,6 +52,7 @@ const GUEST_ONLY = new Set([
 	"auth/forgot-password",
 	"auth/reset-password",
 	"auth/two-factor-challenge",
+	"auth/admin-login",
 ])
 
 const PUBLIC = new Set(["welcome", "auth/socialite-callback"])

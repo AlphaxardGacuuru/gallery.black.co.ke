@@ -6,6 +6,8 @@ use App\Enums\SupportTicketStatus;
 use App\Events\SupportTicketMessageCreatedEvent;
 use App\Jobs\AnswerSupportTicketJob;
 use App\Models\SupportTicketMessage;
+use App\Models\User;
+use App\Notifications\AdminSupportTicketMessageNotification;
 use App\Notifications\SupportTicketRepliedNotification;
 
 class SupportTicketMessageCreatedListener
@@ -16,6 +18,7 @@ class SupportTicketMessageCreatedListener
 
         $this->answerWithAssistant($event);
         $this->notifyCustomer($event);
+        $this->notifyAdmin($event);
     }
 
     /**
@@ -48,5 +51,29 @@ class SupportTicketMessageCreatedListener
         }
 
         $event->message->ticket->user?->notify(new SupportTicketRepliedNotification($event->message));
+    }
+
+    /**
+     * Once a person has the ticket, every customer message waits on them,
+     * so each one is pushed to the admin. While the assistant is still
+     * answering, the admin only hears about it if it escalates.
+     */
+    private function notifyAdmin(SupportTicketMessageCreatedEvent $event): void
+    {
+        $message = $event->message;
+
+        if ($message->author !== SupportTicketMessage::AUTHOR_USER) {
+            return;
+        }
+
+        $handledByPerson = [SupportTicketStatus::NEEDS_AGENT->value, SupportTicketStatus::IN_PROGRESS->value];
+
+        if (! in_array($message->ticket->status, $handledByPerson, true)) {
+            return;
+        }
+
+        User::where('email', config('admin.email'))
+            ->first()
+            ?->notify(new AdminSupportTicketMessageNotification($message));
     }
 }

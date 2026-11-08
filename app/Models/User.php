@@ -167,6 +167,15 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
      */
 
     /**
+     * The admin portal is open to the configured admin email and to the
+     * password login account (see config/admin.php).
+     */
+    public function isAdmin(): bool
+    {
+        return in_array($this->email, [config('admin.email'), config('admin.password_login_email')], true);
+    }
+
+    /**
      * Whether this user still wants emails for the given category — opt-out
      * by default (true) so users created before a category existed, or who
      * never touched their preferences, keep receiving it.

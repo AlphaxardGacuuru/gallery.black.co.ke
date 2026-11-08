@@ -3,6 +3,7 @@ import {
 	ChevronRight,
 	Coins,
 	Gauge,
+	KeyRound,
 	LayoutDashboard,
 	LifeBuoy,
 	Megaphone,
@@ -14,7 +15,10 @@ import {
 	Users,
 	type LucideIcon,
 } from "lucide-react"
+import { useState } from "react"
 import { Link } from "@/components/ui/link"
+import axios from "@/lib/axios"
+import toast from "@/lib/toast"
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -31,6 +35,8 @@ import {
 } from "@/components/ui/sidebar"
 import { useApp } from "@/contexts/AppContext"
 import { useCurrentUrl } from "@/hooks/use-current-url"
+import { clearAuth } from "@/middleware/auth"
+import { logout } from "@/routes"
 
 // Telescope, Horizon and Pulse are Laravel-rendered dashboards, opened in a
 // new tab so the app stays open behind them.
@@ -70,6 +76,29 @@ export function AdminNav() {
 		(item) => !item.ability || Boolean(auth?.[item.ability])
 	)
 	const isActive = items.some((item) => isCurrentOrParentUrl(item.href))
+	const [switching, setSwitching] = useState(false)
+
+	// The signed link has to be fetched while still signed in, then the
+	// session is ended and the page is opened with a full load, so the
+	// server checks the signature.
+	const handlePasswordLogin = async () => {
+		setSwitching(true)
+
+		try {
+			const link = await axios.post("api/admin/password-login-link")
+			const route = logout()
+
+			await axios
+				.request({ url: route.url, method: route.method })
+				.catch(() => undefined)
+
+			clearAuth()
+			window.location.assign(link.data.data)
+		} catch {
+			toast.error("Unable to open the password login page")
+			setSwitching(false)
+		}
+	}
 
 	return (
 		<SidebarGroup className="px-3 py-0">
@@ -102,6 +131,18 @@ export function AdminNav() {
 										</SidebarMenuSubButton>
 									</SidebarMenuSubItem>
 								))}
+								<SidebarMenuSubItem>
+									<SidebarMenuSubButton asChild>
+										<button
+											type="button"
+											className="w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+											onClick={handlePasswordLogin}
+											disabled={switching}>
+											<KeyRound className="size-4" />
+											<span>Log in with password</span>
+										</button>
+									</SidebarMenuSubButton>
+								</SidebarMenuSubItem>
 							</SidebarMenuSub>
 						</CollapsibleContent>
 					</SidebarMenuItem>

@@ -100,10 +100,7 @@ export async function requireSuperAdmin({
 	}
 }
 
-/** The only account allowed into /admin/ routes. Server-side enforcement lives in the `admin` middleware. */
-export const ADMIN_EMAIL = "alphaxardgacuuru47@gmail.com"
-
-/** Restrict /admin/ routes to the single admin account. */
+/** Restrict /admin/ routes to the admin accounts. Server-side enforcement lives in the `admin` middleware. */
 export async function requireAdmin({ location }: { location: RouteLocation }) {
 	if (!location.pathname.includes("/admin/")) {
 		return
@@ -111,7 +108,7 @@ export async function requireAdmin({ location }: { location: RouteLocation }) {
 
 	const auth = await getAuth()
 
-	if (!auth || auth.email !== ADMIN_EMAIL) {
+	if (!auth?.isAdmin) {
 		throw redirect({ to: "/compete" })
 	}
 }

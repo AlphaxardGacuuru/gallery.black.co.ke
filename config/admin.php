@@ -15,6 +15,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Password Login Email
+    |--------------------------------------------------------------------------
+    |
+    | A second admin account, and the only account that may sign in with a
+    | password. The password login page is only reachable through a short
+    | lived signed link that the admin portal hands out.
+    |
+    */
+
+    'password_login_email' => env('ADMIN_PASSWORD_LOGIN_EMAIL', 'al@gallery.black.co.ke'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Wallet Top-up Phone
     |--------------------------------------------------------------------------
     |

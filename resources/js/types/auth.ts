@@ -22,6 +22,8 @@ export type User = {
 	/** When the user disputed the flag by updating their phone number. */
 	flagRefutedAt?: string | null
 	email_verified_at: string | null
+	/** Whether the admin portal is open to this user (User::isAdmin()). */
+	isAdmin?: boolean
 	twoFactorEnabled?: boolean
 	referralsCount?: number
 	settings?: UserSettings | null

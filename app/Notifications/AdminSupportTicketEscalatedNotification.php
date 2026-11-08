@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\SupportTicket;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
@@ -24,7 +25,12 @@ class AdminSupportTicketEscalatedNotification extends Notification implements Sh
      */
     public function via($notifiable): array
     {
-        return [WebPushChannel::class];
+        return ['mail', 'database', WebPushChannel::class];
+    }
+
+    protected function url(): string
+    {
+        return "/admin/support?ticket={$this->ticket->id}";
     }
 
     protected function bodyLine(): string
@@ -34,6 +40,25 @@ class AdminSupportTicketEscalatedNotification extends Notification implements Sh
         return "{$name} needs help with \"{$this->ticket->subject}\" ({$this->ticket->number}).";
     }
 
+    public function toMail($notifiable): MailMessage
+    {
+        return (new MailMessage)
+            ->subject("Support ticket {$this->ticket->number} needs you")
+            ->greeting('Hello '.$notifiable->name.',')
+            ->line($this->bodyLine())
+            ->line('The AI assistant has stopped replying, so the customer is waiting for a person.')
+            ->action('Open the ticket', url($this->url()));
+    }
+
+    public function toArray($notifiable): array
+    {
+        return [
+            'url' => $this->url(),
+            'from' => 'Support',
+            'message' => $this->bodyLine(),
+        ];
+    }
+
     public function toWebPush($notifiable, $notification): WebPushMessage
     {
         return (new WebPushMessage)
@@ -41,6 +66,6 @@ class AdminSupportTicketEscalatedNotification extends Notification implements Sh
             ->icon('/notification-badge-192x192.png')
             ->badge('/notification-badge-192x192.png')
             ->body($this->bodyLine())
-            ->data(['url' => "/admin/support?ticket={$this->ticket->id}"]);
+            ->data(['url' => $this->url()]);
     }
 }

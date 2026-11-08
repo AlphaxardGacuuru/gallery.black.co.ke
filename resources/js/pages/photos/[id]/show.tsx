@@ -34,7 +34,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Spinner } from "@/components/ui/spinner"
 import { useApp } from "@/contexts/AppContext"
-import { ADMIN_EMAIL } from "@/middleware/auth"
 import { cn } from "@/lib/utils"
 import toast from "@/lib/toast"
 import { useDeletePhoto, useLikePhoto, usePhoto } from "@/queries/photos"
@@ -49,7 +48,7 @@ export default function PhotoShow({ id }: Props) {
 	const canGoBack = useCanGoBack()
 	const { data, isLoading } = usePhoto(id)
 	const { auth } = useApp()
-	const isAdmin = auth?.email === ADMIN_EMAIL
+	const isAdmin = Boolean(auth?.isAdmin)
 	const likePhoto = useLikePhoto()
 	const deletePhoto = useDeletePhoto()
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)

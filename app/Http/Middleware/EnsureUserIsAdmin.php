@@ -9,11 +9,11 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureUserIsAdmin
 {
     /**
-     * Restrict access to the single configured admin email.
+     * Restrict access to the admin accounts (see User::isAdmin()).
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->email !== config('admin.email')) {
+        if (! $request->user()?->isAdmin()) {
             abort(403, 'Forbidden');
         }
 

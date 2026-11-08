@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AdminPasswordLoginController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -34,6 +35,16 @@ Route::middleware('guest')->group(function() {
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.update');
 });
+
+// Password sign-in for the password login admin only, through a signed
+// link from the admin portal (see AdminPasswordLoginController).
+Route::get('admin-login', fn() => view('app'))
+    ->middleware('signed:relative')
+    ->name('admin-password-login');
+
+Route::post('admin-login', [AdminPasswordLoginController::class, 'store'])
+    ->middleware(['signed:relative', 'throttle:5,1'])
+    ->name('admin-password-login.store');
 
 Route::get('two-factor-challenge', fn() => view('app'))
     ->name('two-factor.login');

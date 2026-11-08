@@ -7,7 +7,6 @@ import { NavUser } from "@/components/nav-user"
 import { useApp } from "@/contexts/AppContext"
 import { useCurrentUrl } from "@/hooks/use-current-url"
 import { usePwaInstall } from "@/hooks/use-pwa-install"
-import { ADMIN_EMAIL } from "@/middleware/auth"
 import { toUrl } from "@/lib/utils"
 import {
 	Sidebar,
@@ -77,7 +76,7 @@ export function AppSidebar() {
 	const { isInstalled } = usePwaInstall()
 	const { auth } = useApp()
 	const { currentUrl } = useCurrentUrl()
-	const isAdmin = auth?.email === ADMIN_EMAIL
+	const isAdmin = Boolean(auth?.isAdmin)
 	const activeMainNavHref = findActiveNavHref(currentUrl, mainNavItems)
 
 	return (
