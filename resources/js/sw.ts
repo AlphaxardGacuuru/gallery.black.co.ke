@@ -28,7 +28,15 @@ self.addEventListener("message", (event) => {
 		self.skipWaiting()
 	}
 })
-self.addEventListener("activate", () => self.clients.claim())
+// Cached pages link the previous build's assets, which this version's
+// precache no longer holds, so they're dropped on activation.
+self.addEventListener("activate", (event) => {
+	event.waitUntil(
+		caches
+			.delete("navigation")
+			.then(() => self.clients.claim())
+	)
+})
 
 // ─── Caching strategies ───────────────────────────────────────────────────────
 
@@ -266,11 +274,18 @@ self.addEventListener("notificationclick", (event) => {
 
 // ─── SPA navigation fallback ──────────────────────────────────────────────────
 // All navigate requests that don't match a precached URL fall back to /index.php
-// so TanStack Router handles routing on the client side.
+// so TanStack Router handles routing on the client side. Kept for a month so
+// the app shell still opens while offline. After the phone has been idle the
+// first request often stalls instead of failing, which left a blank screen
+// until a reload, so the cached page is used whenever the network hasn't
+// answered within 3 seconds.
 registerRoute(
 	({ request }) => request.mode === "navigate",
 	new NetworkFirst({
 		cacheName: "navigation",
-		plugins: [new ExpirationPlugin({ maxEntries: 1, maxAgeSeconds: 60 })],
+		networkTimeoutSeconds: 3,
+		plugins: [
+			new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+		],
 	})
 )
