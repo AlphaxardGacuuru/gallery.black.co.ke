@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\PhotoLikedNotification;
 use Database\Seeders\SeedUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -27,6 +28,7 @@ class PostSeedLikesTest extends TestCase
         parent::setUp();
 
         Notification::fake();
+        Http::fake(['api.unsplash.com/photos/*/download' => Http::response()]);
         $this->seed(SeedUserSeeder::class);
 
         $this->competition = PhotoCompetition::factory()->create([

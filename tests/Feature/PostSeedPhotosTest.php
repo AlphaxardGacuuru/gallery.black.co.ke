@@ -29,6 +29,7 @@ class PostSeedPhotosTest extends TestCase
         parent::setUp();
 
         config(['services.unsplash.access_key' => 'test-key']);
+        Http::fake(['api.unsplash.com/photos/*/download' => Http::response()]);
         $this->seed(SeedUserSeeder::class);
     }
 
@@ -80,6 +81,22 @@ class PostSeedPhotosTest extends TestCase
 
         $this->assertSame(100, User::where('is_seed', true)->count());
         $this->assertSame(0, User::real()->count());
+    }
+
+    public function test_seeder_gives_seed_users_their_avatar_without_overwriting_a_changed_one(): void
+    {
+        $chebet = User::firstWhere('email', SeedUserSeeder::email('Chebet Jepkosgei'));
+        $mutua = User::firstWhere('email', SeedUserSeeder::email('Mutua Musyoka'));
+
+        $this->assertSame(SeedUserSeeder::avatarUrl('Chebet Jepkosgei'), $chebet->avatar);
+        $this->assertSame(100, User::where('avatar', 'LIKE', 'https://images.unsplash.com/%')->count());
+        Http::assertSent(fn ($request) => $request->url() === 'https://api.unsplash.com/photos/' . SeedUserSeeder::AVATARS['Chebet Jepkosgei'][0] . '/download');
+
+        $mutua->update(['avatar' => 'avatars/changed.png']);
+
+        $this->seed(SeedUserSeeder::class);
+
+        $this->assertSame('/storage/avatars/changed.png', $mutua->fresh()->avatar);
     }
 
     public function test_nothing_is_posted_before_the_first_photo_is_due(): void
