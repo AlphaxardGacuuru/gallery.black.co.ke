@@ -19,7 +19,7 @@ class AdminUserSeeder extends Seeder
         $admins = [
             [
                 'email' => 'al@gallery.black.co.ke',
-                'name' => 'Super Admin',
+                'name' => 'Black Gallery',
                 'avatar' => 'avatars/male-avatar.png',
                 'phone' => null,
                 'gender' => 'male',
