@@ -80,6 +80,9 @@ export function PhotoUploadField({
 				ref={pondRef}
 				allowMultiple
 				allowReorder
+				// New photos go last, so one added after buying a slot
+				// doesn't take over as the cover.
+				itemInsertLocation="after"
 				maxFiles={maxPhotos}
 				// A plain "image/*" (rather than a specific MIME list) is
 				// what makes Chrome on Android open its full Photos picker
@@ -142,10 +145,16 @@ export function PhotoUploadField({
 							)
 					},
 				}}
+				// Not onupdatefiles: react-filepond skips the re-render after
+				// each one, which could drop a prop change, e.g. the higher
+				// maxFiles from buying a slot, leaving no way to add a photo.
+				onaddfile={syncUploads}
+				onprocessfilestart={syncUploads}
 				onprocessfile={syncUploads}
+				onprocessfileabort={syncUploads}
+				onprocessfilerevert={syncUploads}
 				onremovefile={syncUploads}
 				onreorderfiles={syncUploads}
-				onupdatefiles={syncUploads}
 				name="filepond-photo"
 			/>
 			{extraPhoto?.enabled &&

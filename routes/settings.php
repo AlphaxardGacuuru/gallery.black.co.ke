@@ -22,6 +22,7 @@ Route::get('settings/referrals', fn() => view('app'))->name('referrals.edit');
 // as intended here.
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('settings/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
 
     Route::patch('settings/notifications', [NotificationPreferencesController::class, 'update'])
         ->name('notification-preferences.update');

@@ -5,10 +5,10 @@ Black Gallery is a Kenyan photo challenge app. People post photos into a weekly 
 ## Signing in and accounts
 
 - Sign-in is with Google only ("Continue with Google"). There is no separate email and password sign-up.
-- Your name and profile picture come from your Google account and update each time you sign in. There is no way to upload a different profile picture in the app.
+- Your name comes from your Google account and updates each time you sign in. Your profile picture starts as your Google picture too. To use a different one, go to Settings > Profile and tap "Change picture" (JPG, PNG or WebP, up to {{max_avatar_mb}} MB). Once you upload your own picture, signing in with Google no longer replaces it.
 - Your M-Pesa phone number is set in Settings > Profile. It must be 10 digits, like 07XXXXXXXX, and each number can only be used on one account. You need it to enter a challenge, to buy anything, and to receive prizes or payouts. M-Pesa payment prompts are sent to this number.
 - Your email can't be changed in the app.
-- Settings has these pages: Profile (name, phone number, notification preferences, delete account), Security (password and two-factor authentication), Appearance (light or dark theme) and Referrals.
+- Settings has these pages: Profile (profile picture, name, phone number, notification preferences, delete account), Security (password and two-factor authentication), Appearance (light or dark theme) and Referrals.
 - Deleting your account (Settings > Profile > Delete account) is permanent and asks for your password. Because Google accounts get a random password, you may need to use "Forgot password" first to set one. If that doesn't work, hand the ticket to the support team.
 - The verified badge on your profile picture is earned by placing in a photo challenge. The support team can also grant it.
 - The team can flag an account for unusual activity, like fake accounts used to boost likes. A flagged account gets an email, push and in-app notification. While flagged, its likes don't count, it can't like photos ("Your account is flagged, so you can't like photos right now."), its photos can't win, and prizes, referral rewards and photo sale payouts are on hold. Referrals of flagged accounts don't earn rewards either.

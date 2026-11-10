@@ -69,7 +69,7 @@ class AuthService extends Service
 				$attributes['name'] = $name;
 			}
 
-			if (filled($avatarUrl) && $user->avatar !== $avatarUrl) {
+			if (filled($avatarUrl) && ! $user->hasUploadedAvatar() && $user->avatar !== $avatarUrl) {
 				$attributes['avatar'] = $avatarUrl;
 			}
 

@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use Laragear\TwoFactor\TwoFactorAuthentication;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
@@ -66,6 +67,16 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         'created_at' => 'datetime:d M Y h:i:s',
     ];
 
+    /**
+     * The largest profile picture a user can upload, in kilobytes.
+     */
+    public const MAX_AVATAR_KB = 5120;
+
+    /**
+     * Where uploaded profile pictures live on the public disk.
+     */
+    public const AVATAR_UPLOAD_DIRECTORY = 'avatars/uploads';
+
     protected string $guard_name = 'web';
 
     /**
@@ -94,6 +105,16 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         return Attribute::make(
             get: fn($value) => preg_match("/https/", $value) ? $value : "/storage/" . $value
         );
+    }
+
+    /**
+     * Whether the user picked their own profile picture, which Google
+     * sign-in then leaves alone.
+     */
+    public function hasUploadedAvatar(): bool
+    {
+        return Str::of((string) $this->getRawOriginal('avatar'))
+            ->startsWith(static::AVATAR_UPLOAD_DIRECTORY . '/');
     }
 
     protected function emailVerifiedAt(): Attribute

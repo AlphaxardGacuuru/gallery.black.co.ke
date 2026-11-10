@@ -12,8 +12,10 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 
@@ -205,6 +207,25 @@ class UserService extends Service
 		}
 
 		$user->save();
+	}
+
+	/**
+	 * Store a new profile picture for $user, deleting the one they uploaded
+	 * before (Google and default avatars aren't ours to delete).
+	 */
+	public function updateAvatar(User $user, UploadedFile $avatar): void
+	{
+		$previous = $user->hasUploadedAvatar()
+			? $user->getRawOriginal('avatar')
+			: null;
+
+		$user
+			->forceFill(['avatar' => $avatar->store(User::AVATAR_UPLOAD_DIRECTORY, 'public')])
+			->save();
+
+		if ($previous) {
+			Storage::disk('public')->delete($previous);
+		}
 	}
 
 	public function updatePassword(User $user, string $password): void

@@ -1,6 +1,6 @@
 import { Head } from "@/lib/spa"
 import { LoaderCircle } from "lucide-react"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useApp } from "@/contexts/AppContext"
 import ProfileController from "@/actions/App/Http/Controllers/Settings/ProfileController"
@@ -10,9 +10,11 @@ import Heading from "@/components/heading"
 import InputError from "@/components/input-error"
 import PushNotificationSettings from "@/components/push-notification-settings"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
+import { useInitials } from "@/hooks/use-initials"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 import { edit } from "@/routes/profile"
@@ -27,16 +29,58 @@ export default function Profile({
 }) {
 	const { auth } = useApp()
 	const queryClient = useQueryClient()
+	const getInitials = useInitials()
 	const user = {
 		name: auth?.name ?? "",
 		email: auth?.email ?? "",
 		phone: auth?.phone ?? "",
 		email_verified_at: auth?.email_verified_at ?? null,
+		avatar: auth?.avatar,
 	}
 
 	const [processing, setProcessing] = useState(false)
 	const [errors, setErrors] = useState<Record<string, string>>({})
 	const [resendingVerification, setResendingVerification] = useState(false)
+	const [uploadingAvatar, setUploadingAvatar] = useState(false)
+	const [avatarError, setAvatarError] = useState<string>()
+	const avatarInput = useRef<HTMLInputElement>(null)
+
+	function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
+		const file = event.target.files?.[0]
+		event.target.value = ""
+
+		if (!file) {
+			return
+		}
+
+		setUploadingAvatar(true)
+		setAvatarError(undefined)
+		const formData = new FormData()
+		formData.append("avatar", file)
+
+		Axios.post(ProfileController.updateAvatar.url(), formData)
+			.then((response: { data: { message?: string } }) => {
+				toast.success(response.data.message ?? "Profile picture updated.")
+				queryClient.invalidateQueries({ queryKey: ["auth"] })
+			})
+			.catch((err: unknown) => {
+				const e = err as {
+					response?: {
+						status?: number
+						data?: { errors?: { avatar?: string[] } }
+					}
+				}
+
+				setAvatarError(
+					e.response?.status === 422
+						? e.response.data?.errors?.avatar?.[0]
+						: "We couldn't upload your profile picture. Please try again."
+				)
+			})
+			.finally(() => {
+				setUploadingAvatar(false)
+			})
+	}
 
 	function handleResendVerification() {
 		setResendingVerification(true)
@@ -96,7 +140,7 @@ export default function Profile({
 				<Heading
 					variant="small"
 					title="Profile information"
-					description="Update your name and email address"
+					description="Update your profile picture, name and phone number"
 				/>
 
 				{auth?.flaggedAt && (
@@ -109,6 +153,43 @@ export default function Profile({
 						</AlertDescription>
 					</Alert>
 				)}
+
+				<div className="grid gap-2">
+					<div className="flex items-center gap-4">
+						<Avatar className="size-16 overflow-hidden rounded-full">
+							<AvatarImage
+								src={user.avatar}
+								alt={user.name}
+								className="object-cover"
+							/>
+							<AvatarFallback className="rounded-full bg-neutral-200 text-lg text-black dark:bg-neutral-700 dark:text-white">
+								{getInitials(user.name)}
+							</AvatarFallback>
+						</Avatar>
+
+						{/* Avatar Start */}
+						<input
+							ref={avatarInput}
+							id="avatar"
+							type="file"
+							accept="image/jpeg,image/png,image/webp"
+							className="hidden"
+							onChange={handleAvatarChange}
+						/>
+						{/* Avatar End */}
+
+						<Button
+							type="button"
+							variant="outline"
+							disabled={uploadingAvatar}
+							onClick={() => avatarInput.current?.click()}>
+							Change picture
+							{uploadingAvatar && <LoaderCircle className="h-4 w-4 animate-spin" />}
+						</Button>
+					</div>
+
+					<InputError message={avatarError} />
+				</div>
 
 				<form
 					onSubmit={handleSubmit}

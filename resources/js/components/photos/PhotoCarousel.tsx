@@ -10,8 +10,19 @@ type Slide = { url: string; alt: string }
  * this codebase), gives native momentum/touch scrolling for free, with a
  * scroll-position-driven dot indicator and desktop-only prev/next buttons
  * for when there's no touchscreen to swipe with.
+ *
+ * By default every slide is contained within the parent's height (the
+ * full-screen view). With fitWidth each photo spans the full width at its
+ * natural height instead (the photo cards), and the track grows to the
+ * tallest slide.
  */
-export function PhotoCarousel({ slides }: { slides: Slide[] }) {
+export function PhotoCarousel({
+	slides,
+	fitWidth = false,
+}: {
+	slides: Slide[]
+	fitWidth?: boolean
+}) {
 	const trackRef = useRef<HTMLDivElement>(null)
 	const [index, setIndex] = useState(0)
 
@@ -44,26 +55,34 @@ export function PhotoCarousel({ slides }: { slides: Slide[] }) {
 			<img
 				src={slides[0]?.url}
 				alt={slides[0]?.alt}
-				className="h-full w-full object-contain"
+				className={fitWidth ? "h-auto w-full" : "h-full w-full object-contain"}
 			/>
 		)
 	}
 
 	return (
-		<div className="relative h-full w-full">
+		<div className={cn("relative w-full", !fitWidth && "h-full")}>
 			<div
 				ref={trackRef}
 				onScroll={handleScroll}
-				className="flex h-full w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+				className={cn(
+					"flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+					!fitWidth && "h-full"
+				)}>
 				{slides.map((slide, slideIndex) => (
 					<div
 						key={slide.url}
-						className="flex h-full w-full shrink-0 snap-center snap-always items-center justify-center">
+						className={cn(
+							"flex w-full shrink-0 snap-center snap-always items-center justify-center",
+							!fitWidth && "h-full"
+						)}>
 						<img
 							src={slide.url}
 							alt={slide.alt}
 							loading={slideIndex === 0 ? "eager" : "lazy"}
-							className="h-full w-full object-contain"
+							className={
+								fitWidth ? "h-auto w-full" : "h-full w-full object-contain"
+							}
 						/>
 					</div>
 				))}
