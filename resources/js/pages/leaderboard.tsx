@@ -82,11 +82,7 @@ function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
 		.filter(({ count }) => count > 0)
 
 	return (
-		<li
-			className={cn(
-				"flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm",
-				entry.rank === 1 && placed.length > 0 && "ring-1 ring-amber-400"
-			)}>
+		<li className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm">
 			<span
 				className={cn(
 					"w-7 shrink-0 text-center text-sm font-semibold tabular-nums",
