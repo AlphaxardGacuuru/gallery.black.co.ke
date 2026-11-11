@@ -4,12 +4,12 @@ namespace App\Notifications;
 
 use App\Enums\EmailNotificationCategory;
 use App\Models\PhotoCompetition;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 class PhotoCompetitionStartedNotification extends Notification implements ShouldQueue
 {
@@ -68,6 +68,8 @@ class PhotoCompetitionStartedNotification extends Notification implements Should
 			->body(
 				"Submit your best shot before {$this->competition->ends_at->format('l g:ia')} — prizes: {$this->tierSummary()}."
 			)
+			->openAction('submit', 'Submit a photo', '/photos/create')
+			->openAction('leaderboard', 'Leaderboard', '/leaderboard')
 			->data(['url' => '/']);
 	}
 }

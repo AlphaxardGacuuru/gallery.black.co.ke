@@ -3,12 +3,12 @@
 namespace App\Notifications;
 
 use App\Models\PhotoPurchase;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * The buyer's receipt. Always emailed (there's no opt-out category for it),
@@ -67,6 +67,7 @@ class PhotoPurchasedNotification extends Notification implements ShouldQueue
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
 			->body($this->bodyLine())
+			->openAction('download', 'Download', $this->url())
 			->data(['url' => $this->url()]);
 	}
 }

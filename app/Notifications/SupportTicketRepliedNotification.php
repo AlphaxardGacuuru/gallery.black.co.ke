@@ -3,12 +3,12 @@
 namespace App\Notifications;
 
 use App\Models\SupportTicketMessage;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * Someone on the support team replied to the customer's ticket.
@@ -53,6 +53,11 @@ class SupportTicketRepliedNotification extends Notification implements ShouldQue
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
 			->body($this->bodyLine())
+			->openAction('reply', 'Reply', $this->url())
+			->signedAction('mark-read', 'Mark as read', 'push-actions.support-tickets.read', [
+				'user' => $notifiable->id,
+				'supportTicket' => $this->message->support_ticket_id,
+			])
 			->data(['url' => $this->url()]);
 	}
 }

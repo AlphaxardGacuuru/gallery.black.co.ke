@@ -5,12 +5,12 @@ namespace App\Notifications;
 use App\Enums\EmailNotificationCategory;
 use App\Models\Photo;
 use App\Models\User;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 class PhotoLikedNotification extends Notification implements ShouldQueue
 {
@@ -33,6 +33,25 @@ class PhotoLikedNotification extends Notification implements ShouldQueue
 		}
 
 		return $channels;
+	}
+
+	/**
+	 * The liker's photo in the same running challenge, for "Like back",
+	 * unless $notifiable already liked it or is flagged and can't like.
+	 */
+	protected function likeBackPhoto(User $notifiable): ?Photo
+	{
+		if ($notifiable->isFlagged()) {
+			return null;
+		}
+
+		return Photo::query()
+			->where('user_id', $this->likedBy->id)
+			->where('competition_id', $this->photo->competition_id)
+			->whereHas('competition', fn ($query) => $query->active())
+			->whereDoesntHave('likes', fn ($query) => $query->where('user_id', $notifiable->id))
+			->latest()
+			->first();
 	}
 
 	protected function bodyLine(): string
@@ -68,6 +87,14 @@ class PhotoLikedNotification extends Notification implements ShouldQueue
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
 			->body($this->bodyLine())
+			->when(
+				$this->likeBackPhoto($notifiable),
+				fn ($message, Photo $photo) => $message->signedAction('like-back', 'Like back', 'push-actions.photos.like', [
+					'user' => $notifiable->id,
+					'photo' => $photo->id,
+				])
+			)
+			->openAction('view', 'View photo', '/photos/' . $this->photo->id . '/show')
 			->data(['url' => '/photos/' . $this->photo->id . '/show']);
 	}
 }

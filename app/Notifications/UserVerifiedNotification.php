@@ -2,11 +2,11 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * The user just got the verified badge.
@@ -46,6 +46,7 @@ class UserVerifiedNotification extends Notification implements ShouldQueue
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
 			->body($this->bodyLine())
+			->openAction('submit', 'Submit a photo', '/photos/create')
 			->data(['url' => self::URL]);
 	}
 }

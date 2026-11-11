@@ -4,12 +4,12 @@ namespace App\Notifications;
 
 use App\Enums\EmailNotificationCategory;
 use App\Models\PhotoPurchase;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 class PhotoSoldNotification extends Notification implements ShouldQueue
 {
@@ -90,6 +90,7 @@ class PhotoSoldNotification extends Notification implements ShouldQueue
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
 			->body($this->bodyLine())
+			->openAction('view', 'View photo', $this->url())
 			->data(['url' => $this->url()]);
 	}
 }

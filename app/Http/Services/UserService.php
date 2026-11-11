@@ -114,6 +114,18 @@ class UserService extends Service
 	}
 
 	/**
+	 * Give $user the verified badge and let them know.
+	 */
+	public function verify(User $user): void
+	{
+		$user->forceFill(['verified' => true])->save();
+
+		if ($user->wasChanged('verified')) {
+			UserVerifiedEvent::dispatch($user);
+		}
+	}
+
+	/**
 	 * Flag $user for suspected abuse: their likes stop counting, they can't
 	 * like, win or be paid, and they're told how to dispute it.
 	 */

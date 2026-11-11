@@ -5,12 +5,12 @@ namespace App\Notifications;
 use App\Enums\EmailNotificationCategory;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * Sent once, halfway through a challenge. Users who haven't entered are
@@ -99,7 +99,7 @@ class PhotoCompetitionReminderNotification extends Notification implements Shoul
 	}
 
 	/**
-	 * @return array{title: string, body: string, url: string}
+	 * @return array{title: string, body: string, url: string, action: array{name: string, title: string, url: string}}
 	 */
 	protected function shortMessage($notifiable): array
 	{
@@ -110,6 +110,7 @@ class PhotoCompetitionReminderNotification extends Notification implements Shoul
 				'title' => 'Halfway there. Rally some likes',
 				'body' => "Your photo has {$this->likesPhrase($entry)}. Share your referral link to get more before {$this->deadline()}.",
 				'url' => '/settings/referrals',
+				'action' => ['name' => 'share', 'title' => 'Share my link', 'url' => '/settings/referrals'],
 			];
 		}
 
@@ -119,6 +120,7 @@ class PhotoCompetitionReminderNotification extends Notification implements Shoul
 			'title' => 'Still time to enter this week\'s challenge',
 			'body' => "Submit your best shot before {$this->deadline()}" . ($prize ? " ({$prize})." : '.'),
 			'url' => '/',
+			'action' => ['name' => 'submit', 'title' => 'Submit a photo', 'url' => '/photos/create'],
 		];
 	}
 
@@ -142,6 +144,7 @@ class PhotoCompetitionReminderNotification extends Notification implements Shoul
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
 			->body($message['body'])
+			->openAction($message['action']['name'], $message['action']['title'], $message['action']['url'])
 			->data(['url' => $message['url']]);
 	}
 }

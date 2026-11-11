@@ -4,12 +4,12 @@ namespace App\Notifications;
 
 use App\Enums\EmailNotificationCategory;
 use App\Models\PhotoCompetition;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 class PhotoCompetitionEndedNotification extends Notification implements ShouldQueue
 {
@@ -60,6 +60,7 @@ class PhotoCompetitionEndedNotification extends Notification implements ShouldQu
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
 			->body('This week\'s photo challenge has closed — see who won.')
+			->openAction('leaderboard', 'See the leaderboard', '/leaderboard')
 			->data(['url' => '/discover']);
 	}
 }

@@ -3,12 +3,12 @@
 namespace App\Notifications;
 
 use App\Models\SupportTicketMessage;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * An operational alert to the admin account: the customer wrote again on a
@@ -56,6 +56,11 @@ class AdminSupportTicketMessageNotification extends Notification implements Shou
             ->icon('/notification-badge-192x192.png')
             ->badge('/notification-badge-192x192.png')
             ->body($this->bodyLine())
+            ->openAction('reply', 'Reply', $this->url())
+            ->signedAction('resolve', 'Resolve', 'push-actions.support-tickets.resolve', [
+                'user' => $notifiable->id,
+                'supportTicket' => $this->message->support_ticket_id,
+            ])
             ->data(['url' => $this->url()]);
     }
 }

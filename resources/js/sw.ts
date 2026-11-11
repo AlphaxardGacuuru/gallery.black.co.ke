@@ -197,7 +197,15 @@ registerRoute(
 
 type PushAction = { action: string; title: string }
 
-type PushNotificationData = { url?: string }
+// What each button does, keyed by its action name (see
+// App\Notifications\Messages\WebPushMessage): open a page, or post to a
+// signed link in the background.
+type PushActionLink = { url?: string; post?: string }
+
+type PushNotificationData = {
+	url?: string
+	actions?: Record<string, PushActionLink>
+}
 
 type PushPayload = {
 	title?: string
@@ -260,16 +268,43 @@ function openTargetUrl(url: string) {
 		})
 }
 
+// Posts a button's signed link. The signature stands in for the user's
+// token, which the service worker can't read. If it fails (the link
+// expired, the challenge ended, or the phone is offline) the notification's
+// page opens instead, so the user can do it in the app.
+function runSignedAction(post: string, fallbackUrl?: string) {
+	return fetch(new URL(post, self.location.origin), {
+		method: "POST",
+		headers: { Accept: "application/json" },
+	})
+		.then((response) => {
+			if (!response.ok) {
+				throw new Error(`Push action failed with ${response.status}`)
+			}
+		})
+		.catch(() => (fallbackUrl ? openTargetUrl(fallbackUrl) : undefined))
+}
+
 self.addEventListener("notificationclick", (event) => {
 	event.notification.close()
 
 	const data = event.notification.data as PushNotificationData | undefined
+	// event.action is empty for a click on the notification itself.
+	const link = event.action ? data?.actions?.[event.action] : undefined
 
-	if (!data?.url) {
+	if (link?.post) {
+		event.waitUntil(runSignedAction(link.post, data?.url))
+
 		return
 	}
 
-	event.waitUntil(openTargetUrl(data.url))
+	const url = link?.url ?? data?.url
+
+	if (!url) {
+		return
+	}
+
+	event.waitUntil(openTargetUrl(url))
 })
 
 // ─── SPA navigation fallback ──────────────────────────────────────────────────

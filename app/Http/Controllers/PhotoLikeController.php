@@ -21,7 +21,7 @@ class PhotoLikeController extends Controller
      */
     public function store(Request $request, string $id): JsonResponse
     {
-        ['photo' => $photo, 'liked' => $liked] = $this->photoService->like($request, $id);
+        ['photo' => $photo, 'liked' => $liked] = $this->photoService->like($request->user(), $id);
 
         if ($liked) {
             broadcast(new PhotoLikedEvent($photo, $request->user()))->toOthers();

@@ -23,6 +23,7 @@ use App\Http\Controllers\ExtraPhotoPurchaseController;
 use App\Http\Controllers\PhotoLikeController;
 use App\Http\Controllers\PhotoPurchaseController;
 use App\Http\Controllers\PhotoSlotPurchaseController;
+use App\Http\Controllers\PushActionController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\SupportTicketController;
@@ -169,6 +170,19 @@ Route::middleware(['auth:sanctum', 'can:viewAiUsage'])
 Route::get('photos/{photo}/download/{image?}', [PhotoPurchaseController::class, 'download'])
     ->middleware('signed')
     ->name('photos.download');
+
+// Background buttons on web push notifications. The signature stands in
+// for the user's token, since the service worker doesn't have it.
+Route::prefix('push-actions/{user}')
+    ->middleware(['signed:relative', 'throttle:30,1'])
+    ->name('push-actions.')
+    ->controller(PushActionController::class)
+    ->group(function () {
+        Route::post('photos/{photo}/like', 'likePhoto')->name('photos.like');
+        Route::post('support-tickets/{supportTicket}/read', 'readSupportTicket')->name('support-tickets.read');
+        Route::post('support-tickets/{supportTicket}/resolve', 'resolveSupportTicket')->name('support-tickets.resolve');
+        Route::post('users/{subject}/verify', 'verifyUser')->name('users.verify');
+    });
 
 // Kopokopo's send_money callback — hit by Kopokopo itself, not the admin UI.
 Route::post('kopokopo-transfers', [KopokopoTransferController::class, 'store']);

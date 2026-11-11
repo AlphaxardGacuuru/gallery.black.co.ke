@@ -9,6 +9,7 @@ use App\Models\PhotoCompetition;
 use App\Models\PhotoImage;
 use App\Models\PhotoSlotPurchase;
 use App\Models\TemporaryUpload;
+use App\Models\User;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -306,17 +307,16 @@ class PhotoService extends Service
 	}
 
 	/**
-	 * Like a photo on the authenticated user's behalf. A like is permanent:
+	 * Like a photo on $user's behalf. A like is permanent:
 	 * liking a photo the user already liked is a no-op, not an unlike, so
 	 * it's safe to call idempotently (e.g. a retried or duplicate request
 	 * never decrements likes_count).
 	 *
 	 * @return array{photo: Photo, liked: bool} liked is true only when this call added a new like
 	 */
-	public function like(Request $request, string $id): array
+	public function like(User $user, string $id): array
 	{
 		$photo = Photo::with('competition')->findOrFail($id);
-		$user = $request->user();
 
 		if ($photo->competition->status !== PhotoCompetition::STATUS_ACTIVE) {
 			throw ValidationException::withMessages([

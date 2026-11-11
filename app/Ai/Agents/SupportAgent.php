@@ -11,6 +11,7 @@ use App\Models\PhotoSlotPurchase;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketMessage;
 use App\Models\User;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -96,8 +97,8 @@ class SupportAgent implements Agent, Conversational, HasStructuredOutput
     {
         return Str::of(file_get_contents(resource_path('ai/support-knowledge-base.md')))
             ->replace(
-                ['{{max_upload_mb}}', '{{max_photos_per_entry}}', '{{download_link_minutes}}', '{{payment_retry_minutes}}', '{{max_avatar_mb}}'],
-                [Photo::MAX_UPLOAD_KB / 1024, Photo::MAX_IMAGES_PER_ENTRY, PhotoPurchaseService::DOWNLOAD_LINK_TTL_MINUTES, PhotoSlotPurchase::PENDING_TTL_MINUTES, User::MAX_AVATAR_KB / 1024]
+                ['{{max_upload_mb}}', '{{max_photos_per_entry}}', '{{download_link_minutes}}', '{{payment_retry_minutes}}', '{{max_avatar_mb}}', '{{push_action_lifetime_days}}'],
+                [Photo::MAX_UPLOAD_KB / 1024, Photo::MAX_IMAGES_PER_ENTRY, PhotoPurchaseService::DOWNLOAD_LINK_TTL_MINUTES, PhotoSlotPurchase::PENDING_TTL_MINUTES, User::MAX_AVATAR_KB / 1024, WebPushMessage::SIGNED_ACTION_LIFETIME_DAYS]
             )
             ->toString();
     }

@@ -3,12 +3,12 @@
 namespace App\Notifications;
 
 use App\Models\SupportTicket;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * An operational alert to the admin account: a support ticket needs a
@@ -66,6 +66,7 @@ class AdminSupportTicketEscalatedNotification extends Notification implements Sh
             ->icon('/notification-badge-192x192.png')
             ->badge('/notification-badge-192x192.png')
             ->body($this->bodyLine())
+            ->openAction('reply', 'Reply', $this->url())
             ->data(['url' => $this->url()]);
     }
 }

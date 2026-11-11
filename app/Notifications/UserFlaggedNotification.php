@@ -2,12 +2,12 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * Sent on every channel when an admin flags the user, telling them how to
@@ -59,6 +59,7 @@ class UserFlaggedNotification extends Notification implements ShouldQueue
 			->icon('/notification-badge-192x192.png')
 			->badge('/notification-badge-192x192.png')
 			->body($this->bodyLine())
+			->openAction('update-phone', 'Update phone number', self::URL)
 			->data(['url' => self::URL]);
 	}
 }
