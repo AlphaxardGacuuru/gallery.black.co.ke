@@ -71,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Throttled because every customer message costs an AI reply.
     Route::get('support-tickets', [SupportTicketController::class, 'index'])->name('support-tickets.index');
     Route::post('support-tickets', [SupportTicketController::class, 'store'])->middleware('throttle:6,1')->name('support-tickets.store');
+    Route::get('support-tickets/pending', [SupportTicketController::class, 'pending'])->name('support-tickets.pending');
     Route::get('support-tickets/{id}', [SupportTicketController::class, 'show'])->name('support-tickets.show');
     Route::delete('support-tickets/{id}', [SupportTicketController::class, 'destroy'])->name('support-tickets.destroy');
     Route::post('support-tickets/{id}/messages', [SupportTicketController::class, 'storeMessage'])->middleware('throttle:10,1')->name('support-tickets.messages.store');

@@ -112,6 +112,90 @@ class SupportTicketTest extends TestCase
         );
     }
 
+    public function test_a_reply_shows_as_unread_until_the_customer_opens_the_ticket(): void
+    {
+        SupportAgent::fake([['reply' => 'Hi!', 'escalate' => false]]);
+        $customer = User::factory()->create();
+        $ticketId = $this->start($customer)->json('data.id');
+        $ticket = SupportTicket::findOrFail($ticketId);
+
+        $this->travel(1)->minute();
+        app(SupportTicketService::class)->addMessage($ticket, SupportTicketMessage::AUTHOR_AGENT, 'We are on it.');
+
+        $this->actingAs($customer, 'sanctum')
+            ->getJson('/api/support-tickets/pending')
+            ->assertOk()
+            ->assertExactJson(['data' => ['unread' => 1, 'waiting' => null]]);
+
+        $this->actingAs($customer, 'sanctum')
+            ->getJson('/api/support-tickets')
+            ->assertJsonPath('data.0.unread', true);
+
+        $this->travel(1)->minute();
+
+        $this->actingAs($customer, 'sanctum')
+            ->getJson("/api/support-tickets/{$ticketId}")
+            ->assertOk();
+
+        $this->actingAs($customer, 'sanctum')
+            ->getJson('/api/support-tickets/pending')
+            ->assertJsonPath('data.unread', 0);
+
+        $this->actingAs($customer, 'sanctum')
+            ->getJson('/api/support-tickets')
+            ->assertJsonPath('data.0.unread', false);
+    }
+
+    public function test_reading_a_ticket_does_not_bump_it_up_the_admin_inbox(): void
+    {
+        SupportAgent::fake([['reply' => 'Hi!', 'escalate' => false]]);
+        $customer = User::factory()->create();
+        $ticketId = $this->start($customer)->json('data.id');
+        $updatedAt = SupportTicket::findOrFail($ticketId)->getRawOriginal('updated_at');
+
+        $this->travel(1)->hour();
+
+        $this->actingAs($customer, 'sanctum')
+            ->getJson("/api/support-tickets/{$ticketId}")
+            ->assertOk();
+
+        $this->assertSame($updatedAt, SupportTicket::findOrFail($ticketId)->getRawOriginal('updated_at'));
+    }
+
+    public function test_the_admin_badge_counts_tickets_waiting_on_a_person(): void
+    {
+        $admin = User::factory()->create(['email' => config('admin.email')]);
+        $customer = User::factory()->create();
+        SupportAgent::fake([
+            ['reply' => 'Hi!', 'escalate' => false],
+            ['reply' => 'Hi!', 'escalate' => false],
+            ['reply' => 'Hi!', 'escalate' => false],
+        ]);
+
+        // Handed over and not answered yet.
+        $handedOver = $this->start($customer)->json('data.id');
+        $this->actingAs($customer, 'sanctum')
+            ->postJson("/api/support-tickets/{$handedOver}/escalate")
+            ->assertOk();
+
+        // Answered by a person, then the customer wrote again.
+        $followedUp = SupportTicket::findOrFail($this->start($customer)->json('data.id'));
+        app(SupportTicketService::class)->addMessage($followedUp, SupportTicketMessage::AUTHOR_AGENT, 'Done.');
+        $this->travel(1)->minute();
+        $this->actingAs($customer, 'sanctum')
+            ->postJson("/api/support-tickets/{$followedUp->id}/messages", ['message' => 'Thanks, one more thing'])
+            ->assertOk();
+
+        // Answered by a person, customer hasn't written since.
+        $answered = SupportTicket::findOrFail($this->start($customer)->json('data.id'));
+        app(SupportTicketService::class)->addMessage($answered, SupportTicketMessage::AUTHOR_AGENT, 'Done.');
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/support-tickets/pending')
+            ->assertOk()
+            ->assertJsonPath('data.waiting', 2);
+    }
+
     public function test_an_ai_failure_hands_the_ticket_to_a_person(): void
     {
         SupportAgent::fake(fn () => throw new RuntimeException('Gemini is down'));

@@ -40,9 +40,32 @@ class SupportTicketService extends Service
     public function index(User $user)
     {
         return SupportTicket::with('latestMessage')
+            ->withExists(['messages as unread' => fn ($query) => $query->unreadByCustomer()])
             ->where('user_id', $user->id)
             ->orderBy('created_at', 'DESC')
             ->paginate(20);
+    }
+
+    /**
+     * What the badge on the Feedback button counts: the user's tickets with
+     * a reply they haven't opened and, for an admin, tickets waiting on a
+     * person (null for everyone else).
+     *
+     * @return array{unread: int, waiting: int|null}
+     */
+    public function pending(User $user): array
+    {
+        return [
+            'unread' => SupportTicket::query()
+                ->where('user_id', $user->id)
+                ->unreadByCustomer()
+                ->count(),
+            'waiting' => $user->isAdmin()
+                ? SupportTicket::query()
+                    ->waitingOnPerson()
+                    ->count()
+                : null,
+        ];
     }
 
     /**

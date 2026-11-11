@@ -42,14 +42,32 @@ class SupportTicketController extends Controller
 
         $supportTicket = $this->service->store($request, $request->user());
 
+        $supportTicket->markReadByCustomer();
+
         // The assistant may already have replied (sync queue), so reload the
         // conversation without losing wasRecentlyCreated (the 201).
         return SupportTicketResource::make($supportTicket->load('messages'));
     }
 
+    /**
+     * What the badge on the floating Feedback button counts.
+     */
+    public function pending(Request $request): JsonResponse
+    {
+        return response()->json(['data' => $this->service->pending($request->user())]);
+    }
+
+    /**
+     * Viewing the conversation counts as reading it. The chat polls this
+     * while it's open, so replies that land on screen are read too.
+     */
     public function show(Request $request, string $id): SupportTicketResource
     {
-        return SupportTicketResource::make($this->service->findForUser($request->user(), $id));
+        $supportTicket = $this->service->findForUser($request->user(), $id);
+
+        $supportTicket->markReadByCustomer();
+
+        return SupportTicketResource::make($supportTicket);
     }
 
     public function storeMessage(Request $request, string $id): SupportTicketResource
@@ -66,6 +84,9 @@ class SupportTicketController extends Controller
             $request->input('message'),
             $request->user(),
         );
+
+        // Writing back means they've seen everything before it.
+        $supportTicket->markReadByCustomer();
 
         return SupportTicketResource::make($supportTicket->fresh(['user', 'messages']));
     }

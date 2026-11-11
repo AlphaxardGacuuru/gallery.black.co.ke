@@ -35,6 +35,8 @@ class SupportTicketResource extends JsonResource
             "attachments" => $this->attachments,
             "status" => $this->status,
             "canDelete" => $canDelete,
+            // Only on the customer's own list (see SupportTicketService::index()).
+            "unread" => $this->whenHas('unread', fn ($unread) => (bool) $unread),
             "createdAt" => $this->created_at,
             "lastActivityAt" => Carbon::parse($this->getRawOriginal('updated_at'))->toIso8601String(),
             "latestMessage" => $this->whenLoaded(

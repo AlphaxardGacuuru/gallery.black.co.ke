@@ -1,4 +1,5 @@
 import { ArrowLeft, CheckCircle2, MessageSquarePlus, UserRound } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import {
 	SupportComposer,
@@ -104,7 +105,15 @@ export function SupportChat({ initialTicketId = null }: { initialTicketId?: stri
 						onClick={() => setView({ name: "thread", id: ticket.id })}
 						className="w-full rounded-xl border p-3 text-left transition-colors hover:bg-muted/60">
 						<div className="flex items-start justify-between gap-2">
-							<p className="line-clamp-1 text-sm font-medium">{ticket.subject}</p>
+							<p className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+								{ticket.unread && (
+									<span
+										className="size-2 shrink-0 rounded-full bg-destructive"
+										aria-label="Unread reply"
+									/>
+								)}
+								<span className="line-clamp-1">{ticket.subject}</span>
+							</p>
 							<SupportStatusBadge status={ticket.status} />
 						</div>
 						{ticket.latestMessage && (
@@ -213,6 +222,7 @@ function SupportThread({ id, onBack }: { id: string; onBack: () => void }) {
 	const escalate = useEscalateSupportTicket(id)
 	const close = useCloseSupportTicket(id)
 	const bottomRef = useRef<HTMLDivElement>(null)
+	const queryClient = useQueryClient()
 
 	const messages = ticket?.messages ?? []
 	const awaitingReply = isAwaitingReply(ticket) || sendMessage.isPending
@@ -221,6 +231,18 @@ function SupportThread({ id, onBack }: { id: string; onBack: () => void }) {
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView({ block: "end" })
 	}, [messages.length, awaitingReply])
+
+	// Loading the conversation marks it read on the server, so refresh the
+	// Feedback badge and the list's unread dots once each new reply is on
+	// screen.
+	useEffect(() => {
+		if (!ticket) {
+			return
+		}
+
+		queryClient.invalidateQueries({ queryKey: ["support-pending"] })
+		queryClient.invalidateQueries({ queryKey: ["support-tickets"], exact: true })
+	}, [ticket?.id, messages.length, queryClient])
 
 	async function send(message: string) {
 		try {

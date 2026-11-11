@@ -34,6 +34,8 @@ export type SupportTicket = {
 	status: SupportTicketStatus
 	createdAt: string
 	lastActivityAt: string
+	/** A reply the customer hasn't opened yet (their own list only). */
+	unread?: boolean
 	latestMessage?: SupportMessage | null
 	messages?: SupportMessage[]
 }
@@ -62,6 +64,24 @@ function pollInterval(query: Query<SupportTicket>): number | false {
 	}
 
 	return false
+}
+
+/** What the badge on the floating Feedback button counts. `waiting` is
+ *  only set for the admin: tickets waiting on a person. */
+export type SupportPending = {
+	unread: number
+	waiting: number | null
+}
+
+export function useSupportPending() {
+	return useQuery({
+		queryKey: ["support-pending"],
+		queryFn: () =>
+			Axios.get<{ data: SupportPending }>("api/support-tickets/pending").then(
+				(res) => res.data.data
+			),
+		refetchInterval: 60_000,
+	})
 }
 
 export function useSupportTickets(enabled = true) {
