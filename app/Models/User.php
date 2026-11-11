@@ -63,6 +63,7 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         'is_seed' => 'boolean',
         'flagged_at' => 'datetime',
         'flag_refuted_at' => 'datetime',
+        'phone_requested_at' => 'datetime',
         'updated_at' => 'datetime:d M Y',
         'created_at' => 'datetime:d M Y h:i:s',
     ];

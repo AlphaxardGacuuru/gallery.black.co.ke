@@ -7,17 +7,24 @@ use App\Events\UserFlaggedEvent;
 use App\Events\UserVerifiedEvent;
 use App\Http\Resources\UserResource;
 use App\Models\Photo;
+use App\Models\PhotoCompetitionWinner;
 use App\Models\PhotoLike;
+use App\Models\PhotoPurchase;
+use App\Models\PhotoSlotPurchase;
+use App\Models\Referral;
 use App\Models\Role;
+use App\Models\SupportTicket;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class UserService extends Service
 {
@@ -153,6 +160,116 @@ class UserService extends Service
 			->whereHas('competition', fn($query) => $query->active())
 			->get()
 			->each(fn(Photo $photo) => $photo->recountLikes());
+	}
+
+	/**
+	 * Permanently delete $user with everything they posted, liked or sent,
+	 * then recount the running challenge's photos they had liked. Admins,
+	 * and anyone with money on record (prizes, sales, purchases, referral
+	 * payouts), can't be deleted: the cascade would erase that history, so
+	 * flag them instead.
+	 */
+	public function deleteAccount(User $user): void
+	{
+		if ($user->isAdmin()) {
+			throw ValidationException::withMessages([
+				'user' => "{$user->name} is an admin and can't be deleted.",
+			]);
+		}
+
+		if ($this->hasPaymentHistory($user)) {
+			throw ValidationException::withMessages([
+				'user' => "{$user->name} has payment records, so they can't be deleted. Flag them instead.",
+			]);
+		}
+
+		$likedPhotoIds = PhotoLike::query()
+			->where('user_id', $user->id)
+			->pluck('photo_id');
+
+		$files = $this->accountFiles($user);
+
+		DB::transaction(function () use ($user) {
+			$user->tokens()->delete();
+			$user->pushSubscriptions()->delete();
+			$user->notifications()->delete();
+			$user->delete();
+		});
+
+		$files->each(fn (array $paths, string $disk) => Storage::disk($disk)->delete($paths));
+
+		Photo::query()
+			->whereIn('id', $likedPhotoIds)
+			->whereHas('competition', fn ($query) => $query->active())
+			->get()
+			->each(fn (Photo $photo) => $photo->recountLikes());
+	}
+
+	/**
+	 * Whether money has moved for $user: a prize, a paid photo sale or
+	 * purchase, a paid extra slot, or a referral reward.
+	 */
+	private function hasPaymentHistory(User $user): bool
+	{
+		return PhotoCompetitionWinner::query()
+				->where('user_id', $user->id)
+				->exists()
+			|| PhotoPurchase::query()
+				->paid()
+				->where(fn ($query) => $query
+					->where('buyer_id', $user->id)
+					->orWhere('seller_id', $user->id))
+				->exists()
+			|| PhotoSlotPurchase::query()
+				->where('user_id', $user->id)
+				->where('status', PhotoSlotPurchase::STATUS_PAID)
+				->exists()
+			|| Referral::query()
+				->where(fn ($query) => $query
+					->where('referrer_id', $user->id)
+					->orWhere('referred_id', $user->id))
+				->where(fn ($query) => $query
+					->whereNotNull('paid_at')
+					->orWhereNotNull('photo_bonus_paid_at'))
+				->exists();
+	}
+
+	/**
+	 * Files on disk that only $user's account points at (photos, an
+	 * uploaded avatar, support ticket attachments), grouped by disk.
+	 *
+	 * @return Collection<string, array<int, string>>
+	 */
+	private function accountFiles(User $user): Collection
+	{
+		$photos = Photo::query()
+			->with('images')
+			->where('user_id', $user->id)
+			->get();
+
+		return $photos
+			->flatMap(fn (Photo $photo) => $photo->images
+				->map(fn ($image) => [$image->disk, [$image->path, $image->thumbnail_path]])
+				->push([$photo->disk, [$photo->path, $photo->thumbnail_path]]))
+			->when(
+				$user->hasUploadedAvatar(),
+				fn ($files) => $files->push(['public', [$user->getRawOriginal('avatar')]])
+			)
+			->push([
+				'public',
+				SupportTicket::query()
+					->where('user_id', $user->id)
+					->pluck('attachments')
+					->flatten()
+					->all(),
+			])
+			->groupBy(fn (array $file) => $file[0])
+			->map(fn (Collection $files) => $files
+				->flatMap(fn (array $file) => $file[1])
+				->filter()
+				->values()
+				->all())
+			->filter();
 	}
 
 	public function destroy(int|string $id): array

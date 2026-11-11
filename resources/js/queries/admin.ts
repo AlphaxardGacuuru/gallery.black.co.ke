@@ -66,6 +66,9 @@ export type AdminUser = {
 	flagReason?: string | null
 	/** When the flagged user disputed it by updating their phone number. */
 	flagRefutedAt: string | null
+	/** How many times the user was asked to add a phone number. */
+	phoneRequestsCount: number
+	phoneRequestedAt: string | null
 	settings: UserSettings | null
 	pushSubscriptionsCount: number
 	/** Who this user is credited to as a referral, if anyone. */
@@ -180,13 +183,33 @@ export function useFlagUser() {
 }
 
 /**
+ * Permanently delete a user with everything they posted. The server refuses
+ * admins and anyone with payment records.
+ */
+export function useDeleteUser() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (userId: string) => Axios.delete(`api/admin/users/${userId}`),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin"] })
+			queryClient.invalidateQueries({ queryKey: ["photos"] })
+		},
+	})
+}
+
+/**
  * Email a user without a phone number asking them to add the M-Pesa number
  * that prizes and payouts are sent to.
  */
 export function useRequestUserPhone() {
+	const queryClient = useQueryClient()
+
 	return useMutation({
 		mutationFn: (userId: string) =>
 			Axios.post(`api/admin/users/${userId}/request-phone`),
+		onSuccess: () =>
+			queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
 	})
 }
 

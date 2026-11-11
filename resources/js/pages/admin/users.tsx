@@ -1,5 +1,5 @@
 import { isAxiosError } from "axios"
-import { Check, Loader2, Users } from "lucide-react"
+import { Check, Loader2, Trash2, Users } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import AdminStatCard from "@/components/admin/AdminStatCard"
@@ -34,6 +34,7 @@ import {
 	useAdminKopokopoRecipients,
 	useAdminUsers,
 	useAttachReferrer,
+	useDeleteUser,
 	useFlagUser,
 	useRequestUserPhone,
 	useToggleUserVerified,
@@ -140,27 +141,37 @@ function KopokopoRecipientCell({
 
 	if (!user.phone) {
 		return (
-			<Button
-				variant="outline"
-				size="sm"
-				disabled={requestPhone.isPending}
-				onClick={() =>
-					requestPhone.mutate(user.id, {
-						onSuccess: () =>
-							toast.success(`Asked ${user.name} to add their phone number`),
-						onError: (error) =>
-							toast.error("Couldn't send the request", {
-								description: isAxiosError<{ message?: string }>(error)
-									? error.response?.data?.message
-									: undefined,
-							}),
-					})
-				}>
-				{requestPhone.isPending && (
-					<Loader2 className="size-3.5 animate-spin" />
+			<div className="flex items-center gap-1.5">
+				<Button
+					variant="outline"
+					size="sm"
+					disabled={requestPhone.isPending}
+					onClick={() =>
+						requestPhone.mutate(user.id, {
+							onSuccess: () =>
+								toast.success(`Asked ${user.name} to add their phone number`),
+							onError: (error) =>
+								toast.error("Couldn't send the request", {
+									description: isAxiosError<{ message?: string }>(error)
+										? error.response?.data?.message
+										: undefined,
+								}),
+						})
+					}>
+					{requestPhone.isPending && (
+						<Loader2 className="size-3.5 animate-spin" />
+					)}
+					Request phone
+				</Button>
+				{user.phoneRequestsCount > 0 && (
+					<Badge
+						variant="secondary"
+						className="tabular-nums"
+						title={`Sent ${user.phoneRequestsCount} ${user.phoneRequestsCount === 1 ? "time" : "times"}${user.phoneRequestedAt ? `, last on ${new Date(user.phoneRequestedAt).toLocaleString()}` : ""}`}>
+						Sent {user.phoneRequestsCount}×
+					</Badge>
 				)}
-				Request phone
-			</Button>
+			</div>
 		)
 	}
 
@@ -289,6 +300,69 @@ function FlagCell({ user }: { user: AdminUser }) {
 				</DialogContent>
 			</Dialog>
 		</div>
+	)
+}
+
+/**
+ * Delete button with a confirmation dialog. The server refuses admins and
+ * anyone with payment records, and its reason is shown as the error toast.
+ */
+function DeleteUserCell({ user }: { user: AdminUser }) {
+	const [open, setOpen] = useState(false)
+	const deleteUser = useDeleteUser()
+
+	function submit() {
+		deleteUser.mutate(user.id, {
+			onSuccess: () => {
+				toast.success(`${user.name} deleted`)
+				setOpen(false)
+			},
+			onError: (error) =>
+				toast.error(
+					(isAxiosError<{ errors?: { user?: string[] } }>(error) &&
+						error.response?.data?.errors?.user?.[0]) ||
+						"Couldn't delete this user"
+				),
+		})
+	}
+
+	return (
+		<Dialog
+			open={open}
+			onOpenChange={setOpen}>
+			<DialogTrigger asChild>
+				<Button
+					variant="ghost"
+					size="icon"
+					className="text-muted-foreground hover:text-destructive"
+					aria-label={`Delete ${user.name}`}>
+					<Trash2 className="size-4" />
+				</Button>
+			</DialogTrigger>
+			<DialogContent>
+				<DialogTitle>Delete {user.name}?</DialogTitle>
+				<DialogDescription>
+					This permanently deletes their account, photos, likes and support
+					conversations. Their likes stop counting in the running challenge.
+					This can't be undone.
+				</DialogDescription>
+
+				<DialogFooter className="gap-2">
+					<DialogClose asChild>
+						<Button variant="secondary">Cancel</Button>
+					</DialogClose>
+					<Button
+						variant="destructive"
+						disabled={deleteUser.isPending}
+						onClick={submit}>
+						{deleteUser.isPending && (
+							<Loader2 className="size-3.5 animate-spin" />
+						)}
+						Delete user
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	)
 }
 
@@ -581,6 +655,17 @@ export default function AdminUsers() {
 								: `Verify ${row.original.name}`
 						}
 					/>
+				</div>
+			),
+		},
+		{
+			id: "delete",
+			header: "",
+			enableSorting: false,
+			meta: { className: "text-right" },
+			cell: ({ row }) => (
+				<div className="flex justify-end">
+					<DeleteUserCell user={row.original} />
 				</div>
 			),
 		},

@@ -42,6 +42,14 @@ class UserResource extends JsonResource
                 (bool) $request->user()?->isAdmin(),
                 $this->flag_reason
             ),
+            "phoneRequestsCount" => $this->when(
+                (bool) $request->user()?->isAdmin(),
+                (int) $this->phone_requests_count
+            ),
+            "phoneRequestedAt" => $this->when(
+                (bool) $request->user()?->isAdmin(),
+                $this->phone_requested_at
+            ),
             "isAdmin" => $this->isAdmin(),
             "accountType" => $this->account_type,
             "emailVerifiedAt" => $this->email_verified_at,

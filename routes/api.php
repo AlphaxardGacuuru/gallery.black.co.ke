@@ -139,6 +139,7 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::post('users/{user}/referrer', [AdminReferralController::class, 'attach'])->name('users.referrer');
         Route::post('users/{user}/request-phone', [AdminUserController::class, 'requestPhone'])->name('users.request-phone');
         Route::put('users/{user}/flag', [AdminUserController::class, 'flag'])->name('users.flag');
+        Route::delete('users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
         Route::get('photos/{photo}/likes', [AdminPhotoLikeController::class, 'index'])->name('photos.likes.index');
         Route::delete('photos/{photo}/likes/flagged', [AdminPhotoLikeController::class, 'destroyFlagged'])->name('photos.likes.destroy-flagged');
         Route::post('photos/{photo}/likes/{user}', [AdminPhotoLikeController::class, 'toggle'])->name('photos.likes.toggle');

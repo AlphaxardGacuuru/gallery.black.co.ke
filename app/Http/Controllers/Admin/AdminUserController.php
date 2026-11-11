@@ -43,6 +43,18 @@ class AdminUserController extends Controller
     }
 
     /**
+     * Permanently delete $user and everything they posted.
+     */
+    public function destroy(User $user): JsonResponse
+    {
+        $this->userService->deleteAccount($user);
+
+        return response()->json([
+            'message' => "{$user->name} deleted",
+        ]);
+    }
+
+    /**
      * Email $user asking them to add the M-Pesa phone number that prizes
      * and payouts are sent to.
      */
