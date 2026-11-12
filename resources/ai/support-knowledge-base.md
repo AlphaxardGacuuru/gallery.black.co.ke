@@ -5,7 +5,7 @@ Black Gallery is a Kenyan photo challenge app. People post photos into a weekly 
 ## Signing in and accounts
 
 - Sign-in is with Google only ("Continue with Google"). There is no separate email and password sign-up.
-- Your name comes from your Google account and updates each time you sign in. Your profile picture starts as your Google picture too. To use a different one, go to Settings > Profile and tap "Change picture" (JPG, PNG or WebP, up to {{max_avatar_mb}} MB). Once you upload your own picture, signing in with Google no longer replaces it.
+- Your name comes from your Google account and updates each time you sign in. Your profile picture starts as your Google picture too. To use a different one, go to Settings > Profile and tap your picture (or "Upload new picture") to choose a new one, or drag one onto it, then tap "Save picture" (JPG, PNG or WebP, up to {{max_avatar_mb}} MB). The circle shows how the new picture will look before you save it. Once you upload your own picture, signing in with Google no longer replaces it.
 - Your M-Pesa phone number is set in Settings > Profile. It must be 10 digits, like 07XXXXXXXX, and each number can only be used on one account. You need it to enter a challenge, to buy anything, and to receive prizes or payouts. M-Pesa payment prompts are sent to this number.
 - Your email can't be changed in the app.
 - Settings has these pages: Profile (profile picture, name, phone number, notification preferences, delete account), Security (password and two-factor authentication), Appearance (light or dark theme) and Referrals.
