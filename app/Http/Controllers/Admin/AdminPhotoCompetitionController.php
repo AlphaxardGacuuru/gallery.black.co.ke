@@ -15,7 +15,9 @@ use App\Models\Setting;
 use Database\Seeders\SeedUserSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class AdminPhotoCompetitionController extends Controller
 {
@@ -311,13 +313,29 @@ class AdminPhotoCompetitionController extends Controller
 
         $request->merge(['amount' => $total]);
 
-        [$status, $message, $data] = $this->mpesaTransactionService->stkPush($request, config('admin.wallet_phone'));
+        try {
+            [$status, $message, $data] = $this->mpesaTransactionService->stkPush($request, config('admin.wallet_phone'));
+        } catch (Throwable $e) {
+            report($e);
+
+            [$status, $message, $data] = ['error', "Kopokopo couldn't be reached: {$e->getMessage()}", null];
+        }
+
+        // stkPush() only says "Request Failed", so the admin sees (and the
+        // log keeps) Kopokopo's own reason instead.
+        if ($status !== 'success') {
+            Log::warning('Loading the Kopokopo wallet failed', [
+                'competition' => $competition->id,
+                'amount' => $total,
+                'response' => $data,
+            ]);
+        }
 
         return response()->json([
             'status' => $status === 'success',
             'message' => $status === 'success'
                 ? 'KES ' . number_format($total) . ' requested on ' . config('admin.wallet_phone')
-                : $message,
+                : data_get($data, 'data.errorMessage', $message),
             'data' => ['amount' => $total],
         ]);
     }

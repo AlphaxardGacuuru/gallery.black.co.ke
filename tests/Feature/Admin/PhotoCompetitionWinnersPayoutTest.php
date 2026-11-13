@@ -369,6 +369,40 @@ class PhotoCompetitionWinnersPayoutTest extends TestCase
             ->assertJsonPath('data.amount', $expected);
     }
 
+    public function test_a_failed_wallet_load_shows_kopokopos_reason(): void
+    {
+        $competition = $this->competitionWithMixedWinners();
+
+        $this->partialMock(MPESATransactionService::class, function ($mock) {
+            $mock->shouldReceive('stkPush')
+                ->once()
+                ->andReturn(['error', 'Request Failed', ['status' => 'error', 'data' => ['errorCode' => 400, 'errorMessage' => 'Till number is invalid']]]);
+        });
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson("/api/admin/photo-competitions/{$competition->id}/load-wallet")
+            ->assertOk()
+            ->assertJsonPath('status', false)
+            ->assertJsonPath('message', 'Till number is invalid');
+    }
+
+    public function test_a_wallet_load_that_cant_reach_kopokopo_says_so(): void
+    {
+        $competition = $this->competitionWithMixedWinners();
+
+        $this->partialMock(MPESATransactionService::class, function ($mock) {
+            $mock->shouldReceive('stkPush')
+                ->once()
+                ->andThrow(new \ErrorException('Undefined array key "accessToken"'));
+        });
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson("/api/admin/photo-competitions/{$competition->id}/load-wallet")
+            ->assertOk()
+            ->assertJsonPath('status', false)
+            ->assertJsonPath('message', 'Kopokopo couldn\'t be reached: Undefined array key "accessToken"');
+    }
+
     public function test_loading_the_wallet_does_nothing_when_no_prizes_are_outstanding(): void
     {
         $competition = PhotoCompetition::factory()->create();
