@@ -294,6 +294,34 @@ class AdminPhotoCompetitionController extends Controller
     }
 
     /**
+     * Pay every outstanding prize in $competition at once, one transfer per
+     * person. It counts as a success when at least one transfer went out;
+     * anyone skipped is listed in the message.
+     */
+    public function payWinners(PhotoCompetition $competition): JsonResponse
+    {
+        ['paid' => $paid, 'amount' => $amount, 'failed' => $failed] = $this->kopokopoTransferService->payWinners($competition);
+
+        $skipped = collect($failed)
+            ->map(fn(array $failure) => "{$failure['name']}: {$failure['message']}")
+            ->implode('. ');
+
+        return response()->json([
+            'status' => $paid > 0,
+            'message' => match (true) {
+                $paid === 0 && $failed === [] => 'There are no outstanding prizes to pay',
+                $paid === 0 => "Couldn't pay anyone. {$skipped}",
+                default => 'Sent KES ' . number_format($amount) . " to {$paid} " . str('winner')->plural($paid) . ', awaiting confirmation from Kopokopo',
+            },
+            'data' => [
+                'paid' => $paid,
+                'amount' => $amount,
+                'failed' => $failed,
+            ],
+        ]);
+    }
+
+    /**
      * STK push the admin's wallet number for exactly what this competition's
      * outstanding prizes and transfer fees come to, so the Kopokopo balance
      * covers the payouts. The amount is worked out here, not sent by the

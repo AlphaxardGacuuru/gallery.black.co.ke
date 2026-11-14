@@ -5,12 +5,14 @@ namespace App\Http\Services;
 use App\Events\KopokopoTransferRecordedEvent;
 use App\Http\Resources\KopokopoTransferResource;
 use App\Models\KopokopoTransfer;
+use App\Models\PhotoCompetition;
 use App\Models\PhotoCompetitionWinner;
 use App\Models\PhotoPurchase;
 use App\Models\Referral;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Kopokopo\SDK\K2;
 use Illuminate\Support\Facades\Log;
@@ -341,12 +343,56 @@ class KopokopoTransferService extends Service
             return [false, 'A payout for this winner is already in progress', null];
         }
 
-        $user = $winner->user;
-
-        if (! $user) {
+        if (! $winner->user) {
             return [false, 'This winner has no associated user', null];
         }
 
+        return $this->payPrizes($winner->user, collect([$winner]));
+    }
+
+    /**
+     * Pay every outstanding prize in $competition at once, with one transfer
+     * per person: Kopokopo charges its fee per payment line, so someone who
+     * won more than one place gets their prizes added up into a single
+     * transfer. Anyone who can't be paid (flagged, for example) is skipped
+     * and reported, without stopping the rest.
+     *
+     * @return array{paid: int, amount: int, failed: array<int, array{name: string, message: string}>}
+     */
+    public function payWinners(PhotoCompetition $competition): array
+    {
+        $competition->load('winners.user');
+
+        $results = $competition->payableWinners()
+            ->groupBy('user_id')
+            ->map(fn(Collection $winners) => [
+                'name' => $winners->first()->user->name,
+                'amount' => (int) $winners->sum('prize_amount'),
+                'result' => $this->payPrizes($winners->first()->user, $winners),
+            ]);
+
+        [$paid, $failed] = $results->partition(fn(array $payout) => $payout['result'][0]);
+
+        return [
+            'paid' => $paid->count(),
+            'amount' => (int) $paid->sum('amount'),
+            'failed' => $failed
+                ->map(fn(array $payout) => ['name' => $payout['name'], 'message' => $payout['result'][1]])
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /**
+     * Send $user one transfer covering all of $winners' prizes. Like a
+     * single payout, this only records kopokopo_reference on each of them;
+     * the webhook marks them paid (see KopokopoTransferRecordedListener).
+     *
+     * @param  Collection<int, PhotoCompetitionWinner>  $winners
+     * @return array{0: bool, 1: string, 2: mixed}
+     */
+    private function payPrizes(User $user, Collection $winners): array
+    {
         if ($user->isFlagged()) {
             return [false, $user->name . ' is flagged. Unflag them before paying.', null];
         }
@@ -357,18 +403,34 @@ class KopokopoTransferService extends Service
 
         $request = Request::create('/', 'POST', [
             'destinationReference' => $user->phone,
-            'amount' => $winner->prize_amount,
+            'amount' => $winners->sum('prize_amount'),
             'recipientName' => $user->name,
-            'description' => 'Black Gallery weekly challenge prize (#' . $winner->position . ')',
+            'description' => self::prizeDescription($winners),
         ]);
 
         [$status, $message, $data] = $this->initiateTransfer($request);
 
         if ($status === true) {
-            $winner->update(['kopokopo_reference' => $this->locationId($data['location'] ?? '')]);
+            PhotoCompetitionWinner::query()
+                ->whereKey($winners->pluck('id'))
+                ->update(['kopokopo_reference' => $this->locationId($data['location'] ?? '')]);
         }
 
         return [$status === true, $message, $data];
+    }
+
+    /**
+     * "Black Gallery weekly challenge prize (#2)", or "(#2, #5)" for one
+     * transfer covering several places.
+     *
+     * @param  Collection<int, PhotoCompetitionWinner>  $winners
+     */
+    public static function prizeDescription(Collection $winners): string
+    {
+        return $winners
+            ->sortBy('position')
+            ->map(fn(PhotoCompetitionWinner $winner) => '#' . $winner->position)
+            ->pipe(fn(Collection $positions) => 'Black Gallery weekly challenge prize (' . $positions->implode(', ') . ')');
     }
 
     /**

@@ -357,6 +357,37 @@ export function useLoadKopokopoWallet() {
 	})
 }
 
+export function usePayCompetitionWinners() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		// Same status-in-body convention as usePayCompetitionWinner.
+		mutationFn: (competitionId: string) =>
+			Axios.post<{
+				status: unknown
+				message: string
+				data: {
+					paid: number
+					amount: number
+					failed: { name: string; message: string }[]
+				}
+			}>(`api/admin/photo-competitions/${competitionId}/pay-winners`).then(
+				(res) => {
+					if (res.data.status !== true) {
+						throw new Error(res.data.message)
+					}
+
+					return res.data
+				}
+			),
+		onSettled: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "photo-competitions"],
+			})
+		},
+	})
+}
+
 export function usePayCompetitionWinner() {
 	const queryClient = useQueryClient()
 

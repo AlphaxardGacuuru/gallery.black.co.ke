@@ -44,6 +44,7 @@ import {
 	useAdminRecentPhotoCompetitions,
 	useLoadKopokopoWallet,
 	usePayCompetitionWinner,
+	usePayCompetitionWinners,
 	usePayPhotographer,
 	useUpdateActiveCompetition,
 	useUpdateExtraPhoto,
@@ -602,7 +603,7 @@ function WinnerRow({ winner }: { winner: AdminPhotoCompetitionWinner }) {
 
 	return (
 		<div className="flex items-center justify-between gap-3 border-b py-2 last:border-b-0">
-			<div className="flex items-center gap-2">
+			<div className="flex min-w-0 items-center gap-2">
 				<Badge
 					variant="secondary"
 					className="tabular-nums">
@@ -662,7 +663,7 @@ function PayoutTotal({
 	emphasis?: boolean
 }) {
 	return (
-		<div className="flex-1 rounded-md bg-muted/50 px-3 py-2">
+		<div className="min-w-[6.5rem] flex-1 rounded-md bg-muted/50 px-3 py-2">
 			<p className="text-xs text-muted-foreground">{label}</p>
 			<p
 				className={
@@ -682,7 +683,40 @@ function PayoutTotals({
 	competition: AdminPhotoCompetitionSummary
 }) {
 	const loadWallet = useLoadKopokopoWallet()
+	const payWinners = usePayCompetitionWinners()
 	const { payouts, prizes, fees, total } = competition.payoutTotals
+
+	function handlePayAll() {
+		if (
+			!window.confirm(
+				`Send KES ${prizes.toLocaleString()} to ${payouts} winner${payouts === 1 ? "" : "s"}? The Kopokopo wallet needs KES ${total.toLocaleString()} including fees.`
+			)
+		) {
+			return
+		}
+
+		payWinners.mutate(competition.id, {
+			onSuccess: (data) => {
+				const skipped = data.data.failed
+					.map((failure) => `${failure.name}: ${failure.message}`)
+					.join(". ")
+
+				if (skipped) {
+					toast.warning(data.message, {
+						description: `Not paid. ${skipped}`,
+					})
+
+					return
+				}
+
+				toast.success(data.message)
+			},
+			onError: (error) =>
+				toast.error("Couldn't pay the winners", {
+					description: error.message,
+				}),
+		})
+	}
 
 	function handleLoadWallet() {
 		loadWallet.mutate(competition.id, {
@@ -698,8 +732,8 @@ function PayoutTotals({
 	}
 
 	return (
-		<div className="space-y-2 border-b pb-3">
-			<div className="flex gap-2">
+		<div className="shrink-0 space-y-2 border-b pb-3">
+			<div className="flex flex-wrap gap-2">
 				<PayoutTotal
 					label="Prize cash"
 					amount={prizes}
@@ -714,21 +748,55 @@ function PayoutTotals({
 					emphasis
 				/>
 			</div>
-			<div className="flex items-center justify-between gap-3">
-				<p className="text-xs text-muted-foreground">
-					{payouts === 0
-						? "Nothing left to pay out."
-						: `Covers the ${payouts} unpaid payout${payouts === 1 ? "" : "s"} below.`}
-				</p>
+			<p className="text-xs text-muted-foreground">
+				{payouts === 0
+					? "Nothing left to pay out."
+					: "Pay all sends one transfer per person, so someone who won more than one place costs one fee. Load the wallet first."}
+			</p>
+			<div className="flex flex-wrap justify-end gap-2">
 				<Button
 					size="sm"
+					variant="outline"
 					disabled={total < 1 || loadWallet.isPending}
 					onClick={handleLoadWallet}>
 					{loadWallet.isPending && <Loader2 className="size-3.5 animate-spin" />}
 					Load wallet
 				</Button>
+				<Button
+					size="sm"
+					disabled={payouts === 0 || payWinners.isPending}
+					onClick={handlePayAll}>
+					{payWinners.isPending && <Loader2 className="size-3.5 animate-spin" />}
+					Pay all unpaid ({payouts})
+				</Button>
 			</div>
 		</div>
+	)
+}
+
+function WinnerSection({
+	title,
+	winners,
+}: {
+	title: string
+	winners: AdminPhotoCompetitionWinner[]
+}) {
+	if (winners.length === 0) {
+		return null
+	}
+
+	return (
+		<section>
+			<h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+				{title} ({winners.length})
+			</h3>
+			{winners.map((winner) => (
+				<WinnerRow
+					key={winner.id}
+					winner={winner}
+				/>
+			))}
+		</section>
 	)
 }
 
@@ -741,9 +809,9 @@ function WinnersDialog({
 		return <span className="text-muted-foreground">—</span>
 	}
 
-	const paidCount = competition.winners.filter(
-		(winner) => winner.prizePaidAt
-	).length
+	const paid = competition.winners.filter((winner) => winner.prizePaidAt)
+	const unpaid = competition.winners.filter((winner) => !winner.prizePaidAt)
+	const paidCount = paid.length
 
 	return (
 		<Dialog>
@@ -754,18 +822,22 @@ function WinnersDialog({
 					{paidCount}/{competition.winners.length} paid
 				</Button>
 			</DialogTrigger>
-			<DialogContent>
+			{/* Capped to the screen: the header and totals stay put and only
+			    the winners list scrolls. */}
+			<DialogContent className="flex max-h-[90dvh] flex-col">
 				<DialogHeader>
 					<DialogTitle>Winners</DialogTitle>
 				</DialogHeader>
 				<PayoutTotals competition={competition} />
-				<div className="space-y-1">
-					{competition.winners.map((winner) => (
-						<WinnerRow
-							key={winner.id}
-							winner={winner}
-						/>
-					))}
+				<div className="-mx-6 min-h-0 flex-1 space-y-4 overflow-y-auto px-6">
+					<WinnerSection
+						title="Not paid"
+						winners={unpaid}
+					/>
+					<WinnerSection
+						title="Paid"
+						winners={paid}
+					/>
 				</div>
 			</DialogContent>
 		</Dialog>

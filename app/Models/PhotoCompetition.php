@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class PhotoCompetition extends Model
 {
@@ -43,26 +44,43 @@ class PhotoCompetition extends Model
     }
 
     /**
+     * The winners still to pay: not yet paid or in flight, skipping seed
+     * accounts (marked paid automatically) and anyone without a phone number
+     * (who can't be paid). Expects winners.user to be loaded.
+     *
+     * @return Collection<int, PhotoCompetitionWinner>
+     */
+    public function payableWinners(): Collection
+    {
+        return $this->winners
+            ->filter(fn(PhotoCompetitionWinner $winner) => ! $winner->prize_paid_at
+                && ! $winner->kopokopo_reference
+                && $winner->user
+                && ! $winner->user->is_seed
+                && $winner->user->phone)
+            ->values();
+    }
+
+    /**
      * What the Kopokopo wallet needs to pay this competition's outstanding
-     * prizes: winners not yet paid or in flight, skipping seed accounts
-     * (marked paid automatically) and anyone without a phone number (who
-     * can't be paid). Expects winners.user to be loaded.
+     * prizes. Paying them all at once sends one transfer per person (see
+     * KopokopoTransferService::payWinners()), so someone with more than one
+     * winning place only costs one fee.
      *
      * @return array{payouts: int, prizes: int, fees: int, total: int}
      */
     public function payoutTotals(): array
     {
-        $payable = $this->winners->filter(fn(PhotoCompetitionWinner $winner) => ! $winner->prize_paid_at
-            && ! $winner->kopokopo_reference
-            && $winner->user
-            && ! $winner->user->is_seed
-            && $winner->user->phone);
+        $payable = $this->payableWinners();
+        $payouts = $payable
+            ->unique('user_id')
+            ->count();
 
         $prizes = (int) $payable->sum('prize_amount');
-        $fees = $payable->count() * KopokopoTransferService::TRANSFER_FEE;
+        $fees = $payouts * KopokopoTransferService::TRANSFER_FEE;
 
         return [
-            'payouts' => $payable->count(),
+            'payouts' => $payouts,
             'prizes' => $prizes,
             'fees' => $fees,
             'total' => $prizes + $fees,

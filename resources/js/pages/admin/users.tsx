@@ -209,6 +209,17 @@ function KopokopoRecipientCell({
 	)
 }
 
+const FLAG_REASONS = [
+	"Multiple accounts",
+	"Bought or bot likes",
+	"Trading likes with other users",
+	"Someone else's M-Pesa number",
+	"Photo isn't theirs",
+	"Suspicious sign-up",
+]
+
+const OTHER_FLAG_REASON = "other"
+
 /**
  * Flag switch: turning it on opens a confirmation dialog with an
  * admin-only reason (their likes stop counting, they can't win or be paid,
@@ -216,8 +227,16 @@ function KopokopoRecipientCell({
  */
 function FlagCell({ user }: { user: AdminUser }) {
 	const [open, setOpen] = useState(false)
-	const [reason, setReason] = useState("")
+	const [reasonChoice, setReasonChoice] = useState("")
+	const [otherReason, setOtherReason] = useState("")
 	const flagUser = useFlagUser()
+	const reason =
+		reasonChoice === OTHER_FLAG_REASON ? otherReason.trim() : reasonChoice
+
+	function resetReason() {
+		setReasonChoice("")
+		setOtherReason("")
+	}
 
 	function submit(flagged: boolean) {
 		flagUser.mutate(
@@ -228,7 +247,7 @@ function FlagCell({ user }: { user: AdminUser }) {
 						flagged ? `${user.name} flagged` : `${user.name} unflagged`
 					)
 					setOpen(false)
-					setReason("")
+					resetReason()
 				},
 				onError: () => toast.error("Couldn't update this user"),
 			}
@@ -262,7 +281,7 @@ function FlagCell({ user }: { user: AdminUser }) {
 					setOpen(nextOpen)
 
 					if (!nextOpen) {
-						setReason("")
+						resetReason()
 					}
 				}}>
 				<DialogContent>
@@ -275,13 +294,34 @@ function FlagCell({ user }: { user: AdminUser }) {
 					</DialogDescription>
 
 					{/* Reason Start */}
-					<Input
+					<SelectField
 						label="Reason (only admins see this)"
-						value={reason}
-						onChange={(event) => setReason(event.target.value)}
-						maxLength={255}
-					/>
+						value={reasonChoice}
+						onValueChange={setReasonChoice}>
+						{FLAG_REASONS.map((flagReason) => (
+							<SelectItem
+								key={flagReason}
+								value={flagReason}>
+								{flagReason}
+							</SelectItem>
+						))}
+						<SelectItem value={OTHER_FLAG_REASON}>Other</SelectItem>
+					</SelectField>
 					{/* Reason End */}
+
+					{reasonChoice === OTHER_FLAG_REASON && (
+						<>
+							{/* Other Reason Start */}
+							<Input
+								label="What's the reason?"
+								value={otherReason}
+								onChange={(event) => setOtherReason(event.target.value)}
+								maxLength={255}
+								autoFocus
+							/>
+							{/* Other Reason End */}
+						</>
+					)}
 
 					<DialogFooter className="gap-2">
 						<DialogClose asChild>
@@ -289,7 +329,7 @@ function FlagCell({ user }: { user: AdminUser }) {
 						</DialogClose>
 						<Button
 							variant="destructive"
-							disabled={flagUser.isPending}
+							disabled={!reason || flagUser.isPending}
 							onClick={() => submit(true)}>
 							{flagUser.isPending && (
 								<Loader2 className="size-3.5 animate-spin" />

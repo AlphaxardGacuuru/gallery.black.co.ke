@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Events\KopokopoTransferInitiated;
 use App\Events\KopokopoTransferRecordedEvent;
+use App\Http\Services\KopokopoTransferService;
 use App\Http\Services\Service;
 use App\Models\PhotoCompetitionWinner;
 use App\Models\PhotoPurchase;
@@ -86,6 +87,11 @@ class KopokopoTransferRecordedListener
         }
     }
 
+    /**
+     * One transfer can cover several places won by the same person (see
+     * KopokopoTransferService::payWinners()), so they get a single
+     * notification for the whole amount.
+     */
     private function confirmWinners(string $reference): void
     {
         $winners = PhotoCompetitionWinner::query()
@@ -94,18 +100,23 @@ class KopokopoTransferRecordedListener
             ->whereNull('prize_paid_at')
             ->get();
 
-        /** @var PhotoCompetitionWinner $winner */
-        foreach ($winners as $winner) {
-            $winner->update(['prize_paid_at' => now()]);
+        if ($winners->isEmpty()) {
+            return;
+        }
 
-            if ($winner->user?->phone) {
-                KopokopoTransferInitiated::dispatch(
-                    Service::normalizePhoneNumber($winner->user->phone),
-                    (float) $winner->prize_amount,
-                    $winner->user->name,
-                    'Black Gallery weekly challenge prize (#' . $winner->position . ')',
-                );
-            }
+        PhotoCompetitionWinner::query()
+            ->whereKey($winners->modelKeys())
+            ->update(['prize_paid_at' => now()]);
+
+        $user = $winners->first()->user;
+
+        if ($user?->phone) {
+            KopokopoTransferInitiated::dispatch(
+                Service::normalizePhoneNumber($user->phone),
+                (float) $winners->sum('prize_amount'),
+                $user->name,
+                KopokopoTransferService::prizeDescription($winners),
+            );
         }
     }
 

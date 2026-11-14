@@ -349,6 +349,129 @@ class PhotoCompetitionWinnersPayoutTest extends TestCase
             ]);
     }
 
+    public function test_paying_all_sends_one_transfer_per_person_and_skips_the_flagged(): void
+    {
+        $competition = $this->competitionWithMixedWinners();
+        $twice = User::factory()->create(['phone' => '0700999888', 'name' => 'Twice Winner']);
+        $flagged = User::factory()->create(['phone' => '0700999777', 'name' => 'Flagged Winner', 'flagged_at' => now()]);
+
+        collect([[7, 150, $twice], [8, 50, $twice], [9, 50, $flagged]])
+            ->each(fn(array $place) => PhotoCompetitionWinner::factory()->create([
+                'competition_id' => $competition->id,
+                'position' => $place[0],
+                'prize_amount' => $place[1],
+                'user_id' => $place[2]->id,
+            ]));
+
+        $this->partialMock(KopokopoTransferService::class, function ($mock) {
+            $mock->shouldReceive('initiateTransfer')
+                ->times(3)
+                ->andReturnUsing(fn($request) => [true, 'Transfer initiated', [
+                    'location' => 'https://api.kopokopo.com/api/v2/send_money/transfer-' . $request->input('amount'),
+                ]]);
+        });
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson("/api/admin/photo-competitions/{$competition->id}/pay-winners")
+            ->assertOk()
+            ->assertJsonPath('status', true)
+            ->assertJsonPath('data.paid', 3)
+            ->assertJsonPath('data.amount', 500 + 300 + 200)
+            ->assertJsonPath('data.failed.0.name', 'Flagged Winner');
+
+        $this->assertSame(
+            ['transfer-200', 'transfer-200'],
+            PhotoCompetitionWinner::query()
+                ->where('user_id', $twice->id)
+                ->pluck('kopokopo_reference')
+                ->all()
+        );
+        $this->assertDatabaseHas('photo_competition_winners', ['position' => 9, 'kopokopo_reference' => null]);
+        $this->assertDatabaseHas('photo_competition_winners', ['position' => 4, 'kopokopo_reference' => 'in-flight']);
+    }
+
+    public function test_paying_all_with_nothing_outstanding_says_so(): void
+    {
+        $competition = PhotoCompetition::factory()->create();
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson("/api/admin/photo-competitions/{$competition->id}/pay-winners")
+            ->assertOk()
+            ->assertJsonPath('status', false)
+            ->assertJsonPath('message', 'There are no outstanding prizes to pay');
+    }
+
+    public function test_non_admins_cannot_pay_all_winners(): void
+    {
+        $competition = PhotoCompetition::factory()->create();
+
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->postJson("/api/admin/photo-competitions/{$competition->id}/pay-winners")
+            ->assertForbidden();
+    }
+
+    public function test_the_wallet_total_charges_one_fee_per_person(): void
+    {
+        $competition = $this->competitionWithMixedWinners();
+
+        PhotoCompetitionWinner::query()
+            ->where('competition_id', $competition->id)
+            ->where('position', 2)
+            ->update([
+                'user_id' => PhotoCompetitionWinner::query()
+                    ->where('competition_id', $competition->id)
+                    ->where('position', 1)
+                    ->value('user_id'),
+            ]);
+
+        $this->assertSame(
+            ['payouts' => 1, 'prizes' => 800, 'fees' => KopokopoTransferService::TRANSFER_FEE, 'total' => 800 + KopokopoTransferService::TRANSFER_FEE],
+            $competition
+                ->load('winners.user')
+                ->payoutTotals()
+        );
+    }
+
+    public function test_a_confirmed_transfer_for_several_places_notifies_the_winner_once(): void
+    {
+        Event::fake([KopokopoTransferInitiated::class]);
+
+        $user = User::factory()->create(['phone' => '0700123456']);
+        $competition = PhotoCompetition::factory()->create();
+
+        collect([[2, 300], [5, 100]])
+            ->each(fn(array $place) => PhotoCompetitionWinner::factory()->create([
+                'competition_id' => $competition->id,
+                'user_id' => $user->id,
+                'position' => $place[0],
+                'prize_amount' => $place[1],
+                'kopokopo_reference' => 'shared-transfer',
+            ]));
+
+        $this->postJson('/api/kopokopo-transfers', [
+            'data' => [
+                'id' => 'shared-transfer',
+                'attributes' => [
+                    'status' => 'Processed',
+                    'created_at' => now()->toIso8601String(),
+                    'currency' => 'KES',
+                    'destinations' => [['amount' => 400]],
+                    'transfer_batches' => [['status' => 'Transferred']],
+                    'metadata' => [],
+                ],
+            ],
+        ])->assertOk();
+
+        $this->assertSame(0, PhotoCompetitionWinner::query()->whereNull('prize_paid_at')->count());
+
+        Event::assertDispatchedTimes(KopokopoTransferInitiated::class, 1);
+        Event::assertDispatched(
+            KopokopoTransferInitiated::class,
+            fn(KopokopoTransferInitiated $event): bool => $event->amount === 400.0
+                && str_contains($event->description, '(#2, #5)'),
+        );
+    }
+
     public function test_loading_the_wallet_stk_pushes_the_admin_wallet_number_for_the_total(): void
     {
         $competition = $this->competitionWithMixedWinners();

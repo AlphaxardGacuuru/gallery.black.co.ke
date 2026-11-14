@@ -56,12 +56,13 @@ export function SupportLauncher({
 				className={cn(
 					"fixed z-40 inline-flex h-12 items-center gap-2 rounded-full bg-primary pr-5 pl-4 text-sm font-semibold text-primary-foreground shadow-lg ring-1 ring-black/5 transition-transform duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
 					// The compete page's SubmitPhotoButton (h-12) takes the same
-					// spot, so stack 12px above it there.
+					// spot, so stack 12px above it there. On desktop it clears
+					// the right sidebar, like SubmitPhotoButton.
 					onCompetePage
 						? "right-4 bottom-41 md:right-70 md:bottom-21"
 						: aboveFloatingAvatar
 							? "right-4 bottom-40 md:bottom-20"
-							: "right-4 bottom-26 md:bottom-6"
+							: "right-4 bottom-26 md:right-70 md:bottom-6"
 				)}
 				aria-label={
 					badgeCount > 0
