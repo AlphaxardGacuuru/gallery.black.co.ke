@@ -17,7 +17,12 @@ export default function AppSidebarLayout({
 		<AppShell variant="sidebar">
 			<AppContent
 				variant="sidebar"
-				className={cn("bg-transparent md:pb-0", fullScreen ? "pb-0" : "pb-24")}>
+				// min-w-0 lets the content shrink beside the sidebar, so a wide
+				// table scrolls in its own box instead of widening the page.
+				className={cn(
+					"min-w-0 bg-transparent md:pb-0",
+					fullScreen ? "pb-0" : "pb-24"
+				)}>
 				{!fullScreen && (
 					<AppSidebarHeader
 						breadcrumbs={breadcrumbs}
