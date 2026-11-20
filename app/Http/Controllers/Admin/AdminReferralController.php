@@ -9,6 +9,7 @@ use App\Http\Services\ReferralService;
 use App\Models\Referral;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -65,12 +66,24 @@ class AdminReferralController extends Controller
     }
 
     /**
-     * Paginated referral history, most recent first.
+     * Paginated referral history, most recent first, optionally narrowed
+     * by the referrer's and/or the referred user's name or email.
      */
     public function recent(Request $request): JsonResponse
     {
+        $request->validate([
+            'referrer' => ['nullable', 'string', 'max:255'],
+            'referred' => ['nullable', 'string', 'max:255'],
+        ]);
+
         $referrals = Referral::query()
             ->with(['referrer', 'referred'])
+            ->when($request->filled('referrer'), function (Builder $query) use ($request) {
+                $query->whereHas('referrer', fn (Builder $user) => $user->search($request->input('referrer')));
+            })
+            ->when($request->filled('referred'), function (Builder $query) use ($request) {
+                $query->whereHas('referred', fn (Builder $user) => $user->search($request->input('referred')));
+            })
             ->withReferredHasPosted()
             ->latest('created_at')
             ->paginate($request->integer('per_page', 20));

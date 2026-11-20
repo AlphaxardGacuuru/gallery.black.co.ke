@@ -36,6 +36,10 @@ export type SupportTicket = {
 	lastActivityAt: string
 	/** A reply the customer hasn't opened yet (their own list only). */
 	unread?: boolean
+	/** When the customer last opened the conversation. */
+	userReadAt: string | null
+	/** When someone on the support team last opened the conversation. */
+	agentReadAt: string | null
 	latestMessage?: SupportMessage | null
 	messages?: SupportMessage[]
 }

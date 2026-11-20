@@ -592,14 +592,27 @@ type AdminKopokopoTransfersResponse = {
 	meta: { current_page: number; last_page: number; total: number }
 }
 
-export function useAdminKopokopoTransfers(page = 1, perPage = 20) {
+/** What a transfer paid, matched by the reference each payout keeps. */
+export type KopokopoTransferType =
+	| "winnings"
+	| "referrals"
+	| "photographers"
+	| "other"
+
+/** All transfers when no type is given. */
+export function useAdminKopokopoTransfers(
+	page = 1,
+	perPage = 20,
+	type: KopokopoTransferType | null = null
+) {
 	return useQuery({
-		queryKey: ["admin", "kopokopo-transfers", page, perPage],
+		queryKey: ["admin", "kopokopo-transfers", page, perPage, type],
 		queryFn: () =>
 			Axios.get<AdminKopokopoTransfersResponse>(
 				"api/admin/kopokopo-transfers",
-				{ params: { page, per_page: perPage } }
+				{ params: { page, per_page: perPage, ...(type ? { type } : {}) } }
 			).then((res) => res.data),
+		placeholderData: keepPreviousData,
 	})
 }
 
@@ -758,13 +771,29 @@ type AdminRecentReferralsResponse = {
 	meta: { current_page: number; last_page: number; total: number }
 }
 
-export function useAdminRecentReferrals(page = 1, perPage = 20) {
+/** Each search matches the user's name or email; empty ones are left out. */
+export type AdminReferralSearch = {
+	referrer: string
+	referred: string
+}
+
+export function useAdminRecentReferrals(
+	page = 1,
+	perPage = 20,
+	search: AdminReferralSearch = { referrer: "", referred: "" }
+) {
 	return useQuery({
-		queryKey: ["admin", "referrals", "recent", page, perPage],
+		queryKey: ["admin", "referrals", "recent", page, perPage, search],
 		queryFn: () =>
 			Axios.get<AdminRecentReferralsResponse>("api/admin/referrals/recent", {
-				params: { page, per_page: perPage },
+				params: {
+					page,
+					per_page: perPage,
+					...(search.referrer ? { referrer: search.referrer } : {}),
+					...(search.referred ? { referred: search.referred } : {}),
+				},
 			}).then((res) => res.data),
+		placeholderData: keepPreviousData,
 	})
 }
 

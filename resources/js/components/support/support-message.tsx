@@ -1,4 +1,4 @@
-import { SendHorizontal } from "lucide-react"
+import { CheckCheck, SendHorizontal } from "lucide-react"
 import { type FormEvent, type KeyboardEvent, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -62,17 +62,46 @@ export function formatSupportTime(iso: string): string {
 }
 
 /**
+ * The read receipt for the last message in a conversation: when the other
+ * side opened it, if they have since it was sent. Only the last message
+ * gets one, since an answer below a message already shows it was read.
+ */
+export function supportSeenAt(
+	messages: SupportMessage[],
+	mine: (message: SupportMessage) => boolean,
+	readAt: string | null
+): { messageId: string; at: string } | null {
+	const last = messages.at(-1)
+
+	// Read times are to the second, so a message from the same second as
+	// the read counts as seen (as on the server's unread check).
+	if (
+		!last ||
+		!readAt ||
+		!mine(last) ||
+		new Date(readAt).getTime() < Math.floor(new Date(last.createdAt).getTime() / 1000) * 1000
+	) {
+		return null
+	}
+
+	return { messageId: last.id, at: readAt }
+}
+
+/**
  * One chat bubble. `mine` puts it on the right in the primary colour: the
  * customer's own messages in the app, the team's replies in the admin inbox.
+ * `seenAt` adds a read receipt under it.
  */
 export function SupportMessageBubble({
 	message,
 	mine,
 	authorLabel,
+	seenAt,
 }: {
 	message: SupportMessage
 	mine: boolean
 	authorLabel?: string
+	seenAt?: string | null
 }) {
 	return (
 		<div className={cn("flex flex-col gap-1", mine ? "items-end" : "items-start")}>
@@ -91,6 +120,13 @@ export function SupportMessageBubble({
 			<span className="px-1 text-[11px] text-muted-foreground">
 				{authorLabel ?? AUTHOR_LABELS[message.author]} ·{" "}
 				{formatSupportTime(message.createdAt)}
+				{seenAt && (
+					<>
+						{" · "}
+						<CheckCheck className="inline size-3 align-[-2px] text-sky-500" />{" "}
+						Seen {formatSupportTime(seenAt)}
+					</>
+				)}
 			</span>
 		</div>
 	)

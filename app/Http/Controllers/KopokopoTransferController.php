@@ -9,6 +9,7 @@ use App\Models\KopokopoTransfer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Validation\Rule;
 
 class KopokopoTransferController extends Controller
 {
@@ -20,9 +21,15 @@ class KopokopoTransferController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return $this->service->index();
+        $request->validate([
+            'type' => ['nullable', Rule::in(KopokopoTransfer::TYPES)],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        return $this->service
+            ->index($request->input('type'), $request->integer('per_page', 20));
     }
 
     /**

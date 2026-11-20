@@ -6,6 +6,7 @@ import {
 	SupportMessageBubble,
 	SupportStatusBadge,
 	formatSupportTime,
+	supportSeenAt,
 } from "@/components/support/support-message"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -173,6 +174,11 @@ function TicketConversation({ id, onBack }: { id: string; onBack: () => void }) 
 	}
 
 	const finished = ticket.status === "resolved" || ticket.status === "closed"
+	const seen = supportSeenAt(
+		messages,
+		(message) => message.author !== "user",
+		ticket.userReadAt
+	)
 
 	return (
 		<Card className="flex min-h-0 flex-col gap-0 overflow-hidden p-0">
@@ -228,6 +234,7 @@ function TicketConversation({ id, onBack }: { id: string; onBack: () => void }) 
 						key={message.id}
 						message={message}
 						mine={message.author !== "user"}
+						seenAt={seen?.messageId === message.id ? seen.at : null}
 						authorLabel={
 							message.author === "user"
 								? (ticket.userName ?? "Customer")

@@ -37,6 +37,9 @@ class SupportTicketResource extends JsonResource
             "canDelete" => $canDelete,
             // Only on the customer's own list (see SupportTicketService::index()).
             "unread" => $this->whenHas('unread', fn ($unread) => (bool) $unread),
+            // Read receipts: messages created at or before these were seen.
+            "userReadAt" => $this->user_read_at?->toIso8601String(),
+            "agentReadAt" => $this->agent_read_at?->toIso8601String(),
             "createdAt" => $this->created_at,
             "lastActivityAt" => Carbon::parse($this->getRawOriginal('updated_at'))->toIso8601String(),
             "latestMessage" => $this->whenLoaded(

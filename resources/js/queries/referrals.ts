@@ -7,9 +7,24 @@ export type MyReferral = {
 	createdAt: string
 }
 
+/** KES amounts from the user's referral rewards and photo bonuses. */
+export type ReferralEarnings = {
+	/** Sent and confirmed by M-Pesa. */
+	paid: number
+	/** Sent, but not confirmed yet. */
+	pending: number
+	/** Earned (full batches and photo bonuses) but not sent yet. */
+	owed: number
+}
+
 type MyReferralsResponse = {
 	data: MyReferral[]
-	meta: { current_page: number; last_page: number; total: number }
+	meta: {
+		current_page: number
+		last_page: number
+		total: number
+		earnings: ReferralEarnings
+	}
 }
 
 export function useMyReferrals(page = 1, perPage = 20) {

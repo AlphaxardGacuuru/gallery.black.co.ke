@@ -159,6 +159,17 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         return $query->whereNull('flagged_at');
     }
 
+    /**
+     * Users whose name or email contains $term. Grouped, so it can be
+     * combined with other conditions.
+     */
+    public function scopeSearch(Builder $query, string $term): Builder
+    {
+        return $query->where(fn (Builder $query) => $query
+            ->where('name', 'like', "%{$term}%")
+            ->orWhere('email', 'like', "%{$term}%"));
+    }
+
     public function isFlagged(): bool
     {
         return $this->flagged_at !== null;

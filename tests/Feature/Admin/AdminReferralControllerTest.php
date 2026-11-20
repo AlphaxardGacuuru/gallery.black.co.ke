@@ -483,4 +483,79 @@ class AdminReferralControllerTest extends TestCase
         $this->assertNull($referral->photo_bonus_reference);
         $this->assertNull($referral->photo_bonus_amount);
     }
+
+    public function test_the_referral_history_can_be_searched_by_referrer_and_referred_user(): void
+    {
+        $admin = User::factory()
+            ->create(['email' => config('admin.email')]);
+        $jane = User::factory()
+            ->create(['name' => 'Jane Wanjiru', 'email' => 'jane@example.com']);
+        $tom = User::factory()
+            ->create(['name' => 'Tom Otieno']);
+        $amina = User::factory()
+            ->create(['name' => 'Amina Hassan']);
+        $brian = User::factory()
+            ->create(['name' => 'Brian Kiprop']);
+
+        Referral::query()
+            ->create(['referrer_id' => $jane->id, 'referred_id' => $amina->id]);
+        Referral::query()
+            ->create(['referrer_id' => $jane->id, 'referred_id' => $brian->id]);
+        Referral::query()
+            ->create(['referrer_id' => $tom->id, 'referred_id' => $jane->id]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/admin/referrals/recent?referrer=jane@example')
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.total', 2);
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/admin/referrals/recent?referred=jane')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.referrerName', 'Tom Otieno');
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/admin/referrals/recent?referrer=jane&referred=brian')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.referredName', 'Brian Kiprop');
+    }
+
+    public function test_users_see_what_their_referrals_have_paid_and_still_owe_them(): void
+    {
+        $this->setThresholdAndReward(2, 100);
+
+        $referrer = User::factory()
+            ->create();
+        $referral = fn (array $attributes = []) => Referral::query()
+            ->create([
+                'referrer_id' => $referrer->id,
+                'referred_id' => User::factory()->create()->id,
+                ...$attributes,
+            ]);
+
+        // Paid: a confirmed batch reward and a confirmed photo bonus.
+        $referral(['paid_at' => now(), 'amount_paid' => 100, 'kopokopo_reference' => 'paid-ref']);
+        $referral(['photo_bonus_paid_at' => now(), 'photo_bonus_amount' => 20, 'photo_bonus_reference' => 'bonus-ref']);
+        // On its way: sent, but Kopokopo hasn't confirmed it.
+        $referral(['amount_paid' => 50, 'kopokopo_reference' => 'pending-ref']);
+        // Owed: two unpaid referrals make a full batch at 50 each.
+        $referral();
+        $referral();
+        // Someone else's referral doesn't count.
+        Referral::query()
+            ->create([
+                'referrer_id' => User::factory()->create()->id,
+                'referred_id' => User::factory()->create()->id,
+                'paid_at' => now(),
+                'amount_paid' => 500,
+            ]);
+
+        $this->actingAs($referrer, 'sanctum')
+            ->getJson('/api/referrals/mine')
+            ->assertOk()
+            ->assertJsonPath('meta.earnings', ['paid' => 120, 'pending' => 50, 'owed' => 100]);
+    }
 }

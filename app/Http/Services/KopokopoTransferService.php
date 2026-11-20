@@ -27,13 +27,14 @@ class KopokopoTransferService extends Service
     public const TRANSFER_FEE = 50;
 
     /*
-     * Show All Transfers
+     * Show All Transfers, or only those that paid one kind of payout
      */
-    public function index()
+    public function index(?string $type, int $perPage)
     {
         $kopokopoTransfers = KopokopoTransfer::with('user')
+            ->when($type, fn ($query) => $query->ofType($type))
             ->latest('created_at')
-            ->paginate(20);
+            ->paginate($perPage);
 
         return KopokopoTransferResource::collection($kopokopoTransfers);
     }

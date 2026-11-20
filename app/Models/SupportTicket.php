@@ -19,6 +19,7 @@ class SupportTicket extends Model
     protected $casts = [
         'attachments' => 'array',
         'user_read_at' => 'datetime',
+        'agent_read_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -71,13 +72,30 @@ class SupportTicket extends Model
     }
 
     /**
-     * Record that the customer has seen the conversation. Skips the
-     * timestamps so reading doesn't bump the ticket up the admin inbox.
+     * Record that the customer has seen the conversation.
      */
     public function markReadByCustomer(): void
     {
+        $this->markRead('user_read_at');
+    }
+
+    /**
+     * Record that the support team has seen the conversation, for the
+     * "Seen" receipt under the customer's messages.
+     */
+    public function markReadByAgent(): void
+    {
+        $this->markRead('agent_read_at');
+    }
+
+    /**
+     * Skips the timestamps so reading doesn't bump the ticket up the admin
+     * inbox.
+     */
+    private function markRead(string $column): void
+    {
         $this->timestamps = false;
-        $this->forceFill(['user_read_at' => now()])
+        $this->forceFill([$column => now()])
             ->save();
         $this->timestamps = true;
     }

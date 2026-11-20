@@ -162,6 +162,58 @@ class SupportTicketTest extends TestCase
         $this->assertSame($updatedAt, SupportTicket::findOrFail($ticketId)->getRawOriginal('updated_at'));
     }
 
+    public function test_the_customer_sees_when_the_team_has_read_their_message(): void
+    {
+        $admin = User::factory()->create(['email' => config('admin.email')]);
+        $customer = User::factory()->create();
+        SupportAgent::fake([['reply' => 'Hi!', 'escalate' => true]]);
+        $ticketId = $this->start($customer)->json('data.id');
+        $updatedAt = SupportTicket::findOrFail($ticketId)->getRawOriginal('updated_at');
+
+        $this->actingAs($customer, 'sanctum')
+            ->getJson("/api/support-tickets/{$ticketId}")
+            ->assertJsonPath('data.agentReadAt', null);
+
+        $this->travel(1)->hour();
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/admin/support-tickets/{$ticketId}")
+            ->assertOk();
+
+        $this->actingAs($customer, 'sanctum')
+            ->getJson("/api/support-tickets/{$ticketId}")
+            ->assertJsonPath('data.agentReadAt', now()->toIso8601String());
+
+        // Reading doesn't bump the ticket up the inbox.
+        $this->assertSame($updatedAt, SupportTicket::findOrFail($ticketId)->getRawOriginal('updated_at'));
+    }
+
+    public function test_the_admin_sees_when_the_customer_has_read_a_reply(): void
+    {
+        $admin = User::factory()->create(['email' => config('admin.email')]);
+        $customer = User::factory()->create();
+        SupportAgent::fake([['reply' => 'Hi!', 'escalate' => true]]);
+        $ticketId = $this->start($customer)->json('data.id');
+
+        $this->travel(1)->minute();
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/admin/support-tickets/{$ticketId}/messages", ['message' => 'We are on it.'])
+            ->assertOk()
+            ->assertJsonPath('data.agentReadAt', now()->toIso8601String())
+            ->assertJsonPath('data.userReadAt', fn ($readAt) => $readAt < now()->toIso8601String());
+
+        $this->travel(1)->minute();
+
+        $this->actingAs($customer, 'sanctum')
+            ->getJson("/api/support-tickets/{$ticketId}")
+            ->assertOk();
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/admin/support-tickets/{$ticketId}")
+            ->assertJsonPath('data.userReadAt', now()->toIso8601String());
+    }
+
     public function test_the_admin_badge_counts_tickets_waiting_on_a_person(): void
     {
         $admin = User::factory()->create(['email' => config('admin.email')]);

@@ -3,8 +3,14 @@ import type { ColumnDef } from "@tanstack/react-table"
 import ReferFriends from "@/components/refer-friends"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Head } from "@/lib/spa"
-import { type MyReferral, useMyReferrals } from "@/queries/referrals"
+import {
+	type MyReferral,
+	type ReferralEarnings,
+	useMyReferrals,
+	useReferralSettings,
+} from "@/queries/referrals"
 import { edit } from "@/routes/referrals"
 
 const columns: ColumnDef<MyReferral>[] = [
@@ -20,6 +26,56 @@ const columns: ColumnDef<MyReferral>[] = [
 	},
 ]
 
+const formatKes = (amount: number) =>
+	`KES ${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+
+/** What the user's referrals have earned them, and how rewards are paid. */
+function Earnings({ earnings }: { earnings?: ReferralEarnings }) {
+	const { data: settings } = useReferralSettings()
+
+	const figures = [
+		{ label: "Paid to you", value: earnings?.paid },
+		{ label: "On its way", value: earnings?.pending },
+		{ label: "Owed to you", value: earnings?.owed },
+	]
+
+	return (
+		<Card>
+			<CardHeader className="pb-4">
+				<CardTitle>Your earnings</CardTitle>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				<dl className="grid grid-cols-3 gap-4">
+					{figures.map((figure) => (
+						<div
+							key={figure.label}
+							className="flex flex-col-reverse">
+							<dt className="text-sm text-muted-foreground">{figure.label}</dt>
+							<dd className="text-xl font-semibold tracking-tight tabular-nums">
+								{figure.value === undefined ? (
+									<Skeleton className="h-7 w-20" />
+								) : (
+									formatKes(figure.value)
+								)}
+							</dd>
+						</div>
+					))}
+				</dl>
+				{settings && settings.threshold > 0 && (
+					<p className="text-sm text-muted-foreground">
+						You earn {formatKes(settings.rewardAmount)} for every{" "}
+						{settings.threshold} friends who join
+						{settings.photoBonusAmount > 0 &&
+							`, plus ${formatKes(settings.photoBonusAmount)} when a friend posts their first photo`}
+						. Rewards are sent to your M-Pesa once a full batch is reached, and
+						"On its way" is money that's been sent but not confirmed yet.
+					</p>
+				)}
+			</CardContent>
+		</Card>
+	)
+}
+
 export default function Referrals() {
 	const [page, setPage] = useState(1)
 	const [perPage, setPerPage] = useState(20)
@@ -32,6 +88,8 @@ export default function Referrals() {
 			<h1 className="sr-only">Referrals</h1>
 
 			<ReferFriends />
+
+			<Earnings earnings={data?.meta.earnings} />
 
 			<Card className="overflow-hidden">
 				<CardHeader className="pb-4">

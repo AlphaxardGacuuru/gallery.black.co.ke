@@ -26,7 +26,8 @@ class ReferralController extends Controller
     }
 
     /**
-     * The authenticated user's own referral history, most recent first.
+     * The authenticated user's own referral history, most recent first,
+     * and what their referrals have earned them.
      */
     public function mine(Request $request): JsonResponse
     {
@@ -42,6 +43,10 @@ class ReferralController extends Controller
                 'current_page' => $referrals->currentPage(),
                 'last_page' => $referrals->lastPage(),
                 'total' => $referrals->total(),
+                'earnings' => Referral::earnings(
+                    $request->user()->id,
+                    $this->referralService->settings()['threshold'],
+                ),
             ],
         ]);
     }

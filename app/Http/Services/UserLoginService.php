@@ -17,9 +17,9 @@ class UserLoginService extends Service
     {
         return UserLogin::query()
             ->with('user:id,name,email,avatar,last_active_at')
-            ->when($search, fn (Builder $query) => $query->whereHas('user', fn (Builder $user) => $user
-                ->where('name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%")))
+            ->when($search, function (Builder $query) use ($search) {
+                $query->whereHas('user', fn (Builder $user) => $user->search($search));
+            })
             ->latest()
             ->paginate($perPage);
     }

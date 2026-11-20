@@ -180,31 +180,64 @@ class Referral extends Model
 
     /**
      * Headline referral numbers, shared by the admin referrals page and the
-     * admin dashboard so the two can't disagree. Payouts only count as paid
-     * once Kopokopo's webhook confirms them (paid_at/photo_bonus_paid_at);
-     * ones initiated but not yet confirmed are "pending". Both include
-     * photo bonuses.
+     * admin dashboard so the two can't disagree. Both paid and pending
+     * include photo bonuses (see paidAndPending()).
      *
      * @return array{totalReferrals: int, totalReferrers: int, totalPaidOut: int, totalPendingPayout: int}
      */
     public static function summary(): array
     {
+        ['paid' => $paid, 'pending' => $pending] = static::paidAndPending(static::query());
+
         return [
             'totalReferrals' => static::query()->count(),
             'totalReferrers' => static::query()->distinct()->count('referrer_id'),
-            'totalPaidOut' => (int) round(
-                (float) static::query()->whereNotNull('paid_at')->sum('amount_paid')
-                + (float) static::query()->whereNotNull('photo_bonus_paid_at')->sum('photo_bonus_amount')
+            'totalPaidOut' => (int) round($paid),
+            'totalPendingPayout' => (int) round($pending),
+        ];
+    }
+
+    /**
+     * What $referrerId has been paid, what's on its way to them, and what
+     * they're owed but hasn't been sent yet (see eligiblePayout()), for
+     * their own referrals page.
+     *
+     * @return array{paid: float, pending: float, owed: float}
+     */
+    public static function earnings(string $referrerId, int $threshold): array
+    {
+        return [
+            ...static::paidAndPending(static::query()->where('referrer_id', $referrerId)),
+            'owed' => static::eligiblePayout($referrerId, $threshold)['totalAmount'],
+        ];
+    }
+
+    /**
+     * Rewards and photo bonuses among $referrals, split by payout state.
+     * They only count as paid once Kopokopo's webhook confirms them
+     * (paid_at/photo_bonus_paid_at); ones initiated but not yet confirmed
+     * are pending.
+     *
+     * @return array{paid: float, pending: float}
+     */
+    private static function paidAndPending(Builder $referrals): array
+    {
+        return [
+            'paid' => round(
+                (float) $referrals->clone()->whereNotNull('paid_at')->sum('amount_paid')
+                + (float) $referrals->clone()->whereNotNull('photo_bonus_paid_at')->sum('photo_bonus_amount'),
+                2
             ),
-            'totalPendingPayout' => (int) round(
-                (float) static::query()
+            'pending' => round(
+                (float) $referrals->clone()
                     ->whereNull('paid_at')
                     ->whereNotNull('kopokopo_reference')
                     ->sum('amount_paid')
-                + (float) static::query()
+                + (float) $referrals->clone()
                     ->whereNull('photo_bonus_paid_at')
                     ->whereNotNull('photo_bonus_reference')
-                    ->sum('photo_bonus_amount')
+                    ->sum('photo_bonus_amount'),
+                2
             ),
         ];
     }

@@ -48,8 +48,14 @@ class AdminSupportTicketController extends Controller
         ]);
     }
 
+    /**
+     * Viewing the conversation counts as the team reading it. The inbox
+     * polls this while it's open, so new messages on screen are read too.
+     */
     public function show(SupportTicket $supportTicket): SupportTicketResource
     {
+        $supportTicket->markReadByAgent();
+
         return SupportTicketResource::make($supportTicket->load(['user', 'messages']));
     }
 
@@ -68,6 +74,9 @@ class AdminSupportTicketController extends Controller
             $data['message'],
             $request->user(),
         );
+
+        // Replying means they've seen everything before it.
+        $supportTicket->markReadByAgent();
 
         return SupportTicketResource::make($supportTicket->fresh(['user', 'messages']));
     }

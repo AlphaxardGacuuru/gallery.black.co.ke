@@ -7,6 +7,7 @@ import {
 	SupportStatusBadge,
 	TypingIndicator,
 	formatSupportTime,
+	supportSeenAt,
 } from "@/components/support/support-message"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -227,6 +228,11 @@ function SupportThread({ id, onBack }: { id: string; onBack: () => void }) {
 	const messages = ticket?.messages ?? []
 	const awaitingReply = isAwaitingReply(ticket) || sendMessage.isPending
 	const hasAssistantReply = messages.some((message) => message.author === "assistant")
+	const seen = supportSeenAt(
+		messages,
+		(message) => message.author === "user",
+		ticket?.agentReadAt ?? null
+	)
 
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView({ block: "end" })
@@ -283,6 +289,7 @@ function SupportThread({ id, onBack }: { id: string; onBack: () => void }) {
 						key={message.id}
 						message={message}
 						mine={message.author === "user"}
+						seenAt={seen?.messageId === message.id ? seen.at : null}
 					/>
 				))}
 				{sendMessage.isPending && (

@@ -11,10 +11,12 @@ import { DataTable } from "@/components/ui/data-table"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import toast from "@/lib/toast"
+import { cn } from "@/lib/utils"
 import {
 	type AdminKopokopoRecipient,
 	type AdminKopokopoTransfer,
 	type KopokopoRecipientType,
+	type KopokopoTransferType,
 	useAdminDashboard,
 	useAdminKopokopoRecipients,
 	useAdminKopokopoTransfers,
@@ -283,21 +285,50 @@ function RecipientsList() {
 	)
 }
 
+const TRANSFER_FILTERS: { type: KopokopoTransferType | null; label: string }[] =
+	[
+		{ type: null, label: "All" },
+		{ type: "winnings", label: "Winnings" },
+		{ type: "referrals", label: "Referral rewards" },
+		{ type: "photographers", label: "Photographers" },
+		{ type: "other", label: "Other" },
+	]
+
 function TransferHistory() {
+	const [type, setType] = useState<KopokopoTransferType | null>(null)
 	const [page, setPage] = useState(1)
 	const [perPage, setPerPage] = useState(20)
-	const { data } = useAdminKopokopoTransfers(page, perPage)
+	const { data } = useAdminKopokopoTransfers(page, perPage, type)
 
 	return (
 		<Card className="overflow-hidden">
-			<CardHeader className="pb-4">
+			<CardHeader className="space-y-3 pb-4">
 				<CardTitle>Transfer history</CardTitle>
+				<div className="flex flex-wrap gap-1.5">
+					{TRANSFER_FILTERS.map((filter) => (
+						<button
+							key={filter.label}
+							type="button"
+							onClick={() => {
+								setType(filter.type)
+								setPage(1)
+							}}
+							className={cn(
+								"rounded-full border px-3 py-1 text-xs transition-colors",
+								type === filter.type
+									? "border-primary bg-primary text-primary-foreground"
+									: "hover:bg-muted"
+							)}>
+							{filter.label}
+						</button>
+					))}
+				</div>
 			</CardHeader>
 			<CardContent>
 				<DataTable
 					columns={transferColumns}
 					data={data?.data ?? []}
-					emptyMessage="No transfers yet"
+					emptyMessage={type ? "No transfers of this kind" : "No transfers yet"}
 					pagination={{
 						currentPage: data?.meta.current_page ?? 1,
 						lastPage: data?.meta.last_page ?? 1,

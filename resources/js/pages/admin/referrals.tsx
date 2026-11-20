@@ -271,7 +271,13 @@ export default function AdminReferrals() {
 	const { data, isLoading } = useAdminReferrals()
 	const [page, setPage] = useState(1)
 	const [perPage, setPerPage] = useState(20)
-	const { data: recent } = useAdminRecentReferrals(page, perPage)
+	const [search, setSearch] = useState({ referrer: "", referred: "" })
+	const { data: recent } = useAdminRecentReferrals(page, perPage, search)
+
+	function updateSearch(field: keyof typeof search, value: string) {
+		setSearch((current) => ({ ...current, [field]: value }))
+		setPage(1)
+	}
 
 	return (
 		<>
@@ -343,8 +349,28 @@ export default function AdminReferrals() {
 				</Card>
 
 				<Card className="overflow-hidden">
-					<CardHeader className="pb-4">
+					<CardHeader className="space-y-4 pb-4">
 						<CardTitle>All referrals</CardTitle>
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							{/* Referrer Start */}
+							<Input
+								label="Referrer name or email"
+								value={search.referrer}
+								onChange={(event) =>
+									updateSearch("referrer", event.target.value)
+								}
+							/>
+							{/* Referrer End */}
+							{/* Referred User Start */}
+							<Input
+								label="Referred user name or email"
+								value={search.referred}
+								onChange={(event) =>
+									updateSearch("referred", event.target.value)
+								}
+							/>
+							{/* Referred User End */}
+						</div>
 					</CardHeader>
 					<CardContent>
 						<DataTable
@@ -352,7 +378,11 @@ export default function AdminReferrals() {
 								((recent?.meta.current_page ?? 1) - 1) * perPage
 							)}
 							data={recent?.data ?? []}
-							emptyMessage="No referrals yet"
+							emptyMessage={
+								search.referrer || search.referred
+									? "No referrals match your search"
+									: "No referrals yet"
+							}
 							pagination={{
 								currentPage: recent?.meta.current_page ?? 1,
 								lastPage: recent?.meta.last_page ?? 1,
