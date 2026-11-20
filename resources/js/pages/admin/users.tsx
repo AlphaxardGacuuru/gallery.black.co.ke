@@ -4,6 +4,7 @@ import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import AdminStatCard from "@/components/admin/AdminStatCard"
 import Heading from "@/components/heading"
+import { PhoneLink } from "@/components/phone-link"
 import { AvatarPreviewDialog } from "@/components/avatar-preview-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -295,7 +296,7 @@ function FlagCell({ user }: { user: AdminUser }) {
 
 					{/* Reason Start */}
 					<SelectField
-						label="Reason (only admins see this)"
+						label="Reason (the user sees this)"
 						value={reasonChoice}
 						onValueChange={setReasonChoice}>
 						{FLAG_REASONS.map((flagReason) => (
@@ -615,7 +616,8 @@ export default function AdminUsers() {
 		{
 			accessorKey: "phone",
 			header: "Phone",
-			cell: ({ row }) => <span className="">{row.original.phone}</span>,
+			cell: ({ row }) =>
+				row.original.phone && <PhoneLink phone={row.original.phone} />,
 		},
 		{
 			id: "kopokopoRecipient",

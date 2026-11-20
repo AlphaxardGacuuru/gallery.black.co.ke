@@ -21,6 +21,10 @@ export type User = {
 	flaggedAt?: string | null
 	/** When the user disputed the flag by updating their phone number. */
 	flagRefutedAt?: string | null
+	/** Why the account was flagged (the admin's reason). */
+	flagReason?: string | null
+	/** False once the phone number is locked (see User::canChangePhone()). */
+	canChangePhone?: boolean
 	email_verified_at: string | null
 	/** Whether the admin portal is open to this user (User::isAdmin()). */
 	isAdmin?: boolean

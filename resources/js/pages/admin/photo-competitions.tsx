@@ -11,6 +11,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { Head } from "@/lib/spa"
 import AdminStatCard from "@/components/admin/AdminStatCard"
 import Heading from "@/components/heading"
+import { PhoneLink } from "@/components/phone-link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -622,7 +623,9 @@ function WinnerRow({ winner }: { winner: AdminPhotoCompetitionWinner }) {
 						)}
 					</div>
 					{winner.userPhone && (
-						<p className="text-xs text-muted-foreground">{winner.userPhone}</p>
+						<p className="text-xs text-muted-foreground">
+							<PhoneLink phone={winner.userPhone} />
+						</p>
 					)}
 					<p className="text-xs text-muted-foreground">
 						KES {winner.prizeAmount}

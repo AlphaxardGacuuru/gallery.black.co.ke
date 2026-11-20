@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AiUsage;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -88,7 +89,8 @@ class AiUsageService
             ])
             ->map(fn (AiUsage $row): array => [
                 'userId' => (string) $row->user_id,
-                'name' => (string) $row->name,
+                // A joined column, so User's name accessor doesn't apply.
+                'name' => (string) User::capitalizeName($row->name),
                 'email' => (string) $row->email,
                 'requests' => (int) $row->requests,
                 'supportReplies' => (int) $row->support_replies,

@@ -14,6 +14,7 @@ import { useState } from "react"
 import { Head } from "@/lib/spa"
 import { BuyPhotoDialog, canBuyPhoto } from "@/components/photos/BuyPhotoDialog"
 import { EditPhotoDialog } from "@/components/photos/EditPhotoDialog"
+import { FlaggedAccountDialog } from "@/components/photos/FlaggedAccountDialog"
 import { ManageLikesDialog } from "@/components/photos/ManageLikesDialog"
 import { PhotoCarousel } from "@/components/photos/PhotoCarousel"
 import VerifiedBadge from "@/components/verified-badge"
@@ -53,6 +54,7 @@ export default function PhotoShow({ id }: Props) {
 	const deletePhoto = useDeletePhoto()
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [manageLikesOpen, setManageLikesOpen] = useState(false)
+	const [flaggedOpen, setFlaggedOpen] = useState(false)
 	const [editOpen, setEditOpen] = useState(false)
 
 	function goBack() {
@@ -82,6 +84,22 @@ export default function PhotoShow({ id }: Props) {
 	}
 
 	const { photo, canDelete, canLike, sale } = data
+
+	// A flagged account can't like, so explain why instead.
+	function like() {
+		if (!canLike) {
+			return
+		}
+
+		if (auth?.flaggedAt) {
+			setFlaggedOpen(true)
+
+			return
+		}
+
+		likePhoto.mutate(photo.id)
+	}
+
 	// Owners can always download their own originals, buyers once they've paid.
 	const canDownload =
 		photo.isPurchasedByViewer ||
@@ -231,7 +249,7 @@ export default function PhotoShow({ id }: Props) {
 					type="button"
 					aria-label={photo.isLikedByViewer ? "Liked" : "Like photo"}
 					disabled={!canLike || photo.isLikedByViewer || likePhoto.isPending}
-					onClick={() => canLike && likePhoto.mutate(photo.id)}
+					onClick={like}
 					className="flex flex-col items-center gap-1 text-white disabled:opacity-70 cursor-pointer disabled:cursor-default">
 					<Heart
 						className={cn(
@@ -265,6 +283,10 @@ export default function PhotoShow({ id }: Props) {
 					/>
 				)}
 			</div>
+			<FlaggedAccountDialog
+				open={flaggedOpen}
+				onOpenChange={setFlaggedOpen}
+			/>
 		</div>
 	)
 }

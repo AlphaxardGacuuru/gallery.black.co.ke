@@ -146,7 +146,28 @@ class AdminUserFlagTest extends TestCase
         $this->assertNotNull($user->fresh()->flagged_at);
     }
 
-    public function test_the_reason_is_only_shown_to_the_admin(): void
+    public function test_a_flagged_user_can_change_a_locked_phone_number_once_to_dispute(): void
+    {
+        $user = User::factory()->create(['phone' => '0700000001']);
+        $user->forceFill(['flagged_at' => now()])->save();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/auth')
+            ->assertJsonPath('data.canChangePhone', true);
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/settings/profile', ['name' => $user->name, 'email' => $user->email, 'phone' => '0711223344'])
+            ->assertOk();
+
+        $this->actingAs($user->fresh(), 'sanctum')
+            ->patchJson('/settings/profile', ['name' => $user->name, 'email' => $user->email, 'phone' => '0799887766'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('phone');
+
+        $this->assertSame('0711223344', $user->fresh()->phone);
+    }
+
+    public function test_the_reason_is_shown_to_the_flagged_user_and_the_admin(): void
     {
         $user = User::factory()->create();
         $this->flag($user);
@@ -155,7 +176,7 @@ class AdminUserFlagTest extends TestCase
             ->getJson('/api/auth')
             ->assertOk()
             ->assertJsonPath('data.flaggedAt', fn($value) => $value !== null)
-            ->assertJsonMissingPath('data.flagReason');
+            ->assertJsonPath('data.flagReason', 'Like ring');
 
         $this->actingAs($this->admin, 'sanctum')
             ->getJson('/api/admin/users?flagged=1')

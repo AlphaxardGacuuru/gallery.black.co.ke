@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Settings;
 
+use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -41,6 +42,42 @@ class ProfileUpdateTest extends TestCase
         $this->assertSame('Test User', $user->name);
         $this->assertSame('test@example.com', $user->email);
         $this->assertNull($user->email_verified_at);
+    }
+
+    public function test_a_user_without_a_phone_number_can_add_one()
+    {
+        $user = User::factory()->create(['phone' => null]);
+
+        $this->actingAs($user)
+            ->patchJson(route('profile.update'), ['name' => $user->name, 'email' => $user->email, 'phone' => '0711223344'])
+            ->assertOk();
+
+        $this->assertSame('0711223344', $user->fresh()->phone);
+    }
+
+    public function test_a_set_phone_number_is_locked()
+    {
+        $user = User::factory()->create(['phone' => '0711223344']);
+
+        $this->actingAs($user)
+            ->getJson('/api/auth')
+            ->assertJsonPath('data.canChangePhone', false);
+
+        collect(['0799887766', ''])->each(fn ($phone) => $this->actingAs($user)
+            ->patchJson(route('profile.update'), ['name' => $user->name, 'email' => $user->email, 'phone' => $phone])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['phone' => ProfileUpdateRequest::PHONE_LOCKED_MESSAGE]));
+
+        // The disabled field isn't sent, and sending it unchanged is fine.
+        $this->actingAs($user)
+            ->patchJson(route('profile.update'), ['name' => 'New Name', 'email' => $user->email])
+            ->assertOk();
+
+        $this->actingAs($user)
+            ->patchJson(route('profile.update'), ['name' => $user->name, 'email' => $user->email, 'phone' => '0711223344'])
+            ->assertOk();
+
+        $this->assertSame('0711223344', $user->fresh()->phone);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged()

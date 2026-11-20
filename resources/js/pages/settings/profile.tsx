@@ -13,6 +13,7 @@ import PushNotificationSettings from "@/components/push-notification-settings"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Link } from "@/components/ui/link"
 import { Spinner } from "@/components/ui/spinner"
 import { useInitials } from "@/hooks/use-initials"
 import Axios from "@/lib/axios"
@@ -37,6 +38,7 @@ export default function Profile({
 		email_verified_at: auth?.email_verified_at ?? null,
 		avatar: auth?.avatar,
 	}
+	const canChangePhone = auth?.canChangePhone ?? true
 
 	const [processing, setProcessing] = useState(false)
 	const [errors, setErrors] = useState<Record<string, string>>({})
@@ -161,6 +163,7 @@ export default function Profile({
 					</div>
 
 					<div className="grid gap-2">
+						{/* Phone Start */}
 						<Input
 							id="phone"
 							label="M-Pesa phone number"
@@ -168,11 +171,33 @@ export default function Profile({
 							defaultValue={user.phone}
 							name="phone"
 							autoComplete="tel"
+							disabled={!canChangePhone}
 						/>
-						<p className="text-sm text-muted-foreground">
-							Required before you can submit a photo — this is where your prize
-							money is sent.
-						</p>
+						{/* Phone End */}
+						{canChangePhone ? (
+							<p className="text-sm text-muted-foreground">
+								Required before you can submit a photo. This is where your prize
+								money is sent.
+							</p>
+						) : (
+							<div className="flex flex-wrap items-center justify-between gap-2">
+								<p className="text-sm text-muted-foreground">
+									To keep payouts safe, your phone number can only be changed by
+									our support team.
+								</p>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									asChild>
+									<Link
+										href="/support"
+										variant="unstyled">
+										Request a change
+									</Link>
+								</Button>
+							</div>
+						)}
 
 						<InputError
 							className="mt-2"

@@ -13,6 +13,7 @@ import type { Photo } from "@/types/photo"
 import { AvatarPreviewDialog } from "@/components/avatar-preview-dialog"
 import VerifiedBadge from "@/components/verified-badge"
 import { EditPhotoDialog } from "@/components/photos/EditPhotoDialog"
+import { FlaggedAccountDialog } from "@/components/photos/FlaggedAccountDialog"
 import { ManageLikesDialog } from "@/components/photos/ManageLikesDialog"
 import { PhotoCarousel } from "@/components/photos/PhotoCarousel"
 import { Button } from "@/components/ui/button"
@@ -78,6 +79,7 @@ export function PhotoCard({
 	const getInitials = useInitials()
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [manageLikesOpen, setManageLikesOpen] = useState(false)
+	const [flaggedOpen, setFlaggedOpen] = useState(false)
 	const [editOpen, setEditOpen] = useState(false)
 	const [optionsOpen, setOptionsOpen] = useState(false)
 	const isMobile = useIsMobile()
@@ -125,6 +127,21 @@ export function PhotoCard({
 			<AlignRight className="size-4 text-muted-foreground" />
 		</Button>
 	)
+
+	// A flagged account can't like, so explain why instead.
+	function like() {
+		if (!canLike) {
+			return
+		}
+
+		if (auth?.flaggedAt) {
+			setFlaggedOpen(true)
+
+			return
+		}
+
+		likePhoto.mutate(photo.id)
+	}
 
 	function handleDelete() {
 		deletePhoto.mutate(photo.id, {
@@ -306,7 +323,7 @@ export function PhotoCard({
 						type="button"
 						aria-label={photo.isLikedByViewer ? "Liked" : "Like photo"}
 						disabled={!canLike || photo.isLikedByViewer || likePhoto.isPending}
-						onClick={() => canLike && likePhoto.mutate(photo.id)}
+						onClick={like}
 						className="flex shrink-0 cursor-pointer items-center gap-1.5 p-2 text-sm text-muted-foreground disabled:cursor-default">
 						<Heart
 							className={cn(
@@ -329,6 +346,10 @@ export function PhotoCard({
 					</p>
 				)}
 			</figcaption>
+			<FlaggedAccountDialog
+				open={flaggedOpen}
+				onOpenChange={setFlaggedOpen}
+			/>
 		</figure>
 	)
 }

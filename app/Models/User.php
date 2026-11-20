@@ -102,6 +102,29 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     /**
      * Accesors.
      */
+    protected function name(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => static::capitalizeName($value),
+        );
+    }
+
+    /**
+     * Uppercase the first letter of each word, including after a hyphen or
+     * apostrophe ("mary-jane o'brien" to "Mary-Jane O'Brien"). The rest is
+     * left alone, so names like "McDonald" keep their capitals.
+     */
+    public static function capitalizeName(?string $name): ?string
+    {
+        if ($name === null) {
+            return null;
+        }
+
+        return Str::of($name)
+            ->replaceMatches("/(^|[\s\-'’])(\p{Ll})/u", fn (array $matches) => $matches[1].mb_strtoupper($matches[2]))
+            ->toString();
+    }
+
     protected function avatar(): Attribute
     {
         return Attribute::make(
@@ -173,6 +196,18 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     public function isFlagged(): bool
     {
         return $this->flagged_at !== null;
+    }
+
+    /**
+     * Whether the user may set their M-Pesa number from their profile. Once
+     * set it's locked (changes go through a support ticket), except for a
+     * flagged user who hasn't disputed the flag yet, since updating it is
+     * how they ask for a review.
+     */
+    public function canChangePhone(): bool
+    {
+        return ! $this->phone
+            || ($this->isFlagged() && $this->flag_refuted_at === null);
     }
 
     public function photos(): HasMany
