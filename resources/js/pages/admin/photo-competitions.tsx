@@ -198,7 +198,7 @@ function PrizeTiersSettings({ prizeTiers }: { prizeTiers: number[] }) {
 	}
 
 	return (
-		<div className="w-full space-y-3 sm:max-w-6xl sm:flex-1 rounded-lg border p-4">
+		<div className="flex flex-col gap-3 rounded-lg border p-4 md:col-span-2 2xl:col-span-3">
 			<Heading
 				variant="small"
 				title="Weekly prize tiers"
@@ -220,7 +220,7 @@ function PrizeTiersSettings({ prizeTiers }: { prizeTiers: number[] }) {
 					/>
 				))}
 			</div>
-			<div className="flex justify-end">
+			<div className="mt-auto flex justify-end">
 				<Button
 					disabled={updatePrizeTiers.isPending}
 					onClick={handleSave}>
@@ -261,7 +261,7 @@ function ExtraSlotSettings({
 	}
 
 	return (
-		<div className="w-full space-y-3 sm:max-w-sm sm:flex-1 rounded-lg border p-4">
+		<div className="flex flex-col gap-3 rounded-lg border p-4">
 			<Heading
 				variant="small"
 				title="Buy an extra slot"
@@ -282,7 +282,7 @@ function ExtraSlotSettings({
 				value={price}
 				onChange={(event) => setPrice(event.target.value)}
 			/>
-			<div className="flex justify-end">
+			<div className="mt-auto flex justify-end">
 				<Button
 					disabled={updateExtraSlot.isPending}
 					onClick={handleSave}>
@@ -323,7 +323,7 @@ function ExtraPhotoSettings({
 	}
 
 	return (
-		<div className="w-full space-y-3 sm:max-w-sm sm:flex-1 rounded-lg border p-4">
+		<div className="flex flex-col gap-3 rounded-lg border p-4">
 			<Heading
 				variant="small"
 				title="Buy extra photos per entry"
@@ -344,7 +344,7 @@ function ExtraPhotoSettings({
 				value={price}
 				onChange={(event) => setPrice(event.target.value)}
 			/>
-			<div className="flex justify-end">
+			<div className="mt-auto flex justify-end">
 				<Button
 					disabled={updateExtraPhoto.isPending}
 					onClick={handleSave}>
@@ -377,7 +377,7 @@ function SeedPosterSettings({ seedPosters }: { seedPosters: number }) {
 	}
 
 	return (
-		<div className="w-full space-y-3 sm:max-w-sm sm:flex-1 rounded-lg border p-4">
+		<div className="flex flex-col gap-3 rounded-lg border p-4">
 			<Heading
 				variant="small"
 				title="Seed users per competition"
@@ -393,7 +393,7 @@ function SeedPosterSettings({ seedPosters }: { seedPosters: number }) {
 				onChange={(event) => setCount(event.target.value)}
 			/>
 			{/* Seed Users End */}
-			<div className="flex justify-end">
+			<div className="mt-auto flex justify-end">
 				<Button
 					disabled={updateSeedPosters.isPending}
 					onClick={handleSave}>
@@ -454,7 +454,7 @@ function PhotoSaleSettings({
 	}
 
 	return (
-		<div className="w-full space-y-3 sm:max-w-sm sm:flex-1 rounded-lg border p-4">
+		<div className="flex flex-col gap-3 rounded-lg border p-4">
 			<Heading
 				variant="small"
 				title="Sell photos"
@@ -487,7 +487,7 @@ function PhotoSaleSettings({
 				Photographers get KES {photographerAmount} per sale, sent to their
 				M-Pesa as soon as the buyer pays.
 			</p>
-			<div className="flex justify-end">
+			<div className="mt-auto flex justify-end">
 				<Button
 					disabled={updatePhotoSale.isPending}
 					onClick={handleSave}>
@@ -526,13 +526,13 @@ function ScheduleSettings({
 	}
 
 	return (
-		<div className="w-full space-y-3 sm:w-auto sm:max-w-lg rounded-lg border p-4">
+		<div className="flex flex-col gap-3 rounded-lg border p-4">
 			<Heading
 				variant="small"
 				title="Weekly schedule"
 				description="When future competitions automatically start and end."
 			/>
-			<div className="flex gap-2">
+			<div className="grid grid-cols-2 gap-2">
 				<SelectField
 					label="Start day"
 					value={String(startDay)}
@@ -552,7 +552,7 @@ function ScheduleSettings({
 					onChange={(event) => setStartTime(event.target.value)}
 				/>
 			</div>
-			<div className="flex gap-2">
+			<div className="grid grid-cols-2 gap-2">
 				<SelectField
 					label="End day"
 					value={String(endDay)}
@@ -572,7 +572,7 @@ function ScheduleSettings({
 					onChange={(event) => setEndTime(event.target.value)}
 				/>
 			</div>
-			<div className="flex justify-end">
+			<div className="mt-auto flex justify-end">
 				<Button
 					disabled={updateSchedule.isPending}
 					onClick={handleSave}>
@@ -1224,7 +1224,7 @@ export default function AdminPhotoCompetitions() {
 							</div>
 						)}
 
-						<div className="flex flex-wrap gap-4">
+						<div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
 							<PrizeTiersSettings prizeTiers={data.prizeTiers} />
 							<ExtraSlotSettings extraSlot={data.extraSlot} />
 							<ExtraPhotoSettings extraPhoto={data.extraPhoto} />
