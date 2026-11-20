@@ -48,6 +48,7 @@ class AdminDashboardController extends Controller
                 'dailyVolume' => $dailyVolume,
                 'finance' => $this->finance(),
                 'referrals' => Referral::summary(),
+                'activeUsers' => User::activeCounts(),
             ],
         ]);
     }

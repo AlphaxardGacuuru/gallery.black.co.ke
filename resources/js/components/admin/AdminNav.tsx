@@ -6,6 +6,7 @@ import {
 	KeyRound,
 	LayoutDashboard,
 	LifeBuoy,
+	LogIn,
 	Megaphone,
 	Send,
 	ShieldCheck,
@@ -52,6 +53,7 @@ type AdminItem = {
 const ADMIN_ITEMS: AdminItem[] = [
 	{ title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
 	{ title: "Users", href: "/admin/users", icon: Users },
+	{ title: "Logins", href: "/admin/logins", icon: LogIn },
 	{ title: "Photo challenge", href: "/admin/photo-competitions", icon: Trophy },
 	{ title: "Payouts", href: "/admin/kopokopo-transfers", icon: Send },
 	{ title: "Referrals", href: "/admin/referrals", icon: UserPlus },

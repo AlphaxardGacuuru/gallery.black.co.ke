@@ -3,6 +3,7 @@
 use App\Jobs\DeleteStaleTemporaryUploadsJob;
 use App\Jobs\ExpireStalePurchasesJob;
 use App\Models\PhotoCompetition;
+use App\Models\UserLogin;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -62,6 +63,10 @@ Schedule::command('app:post-seed-likes')
 Schedule::command('app:reconcile-kopokopo-transfers')
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+// Sign-in records older than UserLogin::RETENTION_DAYS.
+Schedule::command('model:prune', ['--model' => [UserLogin::class]])
+    ->daily();
 
 // Purchases whose M-Pesa prompt was ignored and never got a webhook.
 Schedule::job(new ExpireStalePurchasesJob)
