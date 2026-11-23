@@ -3,15 +3,21 @@
 namespace App\Http\Requests;
 
 use App\Concerns\PasswordValidationRules;
+use App\Concerns\ProfileValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateUserRequest extends FormRequest
 {
-    use PasswordValidationRules;
+    use PasswordValidationRules, ProfileValidationRules;
 
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->normalizePhoneInput();
     }
 
     public function rules(): array
@@ -30,11 +36,7 @@ class UpdateUserRequest extends FormRequest
                 'max:255',
                 'unique:users,email,'.$id,
             ],
-            'phone' => [
-                'nullable',
-                'unique:users,phone,'.$id,
-                'regex:/^\d{10}$/',
-            ],
+            'phone' => $this->phoneRules($id),
         ];
         if ($this->filled('password')) {
             $rules['password'] = $this->passwordRules();
@@ -46,7 +48,7 @@ class UpdateUserRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.regex' => 'Please enter a valid 10-digit phone number',
+            'phone.unique' => 'Another account already uses this phone number.',
         ];
     }
 }

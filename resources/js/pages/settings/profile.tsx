@@ -177,7 +177,7 @@ export default function Profile({
 						{canChangePhone ? (
 							<p className="text-sm text-muted-foreground">
 								Required before you can submit a photo. This is where your prize
-								money is sent.
+								money is sent, so it must be a Safaricom M-Pesa number.
 							</p>
 						) : (
 							<div className="flex flex-wrap items-center justify-between gap-2">

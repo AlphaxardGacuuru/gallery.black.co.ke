@@ -1,5 +1,5 @@
 import { isAxiosError } from "axios"
-import { Check, Loader2, Trash2, Users } from "lucide-react"
+import { Check, Loader2, Pencil, Trash2, Users } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import AdminStatCard from "@/components/admin/AdminStatCard"
@@ -39,6 +39,7 @@ import {
 	useFlagUser,
 	useRequestUserPhone,
 	useToggleUserVerified,
+	useUpdateUserPhone,
 } from "@/queries/admin"
 
 type UserFilterKey =
@@ -207,6 +208,119 @@ function KopokopoRecipientCell({
 			{addRecipient.isPending && <Loader2 className="size-3.5 animate-spin" />}
 			Register
 		</Button>
+	)
+}
+
+/**
+ * Phone cell: the number plus a dialog to set or change it, for when a
+ * user asks support to change their locked number. The server rejects
+ * anything that isn't a Safaricom M-Pesa number and says why.
+ */
+function PhoneCell({ user }: { user: AdminUser }) {
+	const [open, setOpen] = useState(false)
+	const [phone, setPhone] = useState(user.phone ?? "")
+	const updatePhone = useUpdateUserPhone()
+	const error =
+		isAxiosError<{ errors?: { phone?: string[] } }>(updatePhone.error) &&
+		updatePhone.error.response?.data?.errors?.phone?.[0]
+
+	function handleOpenChange(nextOpen: boolean) {
+		setOpen(nextOpen)
+
+		if (nextOpen) {
+			setPhone(user.phone ?? "")
+			updatePhone.reset()
+		}
+	}
+
+	function submit(event: React.FormEvent<HTMLFormElement>) {
+		event.preventDefault()
+
+		updatePhone.mutate(
+			{ userId: user.id, phone },
+			{
+				onSuccess: () => {
+					toast.success(`Updated ${user.name}'s phone number`)
+					setOpen(false)
+				},
+				onError: (mutationError) => {
+					if (
+						!isAxiosError(mutationError) ||
+						mutationError.response?.status !== 422
+					) {
+						toast.error("Couldn't update the phone number")
+					}
+				},
+			}
+		)
+	}
+
+	return (
+		<div className="flex items-center gap-1">
+			{user.phone && <PhoneLink phone={user.phone} />}
+			<Dialog
+				open={open}
+				onOpenChange={handleOpenChange}>
+				<DialogTrigger asChild>
+					<Button
+						variant="ghost"
+						size="icon"
+						className="size-7 text-muted-foreground"
+						aria-label={
+							user.phone
+								? `Change ${user.name}'s phone number`
+								: `Add a phone number for ${user.name}`
+						}>
+						<Pencil className="size-3.5" />
+					</Button>
+				</DialogTrigger>
+				<DialogContent>
+					<form
+						onSubmit={submit}
+						className="grid gap-4">
+						<DialogTitle>
+							{user.phone ? "Change" : "Add"} {user.name}'s phone number
+						</DialogTitle>
+						<DialogDescription>
+							Prizes, payouts and payment prompts go to this number, so it must
+							be a Safaricom M-Pesa number. This works even when the number is
+							locked on their profile.
+						</DialogDescription>
+
+						{/* Phone Start */}
+						<Input
+							label="M-Pesa phone number"
+							value={phone}
+							onChange={(event) => setPhone(event.target.value)}
+							error={error || undefined}
+							helperText="07XXXXXXXX, 01XXXXXXXX or +254XXXXXXXXX"
+							inputMode="tel"
+							autoComplete="off"
+							autoFocus
+						/>
+						{/* Phone End */}
+
+						<DialogFooter className="gap-2">
+							<DialogClose asChild>
+								<Button
+									type="button"
+									variant="secondary">
+									Cancel
+								</Button>
+							</DialogClose>
+							<Button
+								type="submit"
+								disabled={!phone.trim() || updatePhone.isPending}>
+								{updatePhone.isPending && (
+									<Loader2 className="size-3.5 animate-spin" />
+								)}
+								Save
+							</Button>
+						</DialogFooter>
+					</form>
+				</DialogContent>
+			</Dialog>
+		</div>
 	)
 }
 
@@ -616,8 +730,7 @@ export default function AdminUsers() {
 		{
 			accessorKey: "phone",
 			header: "Phone",
-			cell: ({ row }) =>
-				row.original.phone && <PhoneLink phone={row.original.phone} />,
+			cell: ({ row }) => <PhoneCell user={row.original} />,
 		},
 		{
 			id: "kopokopoRecipient",

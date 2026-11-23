@@ -13,6 +13,11 @@ class ProfileUpdateRequest extends FormRequest
 
     public const PHONE_LOCKED_MESSAGE = 'Your phone number can\'t be changed here. Use "Request a change" to ask the support team.';
 
+    protected function prepareForValidation(): void
+    {
+        $this->normalizePhoneInput();
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -33,7 +38,6 @@ class ProfileUpdateRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.regex' => 'Please enter a valid 10-digit phone number',
             'phone.required' => self::PHONE_LOCKED_MESSAGE,
             'phone.in' => self::PHONE_LOCKED_MESSAGE,
         ];

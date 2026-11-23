@@ -15,6 +15,11 @@ class StoreUserRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->normalizePhoneInput();
+    }
+
     public function rules(): array
     {
         return [

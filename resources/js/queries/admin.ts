@@ -222,6 +222,21 @@ export function useRequestUserPhone() {
 	})
 }
 
+/**
+ * Set or change a user's M-Pesa phone number, including one that's locked
+ * on their own profile page. The server only accepts Safaricom numbers.
+ */
+export function useUpdateUserPhone() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: ({ userId, phone }: { userId: string; phone: string }) =>
+			Axios.patch(`api/admin/users/${userId}/verify`, { phone }),
+		onSuccess: () =>
+			queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
+	})
+}
+
 export type PhotoCompetitionSchedule = {
 	startDay: number
 	startTime: string

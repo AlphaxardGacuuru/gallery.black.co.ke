@@ -4,6 +4,7 @@ namespace Tests\Feature\Settings;
 
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
+use App\Rules\SafaricomPhoneNumber;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -53,6 +54,44 @@ class ProfileUpdateTest extends TestCase
             ->assertOk();
 
         $this->assertSame('0711223344', $user->fresh()->phone);
+    }
+
+    public function test_a_non_safaricom_phone_number_is_rejected()
+    {
+        $user = User::factory()->create(['phone' => null]);
+
+        // Airtel, Telkom, a made-up prefix and a short number.
+        collect(['0733123456', '0771123456', '0101123456', '071122334'])
+            ->each(fn ($phone) => $this->actingAs($user)
+                ->patchJson(route('profile.update'), ['name' => $user->name, 'email' => $user->email, 'phone' => $phone])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['phone' => SafaricomPhoneNumber::MESSAGE]));
+
+        $this->assertNull($user->fresh()->phone);
+    }
+
+    public function test_a_safaricom_phone_number_is_stored_in_the_local_format()
+    {
+        collect(['+254 711 223 344', '254711223344', '0711-223-344'])
+            ->each(function ($phone) {
+                $user = User::factory()->create(['phone' => null]);
+
+                $this->actingAs($user)
+                    ->patchJson(route('profile.update'), ['name' => $user->name, 'email' => $user->email, 'phone' => $phone])
+                    ->assertOk();
+
+                $this->assertSame('0711223344', $user->fresh()->phone);
+
+                $user->delete();
+            });
+
+        $user = User::factory()->create(['phone' => null]);
+
+        $this->actingAs($user)
+            ->patchJson(route('profile.update'), ['name' => $user->name, 'email' => $user->email, 'phone' => '+254110123456'])
+            ->assertOk();
+
+        $this->assertSame('0110123456', $user->fresh()->phone);
     }
 
     public function test_a_set_phone_number_is_locked()

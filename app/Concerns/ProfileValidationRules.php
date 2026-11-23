@@ -3,6 +3,7 @@
 namespace App\Concerns;
 
 use App\Models\User;
+use App\Rules\SafaricomPhoneNumber;
 use Illuminate\Validation\Rule;
 
 trait ProfileValidationRules
@@ -58,10 +59,22 @@ trait ProfileValidationRules
     {
         return [
             'nullable',
-            'regex:/^\d{10}$/',
+            new SafaricomPhoneNumber,
             $userId === null
                 ? Rule::unique(User::class, 'phone')
                 : Rule::unique(User::class, 'phone')->ignore($userId),
         ];
+    }
+
+    /**
+     * Rewrite a submitted phone number (07.., 254.., +254.., with spaces)
+     * to the "07XXXXXXXX" format users are stored with, so the unique rule
+     * compares like with like. Call from prepareForValidation().
+     */
+    protected function normalizePhoneInput(): void
+    {
+        $this->whenFilled('phone', fn (string $phone) => $this->merge([
+            'phone' => SafaricomPhoneNumber::normalize($phone),
+        ]));
     }
 }
