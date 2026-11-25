@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#000000">
+    <title>Offline · Black Gallery</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #ffffff;
+            --fg: #171717;
+            --muted: #5b6475;
+            --primary: #000000;
+            --on-primary: #ffffff;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #171717;
+                --fg: #f2f2f2;
+                --muted: #a3a3a3;
+                --primary: #ffffff;
+                --on-primary: #000000;
+            }
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 16px;
+            box-sizing: border-box;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            text-align: center;
+        }
+
+        img {
+            width: 72px;
+            height: 72px;
+            border-radius: 16px;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            margin: 16px 0 8px;
+        }
+
+        p {
+            margin: 0 0 24px;
+            color: var(--muted);
+        }
+
+        button {
+            font: inherit;
+            padding: 10px 20px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--primary);
+            color: var(--on-primary);
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <!-- The app icon, inlined so this page needs no other request while offline. -->
+        <img src="data:image/png;base64,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" alt="">
+        <h1>You're offline</h1>
+        <p>Black Gallery needs a connection. Check your network and try again.</p>
+        <button type="button" onclick="location.reload()">Try again</button>
+    </main>
+</body>
+
+</html>
