@@ -37,6 +37,7 @@ class UserResource extends JsonResource
             "verified" => (bool) $this->verified,
             "flaggedAt" => $this->flagged_at,
             "flagRefutedAt" => $this->flag_refuted_at,
+            "flaggedUntilPhone" => $this->isFlaggedUntilPhone(),
             // Shown to admins and to the flagged user themselves.
             "flagReason" => $this->when(
                 (bool) $request->user()?->isAdmin() || $request->user()?->is($this->resource),

@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Events\UserCreatedEvent;
 use App\Models\Referral;
 use App\Models\User;
 use App\Notifications\WelcomeNotification;
@@ -93,6 +94,7 @@ class AuthService extends Service
 
 		$user->notify(new WelcomeNotification);
 		event(new Registered($user));
+		UserCreatedEvent::dispatch($user);
 
 		return $user;
 	}

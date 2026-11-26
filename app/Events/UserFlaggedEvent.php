@@ -7,8 +7,8 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * An admin flagged a user for suspected abuse. Not fired when the flag is
- * lifted.
+ * An admin, or the sign-up screening agent, flagged a user for suspected
+ * abuse. Not fired when the flag is lifted.
  */
 class UserFlaggedEvent
 {

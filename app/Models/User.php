@@ -79,6 +79,23 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
      */
     public const AVATAR_UPLOAD_DIRECTORY = 'avatars/uploads';
 
+    /**
+     * Setting that has an AI agent screen each new sign-up, see
+     * screensNewSignups().
+     */
+    public const SETTING_SCREEN_NEW_SIGNUPS = 'screen_new_signups';
+
+    /**
+     * flag_source for a flag an admin set from the users page.
+     */
+    public const FLAG_SOURCE_ADMIN = 'admin';
+
+    /**
+     * flag_source for a flag the sign-up screening agent set. Adding a
+     * phone number lifts it (see isFlaggedUntilPhone()).
+     */
+    public const FLAG_SOURCE_SIGNUP_SCREENING = 'signup_screening';
+
     protected string $guard_name = 'web';
 
     /**
@@ -196,6 +213,26 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     public function isFlagged(): bool
     {
         return $this->flagged_at !== null;
+    }
+
+    /**
+     * Whether the sign-up screening agent flagged the user, which adding a
+     * phone number lifts by itself. An admin's flag needs a review.
+     */
+    public function isFlaggedUntilPhone(): bool
+    {
+        return $this->isFlagged() && $this->flag_source === self::FLAG_SOURCE_SIGNUP_SCREENING;
+    }
+
+    /**
+     * Whether an AI agent screens new sign-ups for fake or duplicate
+     * accounts. On until an admin switches it off on the users page.
+     */
+    public static function screensNewSignups(): bool
+    {
+        return (bool) (Setting::query()
+            ->where('key', self::SETTING_SCREEN_NEW_SIGNUPS)
+            ->value('value') ?? true);
     }
 
     /**

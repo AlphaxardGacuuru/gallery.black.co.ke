@@ -115,6 +115,8 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::post('password-login-link', [AdminPasswordLoginController::class, 'link'])->name('password-login-link');
         Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::get('users/settings', [AdminUserController::class, 'settings'])->name('users.settings');
+        Route::put('users/settings', [AdminUserController::class, 'updateSettings'])->name('users.settings.update');
         Route::get('user-logins', [AdminUserLoginController::class, 'index'])->name('user-logins.index');
         Route::patch('users/{id}/verify', [UserController::class, 'update'])->name('users.verify');
         Route::get('photo-competitions', [AdminPhotoCompetitionController::class, 'index'])->name('photo-competitions.index');

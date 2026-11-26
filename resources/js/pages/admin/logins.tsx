@@ -186,11 +186,14 @@ export default function AdminLogins() {
 								icon={CalendarRange}
 							/>
 							<AdminStatCard
-								label="Sign-ins in the last 30 days"
-								value={data.meta.daily.reduce(
-									(sum, day) => sum + day.logins,
-									0
-								)}
+								label={
+									search ? "Matching sign-ins" : "Sign-ins in the last 30 days"
+								}
+								value={
+									search
+										? data.meta.total
+										: data.meta.daily.reduce((sum, day) => sum + day.logins, 0)
+								}
 								icon={LogIn}
 							/>
 						</>

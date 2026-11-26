@@ -33,12 +33,14 @@ import {
 	useAddKopokopoRecipient,
 	useAdminDashboard,
 	useAdminKopokopoRecipients,
+	useAdminUserSettings,
 	useAdminUsers,
 	useAttachReferrer,
 	useDeleteUser,
 	useFlagUser,
 	useRequestUserPhone,
 	useToggleUserVerified,
+	useUpdateScreenNewSignups,
 	useUpdateUserPhone,
 } from "@/queries/admin"
 
@@ -383,6 +385,13 @@ function FlagCell({ user }: { user: AdminUser }) {
 					user.flaggedAt ? `Unflag ${user.name}` : `Flag ${user.name}`
 				}
 			/>
+			{user.flaggedUntilPhone && (
+				<Badge
+					variant="outline"
+					title="Flagged by sign-up screening. Adding a phone number lifts it.">
+					Needs phone
+				</Badge>
+			)}
 			{user.flagRefutedAt && (
 				<Badge
 					variant="outline"
@@ -643,6 +652,53 @@ function ReferredByCell({ user }: { user: AdminUser }) {
 	)
 }
 
+/**
+ * Switches the AI agent that screens new sign-ups. It flags accounts that
+ * look fake or duplicated until they add a phone number, and each number
+ * can only be on one account.
+ */
+function ScreenNewSignupsToggle() {
+	const { data: settings } = useAdminUserSettings()
+	const updateScreenNewSignups = useUpdateScreenNewSignups()
+
+	if (!settings) {
+		return <Skeleton className="h-20" />
+	}
+
+	function handleChange(checked: boolean) {
+		updateScreenNewSignups.mutate(checked, {
+			onSuccess: () =>
+				toast.success(
+					checked
+						? "New sign-ups will be screened"
+						: "New sign-ups won't be screened"
+				),
+			onError: () => toast.error("Couldn't update the setting"),
+		})
+	}
+
+	return (
+		<div className="flex items-center justify-between gap-4 rounded-xl border bg-card p-4 shadow-xs">
+			<div>
+				<p className="text-sm font-medium">Screen new sign-ups</p>
+				<p className="mt-1 text-sm text-muted-foreground">
+					{settings.screenNewSignups
+						? "AI flags accounts that look fake or duplicated until they add a phone number. Also needs AI agents on."
+						: "Off. New accounts aren't checked."}
+				</p>
+			</div>
+			{/* Screen New Sign-ups Start */}
+			<Switch
+				checked={settings.screenNewSignups}
+				disabled={updateScreenNewSignups.isPending}
+				onCheckedChange={handleChange}
+				aria-label="Screen new sign-ups"
+			/>
+			{/* Screen New Sign-ups End */}
+		</div>
+	)
+}
+
 export default function AdminUsers() {
 	const [search, setSearch] = useState("")
 	const [page, setPage] = useState(1)
@@ -669,9 +725,12 @@ export default function AdminUsers() {
 		setFilters(DEFAULT_FILTERS)
 		setPage(1)
 	}
-	// The table's own total shrinks while searching, so the card reads the
-	// unfiltered count the dashboard already computes.
+	// Unfiltered, the card shows the dashboard's count of real users. Once a
+	// search or filter is set it follows the table's matching total instead.
 	const { data: dashboard } = useAdminDashboard()
+	const totalUsers = hasActiveFilters
+		? data?.meta.total
+		: dashboard?.totals.totalUsers
 	const toggleVerified = useToggleUserVerified()
 	const { data: recipients } = useAdminKopokopoRecipients()
 
@@ -838,15 +897,18 @@ export default function AdminUsers() {
 				/>
 
 				<div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-					{dashboard ? (
+					{totalUsers !== undefined ? (
 						<AdminStatCard
-							label="Total users"
-							value={dashboard.totals.totalUsers}
+							label={hasActiveFilters ? "Matching users" : "Total users"}
+							value={totalUsers}
 							icon={Users}
 						/>
 					) : (
 						<Skeleton className="h-20" />
 					)}
+					<div className="lg:col-span-2">
+						<ScreenNewSignupsToggle />
+					</div>
 				</div>
 
 				<Card>

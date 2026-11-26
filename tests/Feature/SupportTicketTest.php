@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Ai\Agents\SupportAgent;
 use App\Enums\SupportTicketStatus;
 use App\Http\Services\SupportTicketService;
+use App\Jobs\AnswerSupportTicketJob;
 use App\Models\Photo;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketMessage;
@@ -12,7 +13,9 @@ use App\Models\User;
 use App\Notifications\AdminSupportTicketEscalatedNotification;
 use App\Notifications\AdminSupportTicketMessageNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Sleep;
 use NotificationChannels\WebPush\WebPushChannel;
 use RuntimeException;
 use Tests\TestCase;
@@ -248,15 +251,69 @@ class SupportTicketTest extends TestCase
             ->assertJsonPath('data.waiting', 2);
     }
 
-    public function test_an_ai_failure_hands_the_ticket_to_a_person(): void
+    public function test_an_ai_failure_hands_the_ticket_to_a_person_after_every_attempt(): void
     {
-        SupportAgent::fake(fn () => throw new RuntimeException('Gemini is down'));
+        Sleep::fake();
+        $attempts = 0;
+        SupportAgent::fake(function () use (&$attempts) {
+            $attempts++;
+
+            throw new RuntimeException('Gemini is down');
+        });
 
         $ticketId = $this->start(User::factory()->create())->json('data.id');
         $ticket = SupportTicket::find($ticketId);
 
+        $this->assertSame(SupportTicketService::ASSISTANT_ATTEMPTS, $attempts);
         $this->assertSame(SupportTicketStatus::NEEDS_AGENT->value, $ticket->status);
         $this->assertSame(SupportTicketService::HANDOFF_MESSAGE, $ticket->latestMessage->body);
+    }
+
+    public function test_a_passing_ai_failure_is_retried_instead_of_handed_over(): void
+    {
+        Sleep::fake();
+        $attempts = 0;
+        SupportAgent::fake(function () use (&$attempts) {
+            if (++$attempts === 1) {
+                throw new RuntimeException('503 The model is overloaded');
+            }
+
+            return ['reply' => 'Tap Submit a photo on the Compete page.', 'escalate' => false];
+        });
+
+        $ticketId = $this->start(User::factory()->create())->json('data.id');
+        $ticket = SupportTicket::find($ticketId);
+
+        $this->assertSame(SupportTicketStatus::OPEN->value, $ticket->status);
+        $this->assertSame('Tap Submit a photo on the Compete page.', $ticket->latestMessage->body);
+    }
+
+    public function test_an_empty_ai_reply_is_logged_before_handing_over(): void
+    {
+        Log::spy();
+        SupportAgent::fake([['reply' => '', 'escalate' => false]]);
+
+        $ticketId = $this->start(User::factory()->create())->json('data.id');
+
+        $this->assertSame(SupportTicketStatus::NEEDS_AGENT->value, SupportTicket::find($ticketId)->status);
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message) => str_contains($message, 'empty reply'))
+            ->once();
+    }
+
+    public function test_every_ai_attempt_fits_in_the_job_timeout(): void
+    {
+        $agentTimeout = (new \ReflectionClass(SupportAgent::class))
+            ->getAttributes(\Laravel\Ai\Attributes\Timeout::class)[0]
+            ->newInstance()
+            ->value;
+        $pauses = collect(range(1, SupportTicketService::ASSISTANT_ATTEMPTS - 1))->sum();
+
+        $this->assertLessThan(
+            (new AnswerSupportTicketJob(new SupportTicket))->timeout,
+            SupportTicketService::ASSISTANT_ATTEMPTS * $agentTimeout + $pauses,
+        );
+        $this->assertLessThan(config('queue.connections.redis.retry_after'), (new AnswerSupportTicketJob(new SupportTicket))->timeout);
     }
 
     public function test_the_assistant_stays_quiet_once_a_person_has_the_ticket(): void

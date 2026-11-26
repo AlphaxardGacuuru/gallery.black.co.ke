@@ -29,6 +29,12 @@ class SupportTicketService extends Service
      */
     public const HANDOFF_MESSAGE = "I've passed your question to our support team. Someone will reply here as soon as they can.";
 
+    /**
+     * Tries at the AI provider before handing the ticket to a person. With
+     * SupportAgent's timeout this has to fit AnswerSupportTicketJob's.
+     */
+    public const ASSISTANT_ATTEMPTS = 3;
+
     public function __construct(protected AiUsageService $aiUsageService)
     {
         parent::__construct();
@@ -183,9 +189,15 @@ class SupportTicketService extends Service
             return;
         }
 
+        // Gemini sometimes fails a request outright (overloaded, rate
+        // limited), so a failure is retried before a person takes over.
         try {
             $agent = new SupportAgent($supportTicket);
-            $response = $agent->prompt($agent->pendingQuestion());
+            $response = retry(
+                self::ASSISTANT_ATTEMPTS,
+                fn () => $agent->prompt($agent->pendingQuestion()),
+                fn (int $attempt) => $attempt * 1000,
+            );
         } catch (Throwable $exception) {
             Log::error("Support assistant failed on ticket {$supportTicket->id}: {$exception->getMessage()}");
 
@@ -198,7 +210,14 @@ class SupportTicketService extends Service
 
         $reply = trim((string) ($response['reply'] ?? ''));
 
+        // A cut-off or malformed answer decodes to nothing rather than
+        // throwing, so say why here, or it looks like a deliberate handoff.
         if ($reply === '') {
+            Log::warning("Support assistant gave an empty reply on ticket {$supportTicket->id}.", [
+                'finishReason' => $response->steps->last()?->finishReason?->value,
+                'text' => Str::limit((string) $response->text, 500),
+            ]);
+
             $this->escalate($supportTicket, self::HANDOFF_MESSAGE);
 
             return;

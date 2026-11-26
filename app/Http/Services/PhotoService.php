@@ -324,6 +324,12 @@ class PhotoService extends Service
 			]);
 		}
 
+		if ($user->isFlaggedUntilPhone()) {
+			throw ValidationException::withMessages([
+				'id' => 'Add your M-Pesa phone number in Settings > Profile to start liking photos.',
+			]);
+		}
+
 		if ($user->isFlagged()) {
 			throw ValidationException::withMessages([
 				'id' => 'Your account is flagged, so you can\'t like photos right now. Update your M-Pesa phone number in Settings > Profile to ask for a review.',

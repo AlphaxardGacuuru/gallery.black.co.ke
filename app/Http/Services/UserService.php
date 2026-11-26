@@ -134,6 +134,7 @@ class UserService extends Service
 		$user->forceFill([
 			'flagged_at' => now(),
 			'flag_reason' => $reason,
+			'flag_source' => User::FLAG_SOURCE_ADMIN,
 			'flag_refuted_at' => null,
 		])->save();
 
@@ -150,6 +151,7 @@ class UserService extends Service
 		$user->forceFill([
 			'flagged_at' => null,
 			'flag_reason' => null,
+			'flag_source' => null,
 			'flag_refuted_at' => null,
 		])->save();
 
@@ -328,14 +330,27 @@ class UserService extends Service
 			$user->email_verified_at = null;
 		}
 
-		// A flagged user disputes the flag by updating their phone number
-		// (see UserFlaggedNotification). An admin reviews it from the users
-		// page; it doesn't lift the flag by itself.
-		if ($user->isFlagged() && $user->isDirty('phone') && $user->phone) {
+		$addedPhone = $user->isDirty('phone') && $user->phone;
+		$liftsFlag = $addedPhone && $user->isFlaggedUntilPhone();
+
+		// A sign-up screening flag only asks for a phone number, so adding
+		// one lifts it. An admin's flag is disputed by updating the phone
+		// number (see UserFlaggedNotification), which an admin then reviews.
+		if ($liftsFlag) {
+			$user->forceFill([
+				'flagged_at' => null,
+				'flag_reason' => null,
+				'flag_source' => null,
+			]);
+		} elseif ($addedPhone && $user->isFlagged()) {
 			$user->flag_refuted_at = now();
 		}
 
 		$user->save();
+
+		if ($liftsFlag) {
+			$this->recountLikedPhotos($user);
+		}
 	}
 
 	/**

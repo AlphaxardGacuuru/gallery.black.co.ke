@@ -21,6 +21,8 @@ export type User = {
 	flaggedAt?: string | null
 	/** When the user disputed the flag by updating their phone number. */
 	flagRefutedAt?: string | null
+	/** Flagged by sign-up screening until they add a phone number, which lifts it. */
+	flaggedUntilPhone?: boolean
 	/** Why the account was flagged (the admin's reason). */
 	flagReason?: string | null
 	/** False once the phone number is locked (see User::canChangePhone()). */

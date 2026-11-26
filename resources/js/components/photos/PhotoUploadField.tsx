@@ -218,19 +218,30 @@ export function BuyExtraPhotoSlotRow({
 		)
 	}
 
+	// Without this a cancelled, declined or timed-out prompt just put the
+	// button back with no word on what happened.
+	const failed = Boolean(purchaseId) && purchase?.status === "failed"
+
 	return (
-		<Button
-			type="button"
-			variant="outline"
-			size="sm"
-			disabled={buyExtraPhotoSlot.isPending}
-			onClick={handleBuy}>
-			{buyExtraPhotoSlot.isPending ? (
-				<Spinner className="size-4" />
-			) : (
-				<ShoppingCart className="size-4" />
+		<div className="space-y-2">
+			{failed && (
+				<p className="text-sm text-destructive">
+					The payment didn&apos;t go through. You can try again.
+				</p>
 			)}
-			Add another photo slot @ KES {extraPhoto.price}
-		</Button>
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				disabled={buyExtraPhotoSlot.isPending}
+				onClick={handleBuy}>
+				{buyExtraPhotoSlot.isPending ? (
+					<Spinner className="size-4" />
+				) : (
+					<ShoppingCart className="size-4" />
+				)}
+				Add another photo slot @ KES {extraPhoto.price}
+			</Button>
+		</div>
 	)
 }

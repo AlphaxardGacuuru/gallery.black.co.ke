@@ -75,6 +75,8 @@ export type AdminUser = {
 	flagReason?: string | null
 	/** When the flagged user disputed it by updating their phone number. */
 	flagRefutedAt: string | null
+	/** Flagged by sign-up screening until they add a phone number, which lifts it. */
+	flaggedUntilPhone: boolean
 	/** How many times the user was asked to add a phone number. */
 	phoneRequestsCount: number
 	phoneRequestedAt: string | null
@@ -128,6 +130,7 @@ export function useAdminUsers(
 					per_page: perPage,
 				},
 			}).then((res) => res.data),
+		placeholderData: keepPreviousData,
 	})
 }
 
@@ -211,6 +214,35 @@ export function useDeleteUser() {
  * Email a user without a phone number asking them to add the M-Pesa number
  * that prizes and payouts are sent to.
  */
+export type AdminUserSettings = {
+	/** Whether an AI agent screens new sign-ups for fake or duplicate accounts. */
+	screenNewSignups: boolean
+}
+
+export function useAdminUserSettings() {
+	return useQuery({
+		queryKey: ["admin", "users", "settings"],
+		queryFn: () =>
+			Axios.get<{ data: AdminUserSettings }>("api/admin/users/settings").then(
+				(res) => res.data.data
+			),
+	})
+}
+
+/** Switch AI screening of new sign-ups on or off. */
+export function useUpdateScreenNewSignups() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (screenNewSignups: boolean) =>
+			Axios.put("api/admin/users/settings", { screenNewSignups }),
+		onSuccess: () =>
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "users", "settings"],
+			}),
+	})
+}
+
 export function useRequestUserPhone() {
 	const queryClient = useQueryClient()
 

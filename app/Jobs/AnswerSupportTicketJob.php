@@ -21,6 +21,13 @@ class AnswerSupportTicketJob implements ShouldQueue
      */
     public int $tries = 10;
 
+    /**
+     * Room for every AI attempt (SupportTicketService::ASSISTANT_ATTEMPTS
+     * times SupportAgent's timeout, plus pauses), and under the queue's
+     * retry_after of 90 seconds so a slow job isn't run twice.
+     */
+    public int $timeout = 80;
+
     public function __construct(public SupportTicket $ticket) {}
 
     /**

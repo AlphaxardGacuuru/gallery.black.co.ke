@@ -6,6 +6,7 @@ use App\Events\PhoneNumberRequestedEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Http\Services\UserService;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -71,5 +72,28 @@ class AdminUserController extends Controller
         return response()->json([
             'message' => "Asked {$user->name} to add their phone number.",
         ]);
+    }
+
+    public function settings(): JsonResponse
+    {
+        return response()->json([
+            'data' => ['screenNewSignups' => User::screensNewSignups()],
+        ]);
+    }
+
+    /**
+     * Switch sign-up screening on or off. Accounts it already flagged stay
+     * flagged until they add a phone number.
+     */
+    public function updateSettings(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'screenNewSignups' => ['required', 'boolean'],
+        ]);
+
+        Setting::query()
+            ->updateOrCreate(['key' => User::SETTING_SCREEN_NEW_SIGNUPS], ['value' => $data['screenNewSignups']]);
+
+        return response()->json(['data' => $data]);
     }
 }

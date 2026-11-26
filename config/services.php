@@ -98,7 +98,16 @@ return [
         'provider' => env('SUPPORT_AI_PROVIDER', 'gemini'),
         'model' => env('SUPPORT_AI_MODEL', 'gemini-3.1-flash-lite'),
         // After this many AI replies on one ticket, it goes to a person
-        // instead, so a stuck conversation can't run up the bill.
-        'max_replies' => (int) env('SUPPORT_AI_MAX_REPLIES', 8),
+        // instead, so a stuck loop can't run up the bill. High enough that
+        // a real conversation never reaches it (a reply costs a fraction
+        // of a cent); the assistant hands over itself when a person must act.
+        'max_replies' => (int) env('SUPPORT_AI_MAX_REPLIES', 40),
+    ],
+
+    'signup_screening' => [
+        'provider' => env('SIGNUP_SCREENING_AI_PROVIDER', 'gemini'),
+        'model' => env('SIGNUP_SCREENING_AI_MODEL', 'gemini-3.1-flash-lite'),
+        // How many look-alike accounts the agent is shown at most.
+        'max_candidates' => (int) env('SIGNUP_SCREENING_MAX_CANDIDATES', 10),
     ],
 ];

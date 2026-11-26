@@ -3,22 +3,20 @@
 namespace App\Listeners;
 
 use App\Events\UserCreatedEvent;
+use App\Jobs\ScreenNewSignupJob;
 
 class UserCreatedListener
 {
-    /**
-     * Create the event listener.
-     */
-    public function __construct()
+    public function handle(UserCreatedEvent $event): void
     {
-        //
+        $this->screenSignup($event);
     }
 
     /**
-     * Handle the event.
+     * Have the screening agent check for a fake or duplicate account.
      */
-    public function handle(UserCreatedEvent $event): void
+    private function screenSignup(UserCreatedEvent $event): void
     {
-        //
+        ScreenNewSignupJob::dispatch($event->user, request()->ip());
     }
 }

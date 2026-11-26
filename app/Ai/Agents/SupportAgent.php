@@ -5,6 +5,7 @@ namespace App\Ai\Agents;
 use App\Ai\SupportUserContext;
 use App\Http\Services\PhotoPurchaseService;
 use App\Http\Services\ReferralService;
+use App\Models\AiUsage;
 use App\Models\Photo;
 use App\Models\PhotoCompetition;
 use App\Models\PhotoSlotPurchase;
@@ -33,7 +34,9 @@ use Stringable;
  * act on.
  */
 #[MaxTokens(1024)]
-#[Timeout(30)]
+// Replies usually take a few seconds. Kept short so every retry in
+// SupportTicketService fits AnswerSupportTicketJob's timeout.
+#[Timeout(20)]
 class SupportAgent implements Agent, Conversational, HasStructuredOutput
 {
     use Promptable;
@@ -68,8 +71,10 @@ class SupportAgent implements Agent, Conversational, HasStructuredOutput
         You are the support assistant for Black Gallery, replying to a customer in the app's help chat.
 
         How to reply:
-        - Answer only from the knowledge base, the live settings and the customer details below. If the answer isn't there, don't guess: say you're passing it to the support team and set escalate to true.
-        - Set escalate to true when the customer asks for a person, wants a refund or money back, says money left their M-Pesa but nothing unlocked, reports a missing prize or payout, reports a bug you can't explain, wants their account or data changed, or is upset after you've tried to help. Tell them the support team will reply in this chat.
+        - Keep helping for as long as the conversation needs. Answer from the knowledge base, the live settings and the customer details below, including follow-up questions, complaints, and questions about payouts, referrals or a flagged account that you can explain from what you see.
+        - Set escalate to true only when a person on the team has to change data or take an action you can't: changing a locked phone number, sending or checking a prize, payout or referral reward the customer details show as owed or missing, money that left their M-Pesa without unlocking anything, a refund, reviewing a disputed flag, granting a badge, deleting an account they can't delete themselves, or a bug you can't explain. Also escalate if the customer clearly asks for a person. When you escalate, first ask for anything the team will need (like the new phone number or the M-Pesa code) in the same reply, and tell them the support team will reply in this chat.
+        - Being upset, repeating a question or asking a lot of questions is not a reason to escalate on its own. Keep explaining, in different words if the first answer didn't land.
+        - If the answer isn't in what you've been given, don't guess. Say you don't have that detail and ask if they'd like you to pass it to the team; escalate if they say yes.
         - Never promise refunds, payouts, dates or exceptions, and never say you've changed anything. You can't take actions, only explain.
         - Keep replies short and friendly: 1 to 4 sentences, or a few short steps. Plain text only, no markdown headings or tables. Reply in the language the customer writes in (English or Swahili).
         - Only discuss Black Gallery. Politely decline anything else.
@@ -194,6 +199,7 @@ class SupportAgent implements Agent, Conversational, HasStructuredOutput
             '- Extra entry: '.$offer($extraEntry),
             '- Extra photo: '.$offer($extraPhoto),
             '- Buying photos: '.$offer($sale),
+            '- New sign-ups screened for fake or duplicate accounts: '.(User::screensNewSignups() && AiUsage::agentsEnabled() ? 'yes' : 'no'),
             sprintf(
                 '- Referral reward: KES %s for every %d friends who join%s',
                 $referral['rewardAmount'],

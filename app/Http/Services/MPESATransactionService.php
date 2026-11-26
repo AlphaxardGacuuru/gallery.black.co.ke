@@ -158,13 +158,21 @@ class MPESATransactionService extends Service
         $K2 = new K2($this->config());
 
         // Get token
-        $tokenResponse = $K2->TokenService()->getToken();
+        $tokenResponse = $K2->TokenService()
+            ->getToken();
+
+        // On failure "data" is an error string or array with no token, so
+        // reading it threw a 500 and left the caller's purchase stuck
+        // "pending" (blocking retries) instead of marking it failed.
+        if (($tokenResponse['status'] ?? null) !== 'success') {
+            Log::warning('Kopokopo token request failed before STK push', [
+                'response' => $tokenResponse,
+            ]);
+
+            return ['error', 'Request Failed', $tokenResponse];
+        }
 
         $token = $tokenResponse['data']['accessToken'];
-
-        if ($tokenResponse['status'] == 'success') {
-            // echo "My access token is: " . $token . " It expires in: " . $tokenResponse['data']['expiresIn'] . "<br>";
-        }
 
         // STKPush
         $stk = $K2->StkService();

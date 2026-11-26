@@ -105,7 +105,18 @@ export default function Profile({
 					description="Update your profile picture, name and phone number"
 				/>
 
-				{auth?.flaggedAt && (
+				{auth?.flaggedUntilPhone && (
+					<Alert>
+						<AlertTitle>Add your phone number to start liking</AlertTitle>
+						<AlertDescription>
+							Add your M-Pesa phone number below to like photos. Each number can
+							only be on one account, which keeps likes fair, and it's where
+							your prizes are sent.
+						</AlertDescription>
+					</Alert>
+				)}
+
+				{auth?.flaggedAt && !auth.flaggedUntilPhone && (
 					<Alert variant="destructive">
 						<AlertTitle>Your account is flagged</AlertTitle>
 						<AlertDescription>

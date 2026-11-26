@@ -49,6 +49,7 @@ class SupportUserContext
             '- Verified badge: '.($user->verified ? 'yes' : 'no'),
             '- Account flagged: '.match (true) {
                 ! $user->isFlagged() => 'no',
+                $user->isFlaggedUntilPhone() => 'yes, at sign-up because the account looked fake or like a duplicate (adding a phone number lifts it)',
                 $user->flag_refuted_at !== null => 'yes, and they updated their phone number to dispute it (waiting for review)',
                 default => 'yes',
             },

@@ -25,6 +25,11 @@ class AiUsage extends Model
     public const FEATURE_SUPPORT_REPLY = 'support_reply';
 
     /**
+     * The sign-up screening agent checking a new account.
+     */
+    public const FEATURE_SIGNUP_SCREENING = 'signup_screening';
+
+    /**
      * Setting that switches every AI agent on or off, see agentsEnabled().
      */
     public const SETTING_AGENTS_ENABLED = 'ai_agents_enabled';

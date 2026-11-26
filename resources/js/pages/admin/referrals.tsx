@@ -279,6 +279,8 @@ export default function AdminReferrals() {
 		setPage(1)
 	}
 
+	const isSearching = search.referrer !== "" || search.referred !== ""
+
 	return (
 		<>
 			<Head title="Referrals" />
@@ -302,8 +304,12 @@ export default function AdminReferrals() {
 				) : (
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 						<AdminStatCard
-							label="Total referrals"
-							value={data.totalReferrals}
+							label={isSearching ? "Matching referrals" : "Total referrals"}
+							value={
+								isSearching
+									? (recent?.meta.total ?? data.totalReferrals)
+									: data.totalReferrals
+							}
 							icon={UserPlus}
 							tone="success"
 						/>
@@ -379,7 +385,7 @@ export default function AdminReferrals() {
 							)}
 							data={recent?.data ?? []}
 							emptyMessage={
-								search.referrer || search.referred
+								isSearching
 									? "No referrals match your search"
 									: "No referrals yet"
 							}

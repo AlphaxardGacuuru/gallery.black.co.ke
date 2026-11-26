@@ -236,6 +236,102 @@ class ExtraPhotoPurchaseControllerTest extends TestCase
         $this->assertSame(PhotoSlotPurchase::STATUS_FAILED, $purchase->status);
     }
 
+    public function test_a_kopokopo_outage_fails_the_purchase_and_does_not_block_a_retry(): void
+    {
+        $this->enableExtraPhoto();
+        PhotoCompetition::factory()->create();
+        $user = User::factory()->create(['phone' => '0700123456']);
+
+        // Nothing listens here, so Kopokopo's token request fails the way
+        // it does when their API is down or the credentials are rejected.
+        config([
+            'services.kopokopo.environment' => 'sandbox',
+            'services.kopokopo.sandbox.baseUrl' => 'http://127.0.0.1:1',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/extra-photo-purchases')
+            ->assertOk()
+            ->assertJsonPath('status', false);
+
+        $this->assertSame(
+            PhotoSlotPurchase::STATUS_FAILED,
+            PhotoSlotPurchase::query()
+                ->where('user_id', $user->id)
+                ->sole()
+                ->status
+        );
+
+        // The failed attempt must not hold the "payment in progress" lock.
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/extra-photo-purchases')
+            ->assertOk()
+            ->assertJsonPath('status', false);
+    }
+
+    public function test_a_paid_callback_unlocks_one_more_photo(): void
+    {
+        $this->enableExtraPhoto(20);
+        PhotoCompetition::factory()->create();
+        $user = User::factory()->create(['phone' => '0700123456']);
+
+        $this->partialMock(MPESATransactionService::class, function ($mock) {
+            $mock->shouldReceive('stkPush')->once()->andReturn([
+                'success',
+                'Request Sent to Your Phone',
+                ['location' => 'https://sandbox.kopokopo.com/api/v2/incoming_payments/photo-paid'],
+            ]);
+        });
+
+        $purchaseId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/extra-photo-purchases')
+            ->assertOk()
+            ->json('data.purchaseId');
+
+        // Shaped like the "Process Incoming Payment Result" example in
+        // Kopokopo's API docs.
+        $this->postJson('/api/mpesa-transactions', [
+            'data' => [
+                'id' => 'photo-paid',
+                'type' => 'incoming_payment',
+                'attributes' => [
+                    'initiation_time' => now()->toIso8601String(),
+                    'status' => 'Success',
+                    'event' => [
+                        'type' => 'Incoming Payment Request',
+                        'resource' => [
+                            'id' => 'resource-paid',
+                            'reference' => 'TKQ1ABCDEF',
+                            'origination_time' => now()->toIso8601String(),
+                            'sender_phone_number' => '+254700123456',
+                            'amount' => '20.0',
+                            'currency' => 'KES',
+                            'till_number' => 'K000000',
+                            'system' => 'Lipa Na M-PESA',
+                            'status' => 'Received',
+                            'sender_first_name' => 'Joe',
+                            'sender_middle_name' => null,
+                            'sender_last_name' => 'Buyer',
+                        ],
+                        'errors' => null,
+                    ],
+                    'metadata' => null,
+                ],
+            ],
+        ])->assertOk();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson("/api/photo-slot-purchases/{$purchaseId}")
+            ->assertOk()
+            ->assertJsonPath('data.status', PhotoSlotPurchase::STATUS_PAID);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/photos/current')
+            ->assertOk()
+            ->assertJsonPath('extraPhoto.maxPhotos', 2)
+            ->assertJsonPath('extraPhoto.pendingPurchaseId', null);
+    }
+
     public function test_a_user_can_only_view_their_own_photo_purchase(): void
     {
         $owner = User::factory()->create();
