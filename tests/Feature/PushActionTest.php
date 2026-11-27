@@ -134,7 +134,7 @@ class PushActionTest extends TestCase
         $admin = User::factory()->create(['email' => config('admin.email')]);
         $ticket = $this->ticket(User::factory()->create());
         $message = $ticket->messages()->create(['author' => SupportTicketMessage::AUTHOR_USER, 'body' => 'Any news?']);
-        $newUser = User::factory()->create(['verified' => false]);
+        $newUser = User::factory()->create();
 
         $resolve = $this->push(new AdminSupportTicketMessageNotification($message), $admin);
         $verify = $this->push(new AdminNewUserSignupNotification($newUser, null), $admin);
@@ -151,7 +151,7 @@ class PushActionTest extends TestCase
     public function test_admin_actions_are_refused_for_anyone_else(): void
     {
         $customer = User::factory()->create();
-        $newUser = User::factory()->create(['verified' => false]);
+        $newUser = User::factory()->create();
 
         $verify = $this->push(new AdminNewUserSignupNotification($newUser, null), $customer);
 

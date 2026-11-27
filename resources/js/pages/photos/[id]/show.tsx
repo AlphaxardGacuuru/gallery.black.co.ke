@@ -17,6 +17,7 @@ import { EditPhotoDialog } from "@/components/photos/EditPhotoDialog"
 import { FlaggedAccountDialog } from "@/components/photos/FlaggedAccountDialog"
 import { ManageLikesDialog } from "@/components/photos/ManageLikesDialog"
 import { PhotoCarousel } from "@/components/photos/PhotoCarousel"
+import { PostedAt } from "@/components/photos/PostedAt"
 import VerifiedBadge from "@/components/verified-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -237,11 +238,15 @@ export default function PhotoShow({ id }: Props) {
 				/>
 			</div>
 
-			{photo.caption && (
-				<footer className="shrink-0 p-3 pr-16 text-white">
+			<footer className="flex shrink-0 flex-col gap-1 p-3 pr-16 text-white">
+				{photo.caption && (
 					<p className="truncate text-sm text-white/80">{photo.caption}</p>
-				</footer>
-			)}
+				)}
+				<PostedAt
+					date={photo.createdAt}
+					className="text-white/60"
+				/>
+			</footer>
 
 			{/* Instagram/TikTok-style vertical action rail */}
 			<div className="absolute right-2 bottom-6 z-10 flex flex-col items-center gap-5 sm:right-4">

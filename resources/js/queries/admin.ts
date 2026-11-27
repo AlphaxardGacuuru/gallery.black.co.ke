@@ -70,6 +70,8 @@ export type AdminUser = {
 	gender: "male" | "female" | "other" | null
 	avatar: string | null
 	verified: boolean
+	/** Why the user got the verified badge, when they have it. */
+	verificationReason?: string | null
 	flaggedAt: string | null
 	/** Admin-only note on why the user was flagged. */
 	flagReason?: string | null
@@ -138,8 +140,16 @@ export function useToggleUserVerified() {
 	const queryClient = useQueryClient()
 
 	return useMutation({
-		mutationFn: ({ userId, verified }: { userId: string; verified: boolean }) =>
-			Axios.patch(`api/admin/users/${userId}/verify`, { verified }),
+		mutationFn: ({
+			userId,
+			verified,
+			reason,
+		}: {
+			userId: string
+			verified: boolean
+			/** Required when verifying, one of the settings' verificationReasons. */
+			reason?: string
+		}) => Axios.patch(`api/admin/users/${userId}/verify`, { verified, reason }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
 		},
@@ -217,6 +227,8 @@ export function useDeleteUser() {
 export type AdminUserSettings = {
 	/** Whether an AI agent screens new sign-ups for fake or duplicate accounts. */
 	screenNewSignups: boolean
+	/** Why an admin can verify someone, picked when switching the badge on. */
+	verificationReasons: { value: string; label: string }[]
 }
 
 export function useAdminUserSettings() {

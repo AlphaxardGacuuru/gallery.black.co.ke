@@ -66,7 +66,7 @@ class SignupScreeningTest extends TestCase
         return tap(
             User::factory()->create(['phone' => null]),
             fn(User $user) => $user
-                ->forceFill(['flagged_at' => now(), 'flag_reason' => 'Looks like a duplicate', 'flag_source' => User::FLAG_SOURCE_SIGNUP_SCREENING])
+                ->forceFill(['flag' => ['at' => now(), 'reason' => 'Looks like a duplicate', 'source' => User::FLAG_SOURCE_SIGNUP_SCREENING]])
                 ->save()
         );
     }
@@ -208,7 +208,7 @@ class SignupScreeningTest extends TestCase
         $user = tap(
             User::factory()->create(['phone' => null]),
             fn(User $user) => $user
-                ->forceFill(['flagged_at' => now(), 'flag_reason' => 'Like ring', 'flag_source' => User::FLAG_SOURCE_ADMIN])
+                ->forceFill(['flag' => ['at' => now(), 'reason' => 'Like ring', 'source' => User::FLAG_SOURCE_ADMIN]])
                 ->save()
         );
 

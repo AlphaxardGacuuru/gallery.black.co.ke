@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\VerificationReason;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -46,6 +47,23 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the user has the verified badge.
+     *
+     * @return static
+     */
+    public function verifiedBadge()
+    {
+        return $this->state(fn (array $attributes) => [
+            'verification' => [
+                'verified' => true,
+                'at' => now(),
+                'reason' => VerificationReason::OTHER->value,
+                'by' => null,
+            ],
         ]);
     }
 

@@ -353,7 +353,7 @@ class PhotoCompetitionWinnersPayoutTest extends TestCase
     {
         $competition = $this->competitionWithMixedWinners();
         $twice = User::factory()->create(['phone' => '0700999888', 'name' => 'Twice Winner']);
-        $flagged = User::factory()->create(['phone' => '0700999777', 'name' => 'Flagged Winner', 'flagged_at' => now()]);
+        $flagged = User::factory()->create(['phone' => '0700999777', 'name' => 'Flagged Winner', 'flag' => ['at' => now()]]);
 
         collect([[7, 150, $twice], [8, 50, $twice], [9, 50, $flagged]])
             ->each(fn(array $place) => PhotoCompetitionWinner::factory()->create([

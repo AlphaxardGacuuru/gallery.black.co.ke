@@ -4,7 +4,9 @@ namespace App\Http\Requests;
 
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
+use App\Enums\VerificationReason;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateUserRequest extends FormRequest
 {
@@ -37,6 +39,13 @@ class UpdateUserRequest extends FormRequest
                 'unique:users,email,'.$id,
             ],
             'phone' => $this->phoneRules($id),
+            'verified' => ['sometimes', 'boolean'],
+            'reason' => [
+                'nullable',
+                'required_if_accepted:verified',
+                Rule::enum(VerificationReason::class)
+                    ->only(VerificationReason::adminChoices()),
+            ],
         ];
         if ($this->filled('password')) {
             $rules['password'] = $this->passwordRules();

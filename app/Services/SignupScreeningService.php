@@ -54,12 +54,12 @@ class SignupScreeningService
         }
 
         $user
-            ->forceFill([
-                'flagged_at' => now(),
-                'flag_reason' => Str::limit((string) ($response['reason'] ?? 'Flagged by sign-up screening'), 250),
-                'flag_source' => User::FLAG_SOURCE_SIGNUP_SCREENING,
-                'flag_refuted_at' => null,
-            ])
+            ->forceFill(['flag' => [
+                'at' => now(),
+                'reason' => Str::limit((string) ($response['reason'] ?? 'Flagged by sign-up screening'), 250),
+                'source' => User::FLAG_SOURCE_SIGNUP_SCREENING,
+                'refuted_at' => null,
+            ]])
             ->save();
 
         UserFlaggedEvent::dispatch($user);

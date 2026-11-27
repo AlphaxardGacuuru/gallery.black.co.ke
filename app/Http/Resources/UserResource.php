@@ -35,6 +35,10 @@ class UserResource extends JsonResource
             "gender" => $this->gender,
             "avatar" => $this->avatar,
             "verified" => (bool) $this->verified,
+            "verificationReason" => $this->when(
+                (bool) $request->user()?->isAdmin(),
+                $this->verification_reason?->label()
+            ),
             "flaggedAt" => $this->flagged_at,
             "flagRefutedAt" => $this->flag_refuted_at,
             "flaggedUntilPhone" => $this->isFlaggedUntilPhone(),

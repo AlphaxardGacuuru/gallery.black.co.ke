@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SupportTicketStatus;
+use App\Enums\VerificationReason;
 use App\Events\PhotoLikedEvent;
 use App\Http\Services\PhotoService;
 use App\Http\Services\UserService;
@@ -77,7 +78,7 @@ class PushActionController extends Controller
     {
         abort_unless($user->isAdmin(), 403);
 
-        $this->userService->verify($subject);
+        $this->userService->verify($subject, VerificationReason::NEW_SIGNUP, $user);
 
         return response()->json([
             'message' => "{$subject->name} verified",

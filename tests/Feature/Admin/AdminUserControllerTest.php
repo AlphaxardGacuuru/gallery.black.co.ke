@@ -71,7 +71,7 @@ class AdminUserControllerTest extends TestCase
     {
         $admin = $this->admin();
         $verified = User::factory()->create(['phone' => '0700000001']);
-        $verified->forceFill(['verified' => true])->save();
+        $verified->forceFill(['verification' => ['verified' => true]])->save();
         $noPhone = User::factory()->create(['phone' => null]);
         $seed = User::factory()->create(['phone' => '0700000002']);
         $seed->forceFill(['is_seed' => true])->save();

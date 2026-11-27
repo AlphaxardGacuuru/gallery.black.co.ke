@@ -51,7 +51,7 @@ class AdminPhotoLikeController extends Controller
             )
             ->when(
                 $request->boolean('flagged'),
-                fn($query) => $query->whereNotNull('flagged_at')
+                fn($query) => $query->flagged()
             )
             ->addSelect([
                 'likes_photo' => PhotoLike::query()
@@ -123,7 +123,7 @@ class AdminPhotoLikeController extends Controller
     public function destroyFlagged(Photo $photo): JsonResponse
     {
         $removed = $photo->likes()
-            ->whereHas('user', fn($query) => $query->whereNotNull('flagged_at'))
+            ->whereHas('user', fn($query) => $query->flagged())
             ->delete();
 
         $photo->recountLikes();

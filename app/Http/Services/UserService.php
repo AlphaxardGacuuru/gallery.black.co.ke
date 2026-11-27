@@ -3,6 +3,7 @@
 namespace App\Http\Services;
 
 use App\Enums\EmailNotificationCategory;
+use App\Enums\VerificationReason;
 use App\Events\UserFlaggedEvent;
 use App\Events\UserVerifiedEvent;
 use App\Http\Resources\UserResource;
@@ -96,14 +97,12 @@ class UserService extends Service
 			$user->settings = $request->input('settings');
 		}
 
-		if ($request->has('verified')) {
-			$user->verified = $request->boolean('verified');
-		}
-
 		$saved = $user->save();
 
-		if ($user->wasChanged('verified') && $user->verified) {
-			UserVerifiedEvent::dispatch($user);
+		if ($request->has('verified')) {
+			$request->boolean('verified')
+				? $this->verify($user, VerificationReason::from($request->input('reason')), $request->user())
+				: $user->markUnverified($request->user());
 		}
 
 		if ($request->filled('userRoles')) {
@@ -114,13 +113,12 @@ class UserService extends Service
 	}
 
 	/**
-	 * Give $user the verified badge and let them know.
+	 * Give $user the verified badge for $reason and let them know. $by is
+	 * the admin who granted it.
 	 */
-	public function verify(User $user): void
+	public function verify(User $user, VerificationReason $reason, ?User $by = null): void
 	{
-		$user->forceFill(['verified' => true])->save();
-
-		if ($user->wasChanged('verified')) {
+		if ($user->markVerified($reason, $by)) {
 			UserVerifiedEvent::dispatch($user);
 		}
 	}
@@ -131,12 +129,14 @@ class UserService extends Service
 	 */
 	public function flag(User $user, ?string $reason): void
 	{
-		$user->forceFill([
-			'flagged_at' => now(),
-			'flag_reason' => $reason,
-			'flag_source' => User::FLAG_SOURCE_ADMIN,
-			'flag_refuted_at' => null,
-		])->save();
+		$user
+			->forceFill(['flag' => [
+				'at' => now(),
+				'reason' => $reason,
+				'source' => User::FLAG_SOURCE_ADMIN,
+				'refuted_at' => null,
+			]])
+			->save();
 
 		$this->recountLikedPhotos($user);
 
@@ -148,12 +148,9 @@ class UserService extends Service
 	 */
 	public function unflag(User $user): void
 	{
-		$user->forceFill([
-			'flagged_at' => null,
-			'flag_reason' => null,
-			'flag_source' => null,
-			'flag_refuted_at' => null,
-		])->save();
+		$user
+			->forceFill(['flag' => null])
+			->save();
 
 		$this->recountLikedPhotos($user);
 	}
@@ -337,13 +334,9 @@ class UserService extends Service
 		// one lifts it. An admin's flag is disputed by updating the phone
 		// number (see UserFlaggedNotification), which an admin then reviews.
 		if ($liftsFlag) {
-			$user->forceFill([
-				'flagged_at' => null,
-				'flag_reason' => null,
-				'flag_source' => null,
-			]);
+			$user->flag = null;
 		} elseif ($addedPhone && $user->isFlagged()) {
-			$user->flag_refuted_at = now();
+			$user->flag = [...$user->flag, 'refuted_at' => now()];
 		}
 
 		$user->save();
@@ -428,7 +421,7 @@ class UserService extends Service
 			)
 			->when(
 				$request->filled('verified'),
-				fn($query) => $query->where('verified', $request->boolean('verified'))
+				fn($query) => $query->verified($request->boolean('verified'))
 			)
 			->when(
 				$request->filled('hasPhone'),
@@ -455,7 +448,7 @@ class UserService extends Service
 			->when(
 				$request->filled('flagged'),
 				fn($query) => $request->boolean('flagged')
-					? $query->whereNotNull('flagged_at')
+					? $query->flagged()
 					: $query->unflagged()
 			)
 			->when(

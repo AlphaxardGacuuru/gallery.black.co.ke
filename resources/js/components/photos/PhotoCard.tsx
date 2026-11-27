@@ -16,6 +16,7 @@ import { EditPhotoDialog } from "@/components/photos/EditPhotoDialog"
 import { FlaggedAccountDialog } from "@/components/photos/FlaggedAccountDialog"
 import { ManageLikesDialog } from "@/components/photos/ManageLikesDialog"
 import { PhotoCarousel } from "@/components/photos/PhotoCarousel"
+import { PostedAt } from "@/components/photos/PostedAt"
 import { Button } from "@/components/ui/button"
 import {
 	Dialog,
@@ -324,7 +325,7 @@ export function PhotoCard({
 						aria-label={photo.isLikedByViewer ? "Liked" : "Like photo"}
 						disabled={!canLike || photo.isLikedByViewer || likePhoto.isPending}
 						onClick={like}
-						className="flex shrink-0 cursor-pointer items-center gap-1.5 p-2 text-sm text-muted-foreground disabled:cursor-default">
+						className="flex shrink-0 cursor-pointer items-center gap-1 p-2 text-sm text-muted-foreground disabled:cursor-default">
 						<Heart
 							className={cn(
 								"size-4 shrink-0",
@@ -341,10 +342,15 @@ export function PhotoCard({
 					</button>
 				</div>
 				{photo.caption && (
-					<p className="truncate text-xs text-muted-foreground px-2 pb-2">
+					<p className="truncate text-xs text-muted-foreground px-2">
 						{photo.caption}
 					</p>
 				)}
+				<PostedAt
+					date={photo.createdAt}
+					withTime={false}
+					className="px-2 pb-2 text-[11px]"
+				/>
 			</figcaption>
 			<FlaggedAccountDialog
 				open={flaggedOpen}

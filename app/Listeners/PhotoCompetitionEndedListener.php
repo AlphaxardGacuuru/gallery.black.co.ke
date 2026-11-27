@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Enums\VerificationReason;
 use App\Events\PhotoCompetitionEnded;
 use App\Events\UserVerifiedEvent;
 use App\Models\User;
@@ -40,18 +41,16 @@ class PhotoCompetitionEndedListener
             return;
         }
 
-        // Fetched first so only users who weren't already verified hear
-        // about it.
-        $newlyVerified = User::query()
-            ->whereIn('id', $userIds)
-            ->where('verified', false)
-            ->get();
-
+        // Only users who weren't already verified hear about it.
         User::query()
-            ->whereKey($newlyVerified->modelKeys())
-            ->update(['verified' => true]);
+            ->whereIn('id', $userIds)
+            ->verified(false)
+            ->get()
+            ->each(function (User $user) {
+                $user->markVerified(VerificationReason::COMPETITION_WINNER);
 
-        $newlyVerified->each(fn (User $user) => UserVerifiedEvent::dispatch($user));
+                UserVerifiedEvent::dispatch($user);
+            });
     }
 
     private function notifyWinners(PhotoCompetitionEnded $event): void

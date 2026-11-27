@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\VerificationReason;
 use App\Events\PhoneNumberRequestedEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
@@ -77,7 +78,14 @@ class AdminUserController extends Controller
     public function settings(): JsonResponse
     {
         return response()->json([
-            'data' => ['screenNewSignups' => User::screensNewSignups()],
+            'data' => [
+                'screenNewSignups' => User::screensNewSignups(),
+                'verificationReasons' => collect(VerificationReason::adminChoices())
+                    ->map(fn (VerificationReason $reason) => [
+                        'value' => $reason->value,
+                        'label' => $reason->label(),
+                    ]),
+            ],
         ]);
     }
 

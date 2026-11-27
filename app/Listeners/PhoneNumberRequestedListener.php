@@ -33,6 +33,11 @@ class PhoneNumberRequestedListener
             return;
         }
 
-        $event->user->increment('phone_requests_count', extra: ['phone_requested_at' => now()]);
+        $event->user
+            ->forceFill(['phone_request' => [
+                'count' => $event->user->phone_requests_count + 1,
+                'at' => now(),
+            ]])
+            ->save();
     }
 }

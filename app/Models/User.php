@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\EmailNotificationCategory;
+use App\Enums\VerificationReason;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -59,11 +60,10 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     protected $casts = [
         'settings' => 'object',
         'email_verified_at' => 'datetime',
-        'verified' => 'boolean',
+        'verification' => 'array',
+        'flag' => 'array',
+        'phone_request' => 'array',
         'is_seed' => 'boolean',
-        'flagged_at' => 'datetime',
-        'flag_refuted_at' => 'datetime',
-        'phone_requested_at' => 'datetime',
         'last_active_at' => 'datetime',
         'updated_at' => 'datetime:d M Y',
         'created_at' => 'datetime:d M Y h:i:s',
@@ -86,12 +86,12 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     public const SETTING_SCREEN_NEW_SIGNUPS = 'screen_new_signups';
 
     /**
-     * flag_source for a flag an admin set from the users page.
+     * flag.source for a flag an admin set from the users page.
      */
     public const FLAG_SOURCE_ADMIN = 'admin';
 
     /**
-     * flag_source for a flag the sign-up screening agent set. Adding a
+     * flag.source for a flag the sign-up screening agent set. Adding a
      * phone number lifts it (see isFlaggedUntilPhone()).
      */
     public const FLAG_SOURCE_SIGNUP_SCREENING = 'signup_screening';
@@ -159,6 +159,64 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
             ->startsWith(static::AVATAR_UPLOAD_DIRECTORY . '/');
     }
 
+    /**
+     * Whether the user has the verified badge, from the `verification` JSON
+     * column. Change it with markVerified() and markUnverified().
+     */
+    protected function verified(): Attribute
+    {
+        return Attribute::get(fn () => (bool) ($this->verification['verified'] ?? false));
+    }
+
+    /**
+     * Why the user got the verified badge, when they have it.
+     */
+    protected function verificationReason(): Attribute
+    {
+        return Attribute::get(fn () => $this->verified
+            ? VerificationReason::tryFrom($this->verification['reason'] ?? '')
+            : null);
+    }
+
+    /**
+     * The fields below read the `flag` and `phone_request` JSON columns
+     * under their old column names. Write to the JSON columns themselves.
+     */
+    protected function flaggedAt(): Attribute
+    {
+        return Attribute::get(fn () => static::jsonDate($this->flag['at'] ?? null));
+    }
+
+    protected function flagReason(): Attribute
+    {
+        return Attribute::get(fn () => $this->flag['reason'] ?? null);
+    }
+
+    protected function flagSource(): Attribute
+    {
+        return Attribute::get(fn () => $this->flag['source'] ?? null);
+    }
+
+    protected function flagRefutedAt(): Attribute
+    {
+        return Attribute::get(fn () => static::jsonDate($this->flag['refuted_at'] ?? null));
+    }
+
+    protected function phoneRequestsCount(): Attribute
+    {
+        return Attribute::get(fn () => (int) ($this->phone_request['count'] ?? 0));
+    }
+
+    protected function phoneRequestedAt(): Attribute
+    {
+        return Attribute::get(fn () => static::jsonDate($this->phone_request['at'] ?? null));
+    }
+
+    private static function jsonDate(?string $value): ?Carbon
+    {
+        return $value ? Carbon::parse($value) : null;
+    }
+
     protected function emailVerifiedAt(): Attribute
     {
         return Attribute::make(
@@ -196,7 +254,27 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
      */
     public function scopeUnflagged(Builder $query): Builder
     {
-        return $query->whereNull('flagged_at');
+        return $query->whereNull('flag');
+    }
+
+    /**
+     * Users an admin or sign-up screening flagged for suspected abuse.
+     */
+    public function scopeFlagged(Builder $query): Builder
+    {
+        return $query->whereNotNull('flag');
+    }
+
+    /**
+     * Users with the verified badge, or without it when $verified is false.
+     */
+    public function scopeVerified(Builder $query, bool $verified = true): Builder
+    {
+        return $verified
+            ? $query->where('verification->verified', true)
+            : $query->where(fn (Builder $query) => $query
+                ->whereNull('verification')
+                ->orWhere('verification->verified', false));
     }
 
     /**
@@ -208,6 +286,49 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         return $query->where(fn (Builder $query) => $query
             ->where('name', 'like', "%{$term}%")
             ->orWhere('email', 'like', "%{$term}%"));
+    }
+
+    /**
+     * Give the user the verified badge for $reason, granted by $by (null
+     * when the app did it, e.g. for winning). False if they already had it.
+     */
+    public function markVerified(VerificationReason $reason, ?User $by = null): bool
+    {
+        if ($this->verified) {
+            return false;
+        }
+
+        $this
+            ->forceFill(['verification' => [
+                'verified' => true,
+                'at' => now(),
+                'reason' => $reason->value,
+                'by' => $by?->id,
+            ]])
+            ->save();
+
+        return true;
+    }
+
+    /**
+     * Take the verified badge away, recording when and by whom. False if
+     * they didn't have it.
+     */
+    public function markUnverified(?User $by = null): bool
+    {
+        if (! $this->verified) {
+            return false;
+        }
+
+        $this
+            ->forceFill(['verification' => [
+                'verified' => false,
+                'at' => now(),
+                'by' => $by?->id,
+            ]])
+            ->save();
+
+        return true;
     }
 
     public function isFlagged(): bool

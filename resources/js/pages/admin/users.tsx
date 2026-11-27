@@ -468,6 +468,94 @@ function FlagCell({ user }: { user: AdminUser }) {
 }
 
 /**
+ * The verified badge switch. Turning it on asks why first; turning it off
+ * removes the badge straight away.
+ */
+function VerifyCell({ user }: { user: AdminUser }) {
+	const [open, setOpen] = useState(false)
+	const [reason, setReason] = useState("")
+	const { data: settings } = useAdminUserSettings()
+	const toggleVerified = useToggleUserVerified()
+
+	function submit(verified: boolean) {
+		toggleVerified.mutate(
+			{ userId: user.id, verified, reason: verified ? reason : undefined },
+			{
+				onSuccess: () => {
+					toast.success(verified ? "User verified" : "Verification removed")
+					setOpen(false)
+					setReason("")
+				},
+				onError: () => toast.error("Couldn't update this user"),
+			}
+		)
+	}
+
+	return (
+		<div
+			className="flex justify-end"
+			title={user.verificationReason ?? undefined}>
+			<Switch
+				checked={user.verified}
+				disabled={toggleVerified.isPending}
+				onCheckedChange={(checked) => (checked ? setOpen(true) : submit(false))}
+				aria-label={
+					user.verified
+						? `Remove verified badge from ${user.name}`
+						: `Verify ${user.name}`
+				}
+			/>
+			<Dialog
+				open={open}
+				onOpenChange={(nextOpen) => {
+					setOpen(nextOpen)
+
+					if (!nextOpen) {
+						setReason("")
+					}
+				}}>
+				<DialogContent>
+					<DialogTitle>Verify {user.name}?</DialogTitle>
+					<DialogDescription>
+						The verified badge shows on their profile picture and photos, and
+						they'll get a notification about it.
+					</DialogDescription>
+
+					{/* Reason Start */}
+					<SelectField
+						label="Reason"
+						value={reason}
+						onValueChange={setReason}>
+						{(settings?.verificationReasons ?? []).map((option) => (
+							<SelectItem
+								key={option.value}
+								value={option.value}>
+								{option.label}
+							</SelectItem>
+						))}
+					</SelectField>
+					{/* Reason End */}
+
+					<DialogFooter className="gap-2">
+						<DialogClose asChild>
+							<Button variant="secondary">Cancel</Button>
+						</DialogClose>
+						<Button
+							disabled={!reason || toggleVerified.isPending}
+							onClick={() => submit(true)}>
+							{toggleVerified.isPending && (
+								<Loader2 className="size-3.5 animate-spin" />
+							)}
+							Verify user
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</div>
+	)
+}
+
+/**
  * Delete button with a confirmation dialog. The server refuses admins and
  * anyone with payment records, and its reason is shown as the error toast.
  */
@@ -731,7 +819,6 @@ export default function AdminUsers() {
 	const totalUsers = hasActiveFilters
 		? data?.meta.total
 		: dashboard?.totals.totalUsers
-	const toggleVerified = useToggleUserVerified()
 	const { data: recipients } = useAdminKopokopoRecipients()
 
 	const registeredPhones = new Set(
@@ -742,19 +829,6 @@ export default function AdminUsers() {
 			)
 			.map((recipient) => recipient.phoneNumber!)
 	)
-
-	function handleToggle(userId: string, nextVerified: boolean) {
-		toggleVerified.mutate(
-			{ userId, verified: nextVerified },
-			{
-				onSuccess: () =>
-					toast.success(
-						nextVerified ? "User verified" : "Verification removed"
-					),
-				onError: () => toast.error("Couldn't update this user"),
-			}
-		)
-	}
 
 	const columns: ColumnDef<AdminUser>[] = [
 		{
@@ -855,22 +929,7 @@ export default function AdminUsers() {
 			header: "Verified",
 			enableSorting: false,
 			meta: { className: "text-right" },
-			cell: ({ row }) => (
-				<div className="flex justify-end">
-					<Switch
-						checked={row.original.verified}
-						disabled={toggleVerified.isPending}
-						onCheckedChange={(checked) =>
-							handleToggle(row.original.id, checked)
-						}
-						aria-label={
-							row.original.verified
-								? `Remove verified badge from ${row.original.name}`
-								: `Verify ${row.original.name}`
-						}
-					/>
-				</div>
-			),
+			cell: ({ row }) => <VerifyCell user={row.original} />,
 		},
 		{
 			id: "delete",

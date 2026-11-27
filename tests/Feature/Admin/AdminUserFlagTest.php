@@ -69,7 +69,7 @@ class AdminUserFlagTest extends TestCase
     public function test_unflagging_sends_nothing(): void
     {
         $user = User::factory()->create();
-        $user->forceFill(['flagged_at' => now()])->save();
+        $user->forceFill(['flag' => ['at' => now()]])->save();
 
         $this->flag($user, false);
 
@@ -123,7 +123,7 @@ class AdminUserFlagTest extends TestCase
     public function test_a_flagged_user_cannot_like(): void
     {
         $user = User::factory()->create();
-        $user->forceFill(['flagged_at' => now()])->save();
+        $user->forceFill(['flag' => ['at' => now()]])->save();
         $photo = $this->likedPhoto();
 
         $this->actingAs($user, 'sanctum')
@@ -136,7 +136,7 @@ class AdminUserFlagTest extends TestCase
     public function test_updating_the_phone_number_refutes_the_flag_for_review(): void
     {
         $user = User::factory()->create(['phone' => null]);
-        $user->forceFill(['flagged_at' => now()])->save();
+        $user->forceFill(['flag' => ['at' => now()]])->save();
 
         $this->actingAs($user, 'sanctum')
             ->patchJson('/settings/profile', ['name' => $user->name, 'email' => $user->email, 'phone' => '0711223344'])
@@ -149,7 +149,7 @@ class AdminUserFlagTest extends TestCase
     public function test_a_flagged_user_can_change_a_locked_phone_number_once_to_dispute(): void
     {
         $user = User::factory()->create(['phone' => '0700000001']);
-        $user->forceFill(['flagged_at' => now()])->save();
+        $user->forceFill(['flag' => ['at' => now()]])->save();
 
         $this->actingAs($user, 'sanctum')
             ->getJson('/api/auth')
@@ -190,7 +190,7 @@ class AdminUserFlagTest extends TestCase
         $this->artisan('app:start-photo-competition');
         $competition = PhotoCompetition::active()->first();
         $cheat = User::factory()->create();
-        $cheat->forceFill(['flagged_at' => now()])->save();
+        $cheat->forceFill(['flag' => ['at' => now()]])->save();
         $honest = User::factory()->create();
 
         collect([[$cheat, 50], [$honest, 3]])
@@ -252,7 +252,7 @@ class AdminUserFlagTest extends TestCase
     public function test_an_admin_like_for_a_flagged_user_does_not_count(): void
     {
         $faker = User::factory()->create();
-        $faker->forceFill(['flagged_at' => now()])->save();
+        $faker->forceFill(['flag' => ['at' => now()]])->save();
         $photo = $this->likedPhoto();
 
         $this->actingAs($this->admin, 'sanctum')
