@@ -18,6 +18,7 @@ use App\Http\Controllers\KopokopoTransferController;
 use App\Http\Controllers\MPESATransactionController;
 use App\Http\Controllers\NoticeController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PhoneVerificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PhotoBookmarkController;
 use App\Http\Controllers\PhotoCompetitionController;
@@ -117,6 +118,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('photos/{photo}/purchases', [PhotoPurchaseController::class, 'store']);
     Route::get('photos/{photo}/downloads', [PhotoPurchaseController::class, 'downloads']);
     Route::get('photo-purchases/{purchase}', [PhotoPurchaseController::class, 'show']);
+
+    Route::post('phone-verifications', [PhoneVerificationController::class, 'store'])
+        ->middleware('throttle:6,1')
+        ->name('phone-verifications.store');
+    Route::get('phone-verifications/{verification}', [PhoneVerificationController::class, 'show'])
+        ->name('phone-verifications.show');
 
     Route::get('referrals/settings', [ReferralController::class, 'settings'])->name('referrals.settings');
     Route::get('referrals/mine', [ReferralController::class, 'mine'])->name('referrals.mine');

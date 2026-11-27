@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AwaitsMpesaPayment;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Str;
 
 class PhotoSlotPurchase extends Model
 {
     /** @use HasFactory<\Database\Factories\PhotoSlotPurchaseFactory> */
-    use HasFactory, HasUuids;
+    use AwaitsMpesaPayment, HasFactory, HasUuids;
 
     public const STATUS_PENDING = 'pending';
 
@@ -86,58 +86,6 @@ class PhotoSlotPurchase extends Model
     public function scopeOfType(Builder $query, string $type): Builder
     {
         return $query->where('type', $type);
-    }
-
-    /**
-     * Pending AND not stale (see PENDING_TTL_MINUTES), a purchase that's
-     * still realistically awaiting the user's action on their phone, not
-     * one abandoned minutes ago that should no longer block a retry.
-     */
-    public function scopeFreshPending(Builder $query): Builder
-    {
-        return $query
-            ->where('status', self::STATUS_PENDING)
-            ->where('created_at', '>=', now()->subMinutes(self::PENDING_TTL_MINUTES));
-    }
-
-    /**
-     * The status shown to the buyer while they wait: a pending purchase
-     * past PENDING_TTL_MINUTES reads as expired straight away, so their
-     * "check your phone" spinner stops before the job gets to it.
-     */
-    public function statusForBuyer(): string
-    {
-        return $this->status === self::STATUS_PENDING
-            && $this->created_at->lt(now()->subMinutes(self::PENDING_TTL_MINUTES))
-            ? self::STATUS_EXPIRED
-            : $this->status;
-    }
-
-    /**
-     * Why the buyer's payment didn't go through, as one of a few codes the
-     * frontend turns into a message (see paymentFailureMessage() in
-     * queries/photos.ts), or null while it hasn't failed. The match is on
-     * the M-Pesa result descriptions Kopokopo passes along, which have been
-     * seen in production ("Request Cancelled by user.", "DS timeout user
-     * cannot be reached.") or in its sandbox ("The balance is insufficient
-     * for the transaction.").
-     */
-    public function failureReasonForBuyer(): ?string
-    {
-        return match (true) {
-            $this->statusForBuyer() === self::STATUS_EXPIRED => 'timed_out',
-            $this->status !== self::STATUS_FAILED => null,
-            default => Str::of((string) $this->failure_reason)
-                ->lower()
-                ->pipe(fn ($reason) => match (true) {
-                    $reason->contains('cancelled') => 'cancelled',
-                    $reason->contains('cannot be reached') => 'unreachable',
-                    $reason->contains('insufficient') => 'insufficient_funds',
-                    $reason->contains('initiator information is invalid') => 'wrong_pin',
-                    $reason->contains('timeout') => 'timed_out',
-                    default => 'unknown',
-                }),
-        };
     }
 
     public static function paidExtraPhotoCount(string $competitionId, string $userId): int

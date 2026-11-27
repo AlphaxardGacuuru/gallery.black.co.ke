@@ -39,18 +39,17 @@ class UpdateUserRequestTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_change_a_locked_phone_number_to_another_safaricom_number(): void
+    public function test_admin_can_change_a_phone_number_without_flagging_it(): void
     {
         $user = User::factory()->create(['phone' => '0711223344']);
         $admin = User::factory()->create(['email' => config('admin.email')]);
-
-        $this->assertFalse($user->canChangePhone());
 
         $this->actingAs($admin, 'sanctum')
             ->patchJson('/api/admin/users/' . $user->id . '/verify', ['phone' => '+254 722 334 455'])
             ->assertOk();
 
         $this->assertSame('0722334455', $user->fresh()->phone);
+        $this->assertFalse($user->fresh()->isFlagged());
     }
 
     public function test_admin_cannot_set_a_non_safaricom_or_taken_phone_number(): void

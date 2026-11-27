@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\User;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -47,7 +48,12 @@ class UserResource extends JsonResource
                 (bool) $request->user()?->isAdmin() || $request->user()?->is($this->resource),
                 $this->flag_reason
             ),
-            "canChangePhone" => $this->canChangePhone(),
+            "flaggedUntilPhoneVerified" => $this->isFlaggedUntilPhoneVerified(),
+            // What confirming a changed number costs, shown before changing it.
+            "phoneVerificationFee" => $this->when(
+                (bool) $request->user()?->is($this->resource),
+                fn () => User::phoneVerificationFee()
+            ),
             "phoneRequestsCount" => $this->when(
                 (bool) $request->user()?->isAdmin(),
                 (int) $this->phone_requests_count

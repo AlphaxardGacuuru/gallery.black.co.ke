@@ -13,8 +13,9 @@ import { edit } from "@/routes/profile"
 
 /**
  * Shown instead of liking when the viewer's account is flagged. A new
- * account flagged until it adds a phone number is asked to add one; any
- * other flag explains why, and how to dispute it by updating the number.
+ * account flagged until it adds a phone number is asked to add one, and
+ * one that changed its number is asked to confirm it; any other flag
+ * explains why, and how to dispute it by updating the number.
  */
 export function FlaggedAccountDialog({
 	open,
@@ -31,7 +32,16 @@ export function FlaggedAccountDialog({
 			open={open}
 			onOpenChange={onOpenChange}>
 			<DialogContent>
-				{auth?.flaggedUntilPhone ? (
+				{auth?.flaggedUntilPhoneVerified ? (
+					<DialogHeader>
+						<DialogTitle>Confirm your new phone number</DialogTitle>
+						<DialogDescription>
+							You changed your M-Pesa phone number. Pay KES{" "}
+							{auth.phoneVerificationFee} from the new number in Settings &gt;
+							Profile to confirm it, then you can like photos again.
+						</DialogDescription>
+					</DialogHeader>
+				) : auth?.flaggedUntilPhone ? (
 					<DialogHeader>
 						<DialogTitle>Add your phone number to like</DialogTitle>
 						<DialogDescription>
@@ -65,18 +75,18 @@ export function FlaggedAccountDialog({
 						onClick={() => onOpenChange(false)}>
 						Close
 					</Button>
-					{auth?.canChangePhone && (
-						<Button asChild>
-							<Link
-								href={edit().url}
-								variant="unstyled"
-								onClick={() => onOpenChange(false)}>
-								{auth.flaggedUntilPhone
+					<Button asChild>
+						<Link
+							href={edit().url}
+							variant="unstyled"
+							onClick={() => onOpenChange(false)}>
+							{auth?.flaggedUntilPhoneVerified
+								? "Confirm phone number"
+								: auth?.flaggedUntilPhone
 									? "Add phone number"
 									: "Update phone number"}
-							</Link>
-						</Button>
-					)}
+						</Link>
+					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

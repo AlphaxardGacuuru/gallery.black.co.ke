@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\PhoneVerification;
 use App\Models\PhotoPurchase;
 use App\Models\PhotoSlotPurchase;
 use Illuminate\Bus\Queueable;
@@ -33,5 +34,10 @@ class ExpireStalePurchasesJob implements ShouldQueue
             ->where('status', PhotoPurchase::STATUS_PENDING)
             ->where('created_at', '<', $cutoff)
             ->update(['status' => PhotoPurchase::STATUS_EXPIRED]);
+
+        PhoneVerification::query()
+            ->where('status', PhoneVerification::STATUS_PENDING)
+            ->where('created_at', '<', $cutoff)
+            ->update(['status' => PhoneVerification::STATUS_EXPIRED]);
     }
 }

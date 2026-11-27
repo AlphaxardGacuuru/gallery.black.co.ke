@@ -200,6 +200,7 @@ class SupportAgent implements Agent, Conversational, HasStructuredOutput
             '- Extra photo: '.$offer($extraPhoto),
             '- Buying photos: '.$offer($sale),
             '- New sign-ups screened for fake or duplicate accounts: '.(User::screensNewSignups() && AiUsage::agentsEnabled() ? 'yes' : 'no'),
+            '- Fee to confirm a changed phone number: '.(User::phoneVerificationFee() > 0 ? 'KES '.User::phoneVerificationFee() : 'none, changing it is free and nothing is paused'),
             sprintf(
                 '- Referral reward: KES %s for every %d friends who join%s',
                 $referral['rewardAmount'],

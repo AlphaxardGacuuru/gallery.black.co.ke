@@ -96,6 +96,23 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
      */
     public const FLAG_SOURCE_SIGNUP_SCREENING = 'signup_screening';
 
+    /**
+     * flag.source for a flag set by changing to a new phone number. Paying
+     * the verification fee from the new number lifts it (see
+     * isFlaggedUntilPhoneVerified()).
+     */
+    public const FLAG_SOURCE_PHONE_CHANGE = 'phone_change';
+
+    public const PHONE_CHANGE_FLAG_REASON = 'New phone number not verified';
+
+    /**
+     * Setting holding the fee for confirming a new phone number, see
+     * phoneVerificationFee().
+     */
+    public const SETTING_PHONE_VERIFICATION_FEE = 'phone_verification_fee';
+
+    public const DEFAULT_PHONE_VERIFICATION_FEE = 10;
+
     protected string $guard_name = 'web';
 
     /**
@@ -357,20 +374,48 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     }
 
     /**
-     * Whether the user may set their M-Pesa number from their profile. Once
-     * set it's locked (changes go through a support ticket), except for a
-     * flagged user who hasn't disputed the flag yet, since updating it is
-     * how they ask for a review.
+     * Whether changing to a new number flagged the user until they pay
+     * the verification fee from it (see PhoneVerification).
      */
-    public function canChangePhone(): bool
+    public function isFlaggedUntilPhoneVerified(): bool
     {
-        return ! $this->phone
-            || ($this->isFlagged() && $this->flag_refuted_at === null);
+        return $this->isFlagged() && $this->flag_source === self::FLAG_SOURCE_PHONE_CHANGE;
+    }
+
+    /**
+     * What a user who changes their M-Pesa number pays from the new one to
+     * lift the flag the change sets. Set on the admin users page; 0 lets
+     * people change their number without paying or being flagged.
+     */
+    public static function phoneVerificationFee(): int
+    {
+        return (int) (Setting::query()
+            ->where('key', self::SETTING_PHONE_VERIFICATION_FEE)
+            ->value('value') ?? self::DEFAULT_PHONE_VERIFICATION_FEE);
+    }
+
+    /**
+     * Why a flag stops the user entering the challenge (submitting, adding
+     * photos or buying slots), or null when they aren't flagged. Flagged
+     * accounts can't win, so they can't enter either.
+     */
+    public function flaggedEntryMessage(): ?string
+    {
+        return match (true) {
+            $this->isFlaggedUntilPhoneVerified() => 'Confirm your new M-Pesa phone number in Settings > Profile before entering the challenge.',
+            $this->isFlagged() => 'Your account is flagged, so you can\'t enter the challenge right now.',
+            default => null,
+        };
     }
 
     public function photos(): HasMany
     {
         return $this->hasMany(Photo::class);
+    }
+
+    public function phoneVerifications(): HasMany
+    {
+        return $this->hasMany(PhoneVerification::class);
     }
 
     /**

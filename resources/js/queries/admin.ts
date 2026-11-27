@@ -227,6 +227,8 @@ export function useDeleteUser() {
 export type AdminUserSettings = {
 	/** Whether an AI agent screens new sign-ups for fake or duplicate accounts. */
 	screenNewSignups: boolean
+	/** KES a user pays from a new phone number to confirm it (0 = free). */
+	phoneVerificationFee: number
 	/** Why an admin can verify someone, picked when switching the badge on. */
 	verificationReasons: { value: string; label: string }[]
 }
@@ -248,6 +250,20 @@ export function useUpdateScreenNewSignups() {
 	return useMutation({
 		mutationFn: (screenNewSignups: boolean) =>
 			Axios.put("api/admin/users/settings", { screenNewSignups }),
+		onSuccess: () =>
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "users", "settings"],
+			}),
+	})
+}
+
+/** Set what users pay from a new phone number to confirm it. */
+export function useUpdatePhoneVerificationFee() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (phoneVerificationFee: number) =>
+			Axios.put("api/admin/users/settings", { phoneVerificationFee }),
 		onSuccess: () =>
 			queryClient.invalidateQueries({
 				queryKey: ["admin", "users", "settings"],

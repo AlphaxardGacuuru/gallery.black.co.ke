@@ -25,8 +25,10 @@ export type User = {
 	flaggedUntilPhone?: boolean
 	/** Why the account was flagged (the admin's reason). */
 	flagReason?: string | null
-	/** False once the phone number is locked (see User::canChangePhone()). */
-	canChangePhone?: boolean
+	/** Changed their phone number and hasn't paid the fee from the new one yet. */
+	flaggedUntilPhoneVerified?: boolean
+	/** What confirming a changed phone number costs (0 when it's free). */
+	phoneVerificationFee?: number
 	email_verified_at: string | null
 	/** Whether the admin portal is open to this user (User::isAdmin()). */
 	isAdmin?: boolean

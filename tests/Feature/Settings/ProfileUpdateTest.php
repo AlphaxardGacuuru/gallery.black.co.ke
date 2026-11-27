@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Settings;
 
-use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
 use App\Rules\SafaricomPhoneNumber;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -94,29 +93,29 @@ class ProfileUpdateTest extends TestCase
         $this->assertSame('0110123456', $user->fresh()->phone);
     }
 
-    public function test_a_set_phone_number_is_locked()
+    public function test_a_set_phone_number_can_be_changed_but_not_removed()
     {
         $user = User::factory()->create(['phone' => '0711223344']);
 
         $this->actingAs($user)
-            ->getJson('/api/auth')
-            ->assertJsonPath('data.canChangePhone', false);
-
-        collect(['0799887766', ''])->each(fn ($phone) => $this->actingAs($user)
-            ->patchJson(route('profile.update'), ['name' => $user->name, 'email' => $user->email, 'phone' => $phone])
+            ->patchJson(route('profile.update'), ['name' => $user->name, 'email' => $user->email, 'phone' => ''])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['phone' => ProfileUpdateRequest::PHONE_LOCKED_MESSAGE]));
+            ->assertJsonValidationErrors('phone');
 
-        // The disabled field isn't sent, and sending it unchanged is fine.
+        // Leaving it out, or sending it unchanged, doesn't flag anyone.
         $this->actingAs($user)
             ->patchJson(route('profile.update'), ['name' => 'New Name', 'email' => $user->email])
             ->assertOk();
-
         $this->actingAs($user)
             ->patchJson(route('profile.update'), ['name' => $user->name, 'email' => $user->email, 'phone' => '0711223344'])
             ->assertOk();
+        $this->assertFalse($user->fresh()->isFlagged());
 
-        $this->assertSame('0711223344', $user->fresh()->phone);
+        $this->actingAs($user)
+            ->patchJson(route('profile.update'), ['name' => $user->name, 'email' => $user->email, 'phone' => '0799887766'])
+            ->assertOk();
+
+        $this->assertSame('0799887766', $user->fresh()->phone);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged()

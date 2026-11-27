@@ -57,6 +57,12 @@ class ExtraPhotoPurchaseService extends Service
 			]);
 		}
 
+		if ($message = $user->flaggedEntryMessage()) {
+			throw ValidationException::withMessages([
+				'competition' => $message,
+			]);
+		}
+
 		$lock = Cache::lock("photo-extra-photo-purchase:{$competition->id}:{$user->id}", 10);
 
 		try {

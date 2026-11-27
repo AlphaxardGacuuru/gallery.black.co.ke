@@ -146,25 +146,19 @@ class AdminUserFlagTest extends TestCase
         $this->assertNotNull($user->fresh()->flagged_at);
     }
 
-    public function test_a_flagged_user_can_change_a_locked_phone_number_once_to_dispute(): void
+    public function test_changing_phone_while_flagged_by_an_admin_keeps_the_admins_flag(): void
     {
         $user = User::factory()->create(['phone' => '0700000001']);
-        $user->forceFill(['flag' => ['at' => now()]])->save();
-
-        $this->actingAs($user, 'sanctum')
-            ->getJson('/api/auth')
-            ->assertJsonPath('data.canChangePhone', true);
+        $user->forceFill(['flag' => ['at' => now(), 'source' => User::FLAG_SOURCE_ADMIN, 'reason' => 'Fake likes']])->save();
 
         $this->actingAs($user, 'sanctum')
             ->patchJson('/settings/profile', ['name' => $user->name, 'email' => $user->email, 'phone' => '0711223344'])
             ->assertOk();
 
-        $this->actingAs($user->fresh(), 'sanctum')
-            ->patchJson('/settings/profile', ['name' => $user->name, 'email' => $user->email, 'phone' => '0799887766'])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('phone');
-
-        $this->assertSame('0711223344', $user->fresh()->phone);
+        $user->refresh();
+        $this->assertSame(User::FLAG_SOURCE_ADMIN, $user->flag_source);
+        $this->assertSame('Fake likes', $user->flag_reason);
+        $this->assertNotNull($user->flag_refuted_at);
     }
 
     public function test_the_reason_is_shown_to_the_flagged_user_and_the_admin(): void

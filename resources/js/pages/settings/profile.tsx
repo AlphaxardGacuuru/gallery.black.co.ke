@@ -13,8 +13,8 @@ import PushNotificationSettings from "@/components/push-notification-settings"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Link } from "@/components/ui/link"
 import { Spinner } from "@/components/ui/spinner"
+import { VerifyPhoneAlert } from "@/components/verify-phone-alert"
 import { useInitials } from "@/hooks/use-initials"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
@@ -38,7 +38,7 @@ export default function Profile({
 		email_verified_at: auth?.email_verified_at ?? null,
 		avatar: auth?.avatar,
 	}
-	const canChangePhone = auth?.canChangePhone ?? true
+	const phoneVerificationFee = auth?.phoneVerificationFee ?? 0
 
 	const [processing, setProcessing] = useState(false)
 	const [errors, setErrors] = useState<Record<string, string>>({})
@@ -116,16 +116,20 @@ export default function Profile({
 					</Alert>
 				)}
 
-				{auth?.flaggedAt && !auth.flaggedUntilPhone && (
-					<Alert variant="destructive">
-						<AlertTitle>Your account is flagged</AlertTitle>
-						<AlertDescription>
-							{auth.flagRefutedAt
-								? "Thanks for updating your phone number. We're reviewing your account. Until then your likes don't count and payouts are on hold."
-								: "We noticed unusual activity on your account, so your likes don't count and payouts are on hold. If this is a mistake, update your M-Pesa phone number below and we'll review your account."}
-						</AlertDescription>
-					</Alert>
-				)}
+				{auth?.flaggedUntilPhoneVerified && <VerifyPhoneAlert />}
+
+				{auth?.flaggedAt &&
+					!auth.flaggedUntilPhone &&
+					!auth.flaggedUntilPhoneVerified && (
+						<Alert variant="destructive">
+							<AlertTitle>Your account is flagged</AlertTitle>
+							<AlertDescription>
+								{auth.flagRefutedAt
+									? "Thanks for updating your phone number. We're reviewing your account. Until then your likes don't count and payouts are on hold."
+									: "We noticed unusual activity on your account, so your likes don't count and payouts are on hold. If this is a mistake, update your M-Pesa phone number below and we'll review your account."}
+							</AlertDescription>
+						</Alert>
+					)}
 
 				{/* Avatar Start */}
 				<AvatarUploadField
@@ -182,33 +186,15 @@ export default function Profile({
 							defaultValue={user.phone}
 							name="phone"
 							autoComplete="tel"
-							disabled={!canChangePhone}
 						/>
 						{/* Phone End */}
-						{canChangePhone ? (
-							<p className="text-sm text-muted-foreground">
-								Required before you can submit a photo. This is where your prize
-								money is sent, so it must be a Safaricom M-Pesa number.
-							</p>
-						) : (
-							<div className="flex flex-wrap items-center justify-between gap-2">
-								<p className="text-sm text-muted-foreground">
-									To keep payouts safe, your phone number can only be changed by
-									our support team.
-								</p>
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									asChild>
-									<Link
-										href="/support"
-										variant="unstyled">
-										Request a change
-									</Link>
-								</Button>
-							</div>
-						)}
+						<p className="text-sm text-muted-foreground">
+							Required before you can submit a photo. This is where your prize
+							money is sent, so it must be a Safaricom M-Pesa number.
+							{user.phone &&
+								phoneVerificationFee > 0 &&
+								` If you change it, you'll pay KES ${phoneVerificationFee} from the new number to confirm it. Until then you can't like photos or enter the challenge.`}
+						</p>
 
 						<InputError
 							className="mt-2"

@@ -337,24 +337,43 @@ class UserService extends Service
 		$addedPhone = $user->isDirty('phone') && $user->phone;
 		$firstPhone = $addedPhone && ! $user->getOriginal('phone');
 		$liftsFlag = $addedPhone && $user->isFlaggedUntilPhone();
+		$needsVerification = $addedPhone
+			&& ! $firstPhone
+			&& ! $user->isFlagged()
+			&& User::phoneVerificationFee() > 0;
 
 		// A sign-up screening flag only asks for a phone number, so adding
 		// one lifts it. An admin's flag is disputed by updating the phone
 		// number (see UserFlaggedNotification), which an admin then reviews.
+		// Swapping a number otherwise flags the account until the new one
+		// pays the verification fee (see PhoneVerificationService).
 		if ($liftsFlag) {
 			$user->flag = null;
-		} elseif ($addedPhone && $user->isFlagged()) {
+		} elseif ($addedPhone && $user->isFlagged() && ! $user->isFlaggedUntilPhoneVerified()) {
 			$user->flag = [...$user->flag, 'refuted_at' => now()];
+		} elseif ($needsVerification) {
+			$user->flag = [
+				'at' => now(),
+				'reason' => User::PHONE_CHANGE_FLAG_REASON,
+				'source' => User::FLAG_SOURCE_PHONE_CHANGE,
+				'refuted_at' => null,
+			];
 		}
 
 		$user->save();
 
-		if ($liftsFlag) {
+		if ($liftsFlag || $needsVerification) {
 			$this->recountLikedPhotos($user);
+		}
+
+		if ($needsVerification) {
+			UserFlaggedEvent::dispatch($user);
 		}
 
 		if ($firstPhone) {
 			$this->eventRecorder->record(UserEventName::PHONE_ADDED, $user);
+		} elseif ($addedPhone) {
+			$this->eventRecorder->record(UserEventName::PHONE_CHANGED, $user);
 		}
 	}
 

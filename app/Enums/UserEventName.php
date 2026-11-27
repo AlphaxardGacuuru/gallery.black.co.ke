@@ -12,6 +12,8 @@ enum UserEventName: string
     case SIGNED_UP = 'user.signed_up';
     case LOGGED_IN = 'user.logged_in';
     case PHONE_ADDED = 'user.phone_added';
+    case PHONE_CHANGED = 'user.phone_changed';
+    case PHONE_VERIFIED = 'user.phone_verified';
     case VERIFIED = 'user.verified';
     case FLAGGED = 'user.flagged';
     case REFERRED = 'user.referred';
@@ -35,8 +37,10 @@ enum UserEventName: string
             self::SIGNED_UP => 'Created an account. source: google or password.',
             self::LOGGED_IN => 'Signed in. source: google or password.',
             self::PHONE_ADDED => 'Added an M-Pesa phone number for the first time.',
+            self::PHONE_CHANGED => 'Changed to a new M-Pesa phone number, which flags the account until the new number pays the verification fee.',
+            self::PHONE_VERIFIED => 'Paid the verification fee from a new phone number, lifting the flag. properties.amount: KES paid.',
             self::VERIFIED => 'Got the verified badge. properties.reason: why.',
-            self::FLAGGED => 'Was flagged for suspected abuse. source: admin or signup_screening.',
+            self::FLAGGED => 'Was flagged. source: admin or signup_screening (suspected abuse), or phone_change (new number not verified yet).',
             self::REFERRED => 'Was credited to a referrer. source: link or admin. properties.referrer_id.',
             self::PHOTO_SUBMITTED => 'Entered a photo into a challenge. photo_id, competition_id, properties.images: photos in the entry.',
             self::PHOTO_LIKED => 'Liked a photo. photo_id, competition_id. source: app or push_action.',

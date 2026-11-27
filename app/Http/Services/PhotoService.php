@@ -75,6 +75,12 @@ class PhotoService extends Service
 			]);
 		}
 
+		if ($message = $request->user()->flaggedEntryMessage()) {
+			throw ValidationException::withMessages([
+				'temporaryUploadIds' => $message,
+			]);
+		}
+
 		// The slot-count check below and the insert that follows it aren't
 		// atomic on their own (there's no longer a DB-level unique
 		// constraint to fall back on, see
@@ -222,6 +228,12 @@ class PhotoService extends Service
 			]);
 		}
 
+		if ($message = $request->user()->flaggedEntryMessage()) {
+			throw ValidationException::withMessages([
+				'temporaryUploadIds' => $message,
+			]);
+		}
+
 		$maxImages = Photo::maxImagesFor($photo->competition_id, $request->user()->id);
 		$currentCount = 1 + $photo->images()->count();
 
@@ -342,6 +354,12 @@ class PhotoService extends Service
 		if ($user->isFlaggedUntilPhone()) {
 			throw ValidationException::withMessages([
 				'id' => 'Add your M-Pesa phone number in Settings > Profile to start liking photos.',
+			]);
+		}
+
+		if ($user->isFlaggedUntilPhoneVerified()) {
+			throw ValidationException::withMessages([
+				'id' => 'Confirm your new M-Pesa phone number in Settings > Profile to start liking photos again.',
 			]);
 		}
 

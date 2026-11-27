@@ -564,12 +564,12 @@ export function useBuyExtraPhotoSlot() {
 	})
 }
 
-type PurchaseStatus = "pending" | "paid" | "failed"
+export type PurchaseStatus = "pending" | "paid" | "failed"
 
 /** The server reports a prompt that was never approved as "expired"
  *  (still payable by a late webhook, see PhotoSlotPurchase::STATUS_EXPIRED).
  *  For the buyer that's the same as failed: stop waiting, offer a retry. */
-function settledStatus(status: PurchaseStatus | "expired"): {
+export function settledStatus(status: PurchaseStatus | "expired"): {
 	status: PurchaseStatus
 } {
 	return { status: status === "expired" ? "failed" : status }

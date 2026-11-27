@@ -5,13 +5,10 @@ namespace App\Http\Requests\Settings;
 use App\Concerns\ProfileValidationRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class ProfileUpdateRequest extends FormRequest
 {
     use ProfileValidationRules;
-
-    public const PHONE_LOCKED_MESSAGE = 'Your phone number can\'t be changed here. Use "Request a change" to ask the support team.';
 
     protected function prepareForValidation(): void
     {
@@ -25,12 +22,11 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        // A locked number (see User::canChangePhone()) may only be sent
-        // back unchanged, not cleared or replaced.
+        // A number can be changed but not cleared, since payouts need one.
         return collect($this->profileRules($this->user()->id))
             ->when(
-                ! $this->user()->canChangePhone(),
-                fn ($rules) => $rules->put('phone', ['sometimes', 'required', Rule::in([$this->user()->phone])]),
+                $this->user()->phone,
+                fn ($rules) => $rules->put('phone', ['sometimes', 'required', ...collect($rules->get('phone'))->reject('nullable')->all()]),
             )
             ->all();
     }
@@ -38,8 +34,7 @@ class ProfileUpdateRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.required' => self::PHONE_LOCKED_MESSAGE,
-            'phone.in' => self::PHONE_LOCKED_MESSAGE,
+            'phone.required' => 'Your M-Pesa phone number can\'t be removed, since prizes and payouts are sent to it. You can change it to a new one.',
         ];
     }
 }

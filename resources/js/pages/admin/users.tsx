@@ -40,6 +40,7 @@ import {
 	useFlagUser,
 	useRequestUserPhone,
 	useToggleUserVerified,
+	useUpdatePhoneVerificationFee,
 	useUpdateScreenNewSignups,
 	useUpdateUserPhone,
 } from "@/queries/admin"
@@ -787,6 +788,66 @@ function ScreenNewSignupsToggle() {
 	)
 }
 
+/**
+ * What users pay from a new M-Pesa number to confirm it after changing it.
+ * Until they pay, the account is flagged. 0 lets them change it freely.
+ */
+function PhoneVerificationFeeSetting() {
+	const { data: settings } = useAdminUserSettings()
+
+	if (!settings) {
+		return <Skeleton className="h-20" />
+	}
+
+	return <PhoneVerificationFeeForm fee={settings.phoneVerificationFee} />
+}
+
+function PhoneVerificationFeeForm({ fee }: { fee: number }) {
+	const updateFee = useUpdatePhoneVerificationFee()
+	const [value, setValue] = useState(String(fee))
+	const parsed = Number(value)
+	const valid = value !== "" && Number.isInteger(parsed) && parsed >= 0
+
+	function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+		event.preventDefault()
+
+		updateFee.mutate(parsed, {
+			onSuccess: () =>
+				toast.success(
+					parsed > 0
+						? `Changing phone number now costs KES ${parsed}`
+						: "Changing phone number is now free"
+				),
+			onError: () => toast.error("Couldn't update the fee"),
+		})
+	}
+
+	return (
+		<form
+			onSubmit={handleSubmit}
+			className="flex items-end gap-2 rounded-xl border bg-card p-4 shadow-xs">
+			<div className="min-w-0 flex-1">
+				{/* Phone Verification Fee Start */}
+				<Input
+					label="Phone change fee (KES)"
+					type="number"
+					min={0}
+					max={1000}
+					value={value}
+					onChange={(event) => setValue(event.target.value)}
+				/>
+				{/* Phone Verification Fee End */}
+			</div>
+			<Button
+				type="submit"
+				disabled={!valid || parsed === fee || updateFee.isPending}>
+				{updateFee.isPending && <Loader2 className="size-4 animate-spin" />}
+				Save
+			</Button>
+		</form>
+	)
+}
+
 export default function AdminUsers() {
 	const [search, setSearch] = useState("")
 	const [page, setPage] = useState(1)
@@ -968,6 +1029,7 @@ export default function AdminUsers() {
 					<div className="lg:col-span-2">
 						<ScreenNewSignupsToggle />
 					</div>
+					<PhoneVerificationFeeSetting />
 				</div>
 
 				<Card>

@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Events\MpesaPaymentFailedEvent;
+use App\Models\PhoneVerification;
 use App\Models\PhotoPurchase;
 use App\Models\PhotoSlotPurchase;
 
@@ -12,6 +13,7 @@ class MpesaPaymentFailedListener
     {
         $this->failPendingSlotPurchase($event);
         $this->failPendingPhotoPurchase($event);
+        $this->failPendingPhoneVerification($event);
     }
 
     /**
@@ -41,5 +43,21 @@ class MpesaPaymentFailedListener
             ->where('kopokopo_reference', $event->kopokopoReference)
             ->whereIn('status', PhotoPurchase::UNSETTLED_STATUSES)
             ->update(['status' => PhotoPurchase::STATUS_FAILED]);
+    }
+
+    /**
+     * Same as failPendingSlotPurchase(), for confirming a new phone number.
+     */
+    private function failPendingPhoneVerification(MpesaPaymentFailedEvent $event): void
+    {
+        PhoneVerification::query()
+            ->where('kopokopo_reference', $event->kopokopoReference)
+            ->whereIn('status', PhoneVerification::UNSETTLED_STATUSES)
+            ->update([
+                'status' => PhoneVerification::STATUS_FAILED,
+                'failure_reason' => collect($event->errors)
+                    ->filter()
+                    ->implode(' ') ?: null,
+            ]);
     }
 }

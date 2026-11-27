@@ -52,6 +52,12 @@ class PhotoSlotPurchaseService extends Service
 			]);
 		}
 
+		if ($message = $user->flaggedEntryMessage()) {
+			throw ValidationException::withMessages([
+				'competition' => $message,
+			]);
+		}
+
 		$submittedCount = Photo::where('competition_id', $competition->id)
 			->where('user_id', $user->id)
 			->count();

@@ -50,6 +50,7 @@ class SupportUserContext
             '- Account flagged: '.match (true) {
                 ! $user->isFlagged() => 'no',
                 $user->isFlaggedUntilPhone() => 'yes, at sign-up because the account looked fake or like a duplicate (adding a phone number lifts it)',
+                $user->isFlaggedUntilPhoneVerified() => 'yes, because they changed their phone number and haven\'t paid the KES '.User::phoneVerificationFee().' confirmation from the new number yet',
                 $user->flag_refuted_at !== null => 'yes, and they updated their phone number to dispute it (waiting for review)',
                 default => 'yes',
             },

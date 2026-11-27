@@ -20,12 +20,14 @@ class UserFlaggedListener
 
     /**
      * A screening flag only asks for a phone number, so it gets a gentler
-     * message than an admin's flag.
+     * message than an admin's flag. Changing phone number flags the user
+     * while they're on the profile page, which already asks them to pay
+     * from the new number, so that one isn't sent anywhere.
      */
     private function notifyUser(UserFlaggedEvent $event): void
     {
         // Seed accounts' emails are on a domain with no inbox.
-        if ($event->user->is_seed) {
+        if ($event->user->is_seed || $event->user->isFlaggedUntilPhoneVerified()) {
             return;
         }
 

@@ -98,6 +98,21 @@ export default function CreatePhoto() {
 						before you can submit a photo, that&apos;s where your prize money is
 						sent.
 					</Notice>
+				) : auth.flaggedUntilPhoneVerified ? (
+					<Notice>
+						Confirm your new M-Pesa phone number in your{" "}
+						<Link
+							href={edit().url}
+							variant="text">
+							profile
+						</Link>{" "}
+						before you can submit a photo.
+					</Notice>
+				) : auth.flaggedAt ? (
+					<Notice>
+						Your account is flagged, so you can&apos;t enter the challenge right
+						now.
+					</Notice>
 				) : reachedLimit ? (
 					<Notice>
 						You&apos;ve already submitted this week. Head back to the challenge
@@ -151,13 +166,17 @@ export default function CreatePhoto() {
 					</div>
 				)}
 
-				{!isLoading && (!activeCompetition || !auth?.phone || reachedLimit) && (
-					<Link
-						href={COMPETE_URL}
-						variant="text">
-						Back to this week&apos;s challenge
-					</Link>
-				)}
+				{!isLoading &&
+					(!activeCompetition ||
+						!auth?.phone ||
+						auth.flaggedAt ||
+						reachedLimit) && (
+						<Link
+							href={COMPETE_URL}
+							variant="text">
+							Back to this week&apos;s challenge
+						</Link>
+					)}
 			</div>
 		</>
 	)

@@ -31,7 +31,9 @@ class AdminUserController extends Controller
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        if ($data['flagged'] && ! $user->isFlagged()) {
+        // An admin's flag replaces an automatic one, which the user could
+        // otherwise lift by themselves.
+        if ($data['flagged'] && (! $user->isFlagged() || $user->isFlaggedUntilPhone() || $user->isFlaggedUntilPhoneVerified())) {
             $this->userService->flag($user, $data['reason'] ?? null);
         }
 
@@ -80,6 +82,7 @@ class AdminUserController extends Controller
         return response()->json([
             'data' => [
                 'screenNewSignups' => User::screensNewSignups(),
+                'phoneVerificationFee' => User::phoneVerificationFee(),
                 'verificationReasons' => collect(VerificationReason::adminChoices())
                     ->map(fn (VerificationReason $reason) => [
                         'value' => $reason->value,
@@ -90,17 +93,25 @@ class AdminUserController extends Controller
     }
 
     /**
-     * Switch sign-up screening on or off. Accounts it already flagged stay
-     * flagged until they add a phone number.
+     * Switch sign-up screening on or off (accounts it already flagged stay
+     * flagged until they add a phone number), or set the fee for
+     * confirming a new phone number (0 stops changes being flagged; anyone
+     * already flagged still pays the fee in force when they pay).
      */
     public function updateSettings(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'screenNewSignups' => ['required', 'boolean'],
+            'screenNewSignups' => ['sometimes', 'boolean'],
+            'phoneVerificationFee' => ['sometimes', 'integer', 'min:0', 'max:1000'],
         ]);
 
-        Setting::query()
-            ->updateOrCreate(['key' => User::SETTING_SCREEN_NEW_SIGNUPS], ['value' => $data['screenNewSignups']]);
+        collect([
+            User::SETTING_SCREEN_NEW_SIGNUPS => 'screenNewSignups',
+            User::SETTING_PHONE_VERIFICATION_FEE => 'phoneVerificationFee',
+        ])
+            ->filter(fn (string $field) => array_key_exists($field, $data))
+            ->each(fn (string $field, string $key) => Setting::query()
+                ->updateOrCreate(['key' => $key], ['value' => $data[$field]]));
 
         return response()->json(['data' => $data]);
     }
