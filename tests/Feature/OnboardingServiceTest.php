@@ -16,7 +16,7 @@ class OnboardingServiceTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user, 'sanctum');
-        [$status, $message, $updated] = (new OnboardingService)->completePermissionsStep();
+        [$status, $message, $updated] = app(OnboardingService::class)->completePermissionsStep();
 
         $this->assertTrue($status);
         $this->assertSame('Onboarding Updated', $message);
@@ -28,7 +28,7 @@ class OnboardingServiceTest extends TestCase
         $user = User::factory()->create(['settings' => ['theme' => 'dark']]);
 
         $this->actingAs($user, 'sanctum');
-        [, , $updated] = (new OnboardingService)->completePermissionsStep();
+        [, , $updated] = app(OnboardingService::class)->completePermissionsStep();
 
         $this->assertSame('dark', $updated->settings->theme);
         $this->assertNotEmpty($updated->settings->permissionsOnboardedAt);
@@ -40,7 +40,7 @@ class OnboardingServiceTest extends TestCase
         $other = User::factory()->create();
 
         $this->actingAs($me, 'sanctum');
-        (new OnboardingService)->completePermissionsStep();
+        app(OnboardingService::class)->completePermissionsStep();
 
         $this->assertNull($other->fresh()->settings->permissionsOnboardedAt ?? null);
     }
@@ -52,7 +52,7 @@ class OnboardingServiceTest extends TestCase
         ]);
 
         $this->actingAs($user, 'sanctum');
-        [$status, $message, $updated] = (new OnboardingService)->recordPwaInstalled();
+        [$status, $message, $updated] = app(OnboardingService::class)->recordPwaInstalled();
 
         $this->assertTrue($status);
         $this->assertSame('Onboarding Updated', $message);

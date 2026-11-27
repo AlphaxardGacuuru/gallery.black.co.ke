@@ -3,15 +3,19 @@
 namespace App\Listeners;
 
 use App\Enums\SupportTicketStatus;
+use App\Enums\UserEventName;
 use App\Events\SupportTicketMessageCreatedEvent;
 use App\Jobs\AnswerSupportTicketJob;
 use App\Models\SupportTicketMessage;
 use App\Models\User;
 use App\Notifications\AdminSupportTicketMessageNotification;
 use App\Notifications\SupportTicketRepliedNotification;
+use App\Services\EventRecorder;
 
 class SupportTicketMessageCreatedListener
 {
+    public function __construct(protected EventRecorder $eventRecorder) {}
+
     public function handle(SupportTicketMessageCreatedEvent $event): void
     {
         $event->message->loadMissing('ticket.user');
@@ -19,6 +23,7 @@ class SupportTicketMessageCreatedListener
         $this->answerWithAssistant($event);
         $this->notifyCustomer($event);
         $this->notifyAdmin($event);
+        $this->recordEvent($event);
     }
 
     /**
@@ -75,5 +80,24 @@ class SupportTicketMessageCreatedListener
         User::where('email', config('admin.email'))
             ->first()
             ?->notify(new AdminSupportTicketMessageNotification($message));
+    }
+
+    /**
+     * Only the customer's own messages, not the assistant's or a person's
+     * replies.
+     */
+    private function recordEvent(SupportTicketMessageCreatedEvent $event): void
+    {
+        $message = $event->message;
+
+        if ($message->author !== SupportTicketMessage::AUTHOR_USER || ! $message->ticket->user) {
+            return;
+        }
+
+        $this->eventRecorder->record(
+            UserEventName::SUPPORT_MESSAGE_SENT,
+            $message->ticket->user,
+            properties: ['ticket_id' => $message->ticket->id],
+        );
     }
 }

@@ -104,7 +104,7 @@ class AdminPhotoLikeController extends Controller
         // A recount rather than +/-1, since a flagged user's like is
         // stored but doesn't count.
         $photo->recountLikes();
-        broadcast(new PhotoLikedEvent($photo, $user, ! $like))->toOthers();
+        broadcast(new PhotoLikedEvent($photo, $user, ! $like, PhotoLikedEvent::SOURCE_ADMIN))->toOthers();
 
         return response()->json([
             'data' => [

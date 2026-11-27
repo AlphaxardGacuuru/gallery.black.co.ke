@@ -2,19 +2,21 @@
 
 namespace App\Listeners;
 
+use App\Enums\UserEventName;
 use App\Enums\VerificationReason;
 use App\Events\PhotoCompetitionEnded;
 use App\Events\UserVerifiedEvent;
 use App\Models\User;
 use App\Notifications\PhotoCompetitionEndedNotification;
 use App\Notifications\PhotoCompetitionWonNotification;
+use App\Services\EventRecorder;
 
 class PhotoCompetitionEndedListener
 {
     /**
      * Create the event listener.
      */
-    public function __construct()
+    public function __construct(protected EventRecorder $eventRecorder)
     {
         //
     }
@@ -27,6 +29,7 @@ class PhotoCompetitionEndedListener
         $this->verifyWinners($event);
         $this->notifyWinners($event);
         $this->notifyEntrants($event);
+        $this->recordPrizesWon($event);
     }
 
     /**
@@ -75,6 +78,21 @@ class PhotoCompetitionEndedListener
             ->unique('id')
             ->each(fn($user) => $user->notify(
                 new PhotoCompetitionEndedNotification($event->competition)
+            ));
+    }
+
+    private function recordPrizesWon(PhotoCompetitionEnded $event): void
+    {
+        $event->competition
+            ->winners
+            ->loadMissing(['user', 'photo'])
+            ->filter(fn ($winner) => $winner->user)
+            ->each(fn ($winner) => $this->eventRecorder->record(
+                UserEventName::PRIZE_WON,
+                $winner->user,
+                photo: $winner->photo,
+                properties: ['position' => $winner->position, 'amount' => $winner->prize_amount],
+                competitionId: $event->competition->id,
             ));
     }
 }

@@ -14,6 +14,18 @@ class PhotoLikedEvent implements ShouldBroadcast
 {
 	use Dispatchable;
 
+	/** Liked with the heart in the app. */
+	public const SOURCE_APP = 'app';
+
+	/** Liked from the button on a push notification. */
+	public const SOURCE_PUSH_ACTION = 'push_action';
+
+	/** Added or removed by an admin from "manage likes". */
+	public const SOURCE_ADMIN = 'admin';
+
+	/** Added by the seed-likes command. */
+	public const SOURCE_SEED = 'seed';
+
 	/**
 	 * @param  bool  $liked  True when this call added a new like, false when
 	 *                       it removed one (the admin "manage likes" tool can
@@ -24,6 +36,7 @@ class PhotoLikedEvent implements ShouldBroadcast
 		public Photo $photo,
 		public User $likedBy,
 		public bool $liked = true,
+		public string $source = self::SOURCE_APP,
 	) {}
 
 	/**

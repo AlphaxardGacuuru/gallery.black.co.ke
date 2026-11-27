@@ -1,5 +1,6 @@
 import {
 	Activity,
+	ChartLine,
 	ChevronRight,
 	Coins,
 	Gauge,
@@ -52,6 +53,7 @@ type AdminItem = {
 
 const ADMIN_ITEMS: AdminItem[] = [
 	{ title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+	{ title: "Analytics", href: "/admin/analytics", icon: ChartLine },
 	{ title: "Users", href: "/admin/users", icon: Users },
 	{ title: "Logins", href: "/admin/logins", icon: LogIn },
 	{ title: "Photo challenge", href: "/admin/photo-competitions", icon: Trophy },

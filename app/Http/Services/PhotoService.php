@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Enums\UserEventName;
 use App\Jobs\GeneratePhotoImageThumbnailJob;
 use App\Jobs\GeneratePhotoThumbnailJob;
 use App\Models\Photo;
@@ -10,6 +11,7 @@ use App\Models\PhotoImage;
 use App\Models\PhotoSlotPurchase;
 use App\Models\TemporaryUpload;
 use App\Models\User;
+use App\Services\EventRecorder;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -19,6 +21,11 @@ use Illuminate\Validation\ValidationException;
 
 class PhotoService extends Service
 {
+	public function __construct(protected EventRecorder $eventRecorder)
+	{
+		parent::__construct();
+	}
+
 	/**
 	 * A single photo (any competitor's, active or ended), plus this viewer's
 	 * permissions for it, since those depend on whether its competition is
@@ -163,6 +170,13 @@ class PhotoService extends Service
 		foreach ($photo->images as $image) {
 			GeneratePhotoImageThumbnailJob::dispatch($image);
 		}
+
+		$this->eventRecorder->record(
+			UserEventName::PHOTO_SUBMITTED,
+			$request->user(),
+			photo: $photo,
+			properties: ['images' => count($ids)],
+		);
 
 		return $photo->load(['user', 'images']);
 	}

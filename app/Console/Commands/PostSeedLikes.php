@@ -92,7 +92,7 @@ class PostSeedLikes extends Command
             ->create(['user_id' => $user->id]);
         $photo->increment('likes_count');
 
-        broadcast(new PhotoLikedEvent($photo, $user));
+        broadcast(new PhotoLikedEvent($photo, $user, source: PhotoLikedEvent::SOURCE_SEED));
     }
 
     public static function targetFor(Photo $photo): int

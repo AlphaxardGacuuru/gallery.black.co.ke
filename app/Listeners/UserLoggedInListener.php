@@ -2,8 +2,10 @@
 
 namespace App\Listeners;
 
+use App\Enums\UserEventName;
 use App\Models\User;
 use App\Models\UserLogin;
+use App\Services\EventRecorder;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Str;
 
@@ -13,7 +15,7 @@ use Illuminate\Support\Str;
  */
 class UserLoggedInListener
 {
-    public function __construct()
+    public function __construct(protected EventRecorder $eventRecorder)
     {
         //
     }
@@ -36,12 +38,15 @@ class UserLoggedInListener
     private function recordLogin(User $user): void
     {
         $request = request();
+        $method = $request->route()?->parameter('website') ?? UserLogin::METHOD_PASSWORD;
 
         $user->logins()
             ->create([
-                'method' => $request->route()?->parameter('website') ?? UserLogin::METHOD_PASSWORD,
+                'method' => $method,
                 'ip_address' => $request->ip(),
                 'user_agent' => Str::limit((string) $request->userAgent(), 1000, ''),
             ]);
+
+        $this->eventRecorder->record(UserEventName::LOGGED_IN, $user, source: $method);
     }
 }

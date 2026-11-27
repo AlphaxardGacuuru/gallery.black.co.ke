@@ -2,10 +2,17 @@
 
 namespace App\Http\Services;
 
+use App\Enums\UserEventName;
 use App\Models\User;
+use App\Services\EventRecorder;
 
 class OnboardingService extends Service
 {
+    public function __construct(protected EventRecorder $eventRecorder)
+    {
+        parent::__construct();
+    }
+
     public function completeInstallStep(): array
     {
         $user = User::query()->findOrFail($this->id);
@@ -46,9 +53,14 @@ class OnboardingService extends Service
         $user = User::query()->findOrFail($this->id);
 
         $settings = (array) ($user->settings ?? []);
+        $firstInstall = ! isset($settings['pwaInstalledAt']);
         $settings['pwaInstalledAt'] = now()->toIso8601String();
         $user->settings = $settings;
         $user->save();
+
+        if ($firstInstall) {
+            $this->eventRecorder->record(UserEventName::APP_INSTALLED, $user);
+        }
 
         return [true, 'Onboarding Updated', $user];
     }

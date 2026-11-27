@@ -1295,3 +1295,28 @@ export function useAdminUserLogins(search: string, page = 1, perPage = 20) {
 		placeholderData: keepPreviousData,
 	})
 }
+
+export type AnalyticsChatMessage = {
+	role: "user" | "assistant"
+	content: string
+	/** For answers: the tools the agent ran, so its numbers can be checked. */
+	toolCalls?: { name: string; arguments: Record<string, unknown> }[]
+}
+
+/**
+ * Ask the analytics agent a question. The chat lives in the page, so the
+ * whole conversation is sent with the question last.
+ */
+export function useAskAnalytics() {
+	return useMutation({
+		mutationFn: (messages: AnalyticsChatMessage[]) =>
+			Axios.post<{
+				data: {
+					answer: string
+					toolCalls: NonNullable<AnalyticsChatMessage["toolCalls"]>
+				}
+			}>("api/admin/analytics/ask", {
+				messages: messages.map(({ role, content }) => ({ role, content })),
+			}).then((res) => res.data.data),
+	})
+}

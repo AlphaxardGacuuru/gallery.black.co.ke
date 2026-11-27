@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminAiUsageController;
+use App\Http\Controllers\Admin\AdminAnalyticsController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminNoticeController;
 use App\Http\Controllers\Admin\AdminPhotoCompetitionController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserEventController;
 use App\Http\Controllers\UserProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -61,6 +63,11 @@ Route::get('photos/features', [PhotoCompetitionController::class, 'features'])
 Route::middleware('auth.optional')->group(function () {
     Route::get('photos/current', [PhotoCompetitionController::class, 'current']);
     Route::get('photos/discover', [PhotoCompetitionController::class, 'discover']);
+
+    // Page views and shares from the browser, guests included.
+    Route::post('events', [UserEventController::class, 'store'])
+        ->middleware('throttle:120,1')
+        ->name('events.store');
 });
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -156,6 +163,11 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::post('users/{user}/request-phone', [AdminUserController::class, 'requestPhone'])->name('users.request-phone');
         Route::put('users/{user}/flag', [AdminUserController::class, 'flag'])->name('users.flag');
         Route::delete('users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+
+        // Each question costs an AI call that can run several tools.
+        Route::post('analytics/ask', [AdminAnalyticsController::class, 'ask'])
+            ->middleware('throttle:20,1')
+            ->name('analytics.ask');
         Route::get('photos/{photo}/likes', [AdminPhotoLikeController::class, 'index'])->name('photos.likes.index');
         Route::delete('photos/{photo}/likes/flagged', [AdminPhotoLikeController::class, 'destroyFlagged'])->name('photos.likes.destroy-flagged');
         Route::post('photos/{photo}/likes/{user}', [AdminPhotoLikeController::class, 'toggle'])->name('photos.likes.toggle');

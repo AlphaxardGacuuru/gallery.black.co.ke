@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/sheet"
 import { useApp } from "@/contexts/AppContext"
 import { useClipboard } from "@/hooks/use-clipboard"
+import { track } from "@/lib/analytics"
 import { useInitials } from "@/hooks/use-initials"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -191,6 +192,7 @@ export function PhotoCard({
 						: "Check out this photo on Black Gallery",
 					url,
 				})
+				track("photo.shared", { photoId: photo.id, source: "share_sheet" })
 			} catch {
 				// The user cancelled the share sheet, nothing to do.
 			}
@@ -199,6 +201,7 @@ export function PhotoCard({
 		}
 
 		if (await copy(url)) {
+			track("photo.shared", { photoId: photo.id, source: "copied_link" })
 			toast.success("Link copied")
 		} else {
 			toast.error("Couldn't copy the link")

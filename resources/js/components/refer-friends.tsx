@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useApp } from "@/contexts/AppContext"
 import { useClipboard } from "@/hooks/use-clipboard"
+import { track } from "@/lib/analytics"
 import toast from "@/lib/toast"
 
 export default function ReferFriends() {
@@ -25,6 +26,7 @@ export default function ReferFriends() {
 					text: "Join me on Black Gallery's weekly photo challenge!",
 					url: referralLink,
 				})
+				track("referral.shared", { source: "share_sheet" })
 			} catch {
 				// The user cancelled the share sheet — nothing to do.
 			}
@@ -32,6 +34,7 @@ export default function ReferFriends() {
 		}
 
 		if (await copy(referralLink)) {
+			track("referral.shared", { source: "copied_link" })
 			toast.success("Referral link copied")
 		} else {
 			toast.error("Couldn't copy the link")

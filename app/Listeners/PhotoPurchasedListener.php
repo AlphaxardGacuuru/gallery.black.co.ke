@@ -2,16 +2,21 @@
 
 namespace App\Listeners;
 
+use App\Enums\UserEventName;
 use App\Events\PhotoPurchasedEvent;
 use App\Http\Services\KopokopoTransferService;
 use App\Notifications\PhotoPurchasedNotification;
 use App\Notifications\PhotoSoldNotification;
+use App\Services\EventRecorder;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class PhotoPurchasedListener
 {
-    public function __construct(protected KopokopoTransferService $kopokopoTransferService)
+    public function __construct(
+        protected KopokopoTransferService $kopokopoTransferService,
+        protected EventRecorder $eventRecorder,
+    )
     {
         //
     }
@@ -26,6 +31,7 @@ class PhotoPurchasedListener
 
         $this->notifyBuyer($event);
         $this->notifySeller($event, $payoutStarted);
+        $this->recordEvent($event);
     }
 
     /**
@@ -59,5 +65,19 @@ class PhotoPurchasedListener
     private function notifySeller(PhotoPurchasedEvent $event, bool $payoutStarted): void
     {
         $event->purchase->seller?->notify(new PhotoSoldNotification($event->purchase, $payoutStarted));
+    }
+
+    private function recordEvent(PhotoPurchasedEvent $event): void
+    {
+        if (! $event->purchase->buyer) {
+            return;
+        }
+
+        $this->eventRecorder->record(
+            UserEventName::PHOTO_PURCHASED,
+            $event->purchase->buyer,
+            photo: $event->purchase->photo,
+            properties: ['amount' => $event->purchase->amount],
+        );
     }
 }

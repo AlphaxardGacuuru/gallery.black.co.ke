@@ -3,6 +3,7 @@
 namespace App\Http\Services;
 
 use App\Enums\EmailNotificationCategory;
+use App\Enums\UserEventName;
 use App\Enums\VerificationReason;
 use App\Events\UserFlaggedEvent;
 use App\Events\UserVerifiedEvent;
@@ -16,6 +17,7 @@ use App\Models\Referral;
 use App\Models\Role;
 use App\Models\SupportTicket;
 use App\Models\User;
+use App\Services\EventRecorder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
@@ -29,6 +31,11 @@ use Illuminate\Validation\ValidationException;
 
 class UserService extends Service
 {
+	public function __construct(protected EventRecorder $eventRecorder)
+	{
+		parent::__construct();
+	}
+
 	public function index(Request $request): LengthAwarePaginator|Collection
 	{
 		if ($request->filled('idAndName')) {
@@ -328,6 +335,7 @@ class UserService extends Service
 		}
 
 		$addedPhone = $user->isDirty('phone') && $user->phone;
+		$firstPhone = $addedPhone && ! $user->getOriginal('phone');
 		$liftsFlag = $addedPhone && $user->isFlaggedUntilPhone();
 
 		// A sign-up screening flag only asks for a phone number, so adding
@@ -343,6 +351,10 @@ class UserService extends Service
 
 		if ($liftsFlag) {
 			$this->recountLikedPhotos($user);
+		}
+
+		if ($firstPhone) {
+			$this->eventRecorder->record(UserEventName::PHONE_ADDED, $user);
 		}
 	}
 

@@ -25,7 +25,7 @@ class GrantPhotoSlotListenerTest extends TestCase
             'kopokopo_id' => 'abc-123',
         ]);
 
-        (new GrantPhotoSlotListener)
+        app(GrantPhotoSlotListener::class)
             ->handle(new MpesaTransactionCreatedEvent($mpesaTransaction));
 
         $purchase->refresh();
@@ -45,7 +45,7 @@ class GrantPhotoSlotListenerTest extends TestCase
             'kopokopo_id' => 'late-123',
         ]);
 
-        (new GrantPhotoSlotListener)
+        app(GrantPhotoSlotListener::class)
             ->handle(new MpesaTransactionCreatedEvent($mpesaTransaction));
 
         $purchase->refresh();
@@ -64,7 +64,7 @@ class GrantPhotoSlotListenerTest extends TestCase
             'kopokopo_id' => 'does-not-match',
         ]);
 
-        (new GrantPhotoSlotListener)
+        app(GrantPhotoSlotListener::class)
             ->handle(new MpesaTransactionCreatedEvent($mpesaTransaction));
 
         $purchase->refresh();
@@ -83,7 +83,7 @@ class GrantPhotoSlotListenerTest extends TestCase
             'kopokopo_id' => 'photo-abc',
         ]);
 
-        (new GrantPhotoSlotListener)
+        app(GrantPhotoSlotListener::class)
             ->handle(new MpesaTransactionCreatedEvent($mpesaTransaction));
 
         $purchase->refresh();
@@ -102,7 +102,7 @@ class GrantPhotoSlotListenerTest extends TestCase
             'kopokopo_id' => 'abc-123',
         ]);
 
-        (new GrantPhotoSlotListener)
+        app(GrantPhotoSlotListener::class)
             ->handle(new MpesaTransactionCreatedEvent($mpesaTransaction));
 
         $purchase->refresh();

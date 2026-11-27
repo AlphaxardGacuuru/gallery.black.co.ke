@@ -2,15 +2,17 @@
 
 namespace App\Listeners;
 
+use App\Enums\UserEventName;
 use App\Events\MpesaTransactionCreatedEvent;
 use App\Models\PhotoSlotPurchase;
+use App\Services\EventRecorder;
 
 class GrantPhotoSlotListener
 {
     /**
      * Create the event listener.
      */
-    public function __construct()
+    public function __construct(protected EventRecorder $eventRecorder)
     {
         //
     }
@@ -39,5 +41,23 @@ class GrantPhotoSlotListener
             'mpesa_transaction_id' => $event->mpesaTransaction->id,
             'paid_at' => now(),
         ]);
+
+        $this->recordEvent($purchase);
+    }
+
+    private function recordEvent(PhotoSlotPurchase $purchase): void
+    {
+        if (! $purchase->user) {
+            return;
+        }
+
+        $this->eventRecorder->record(
+            $purchase->type === PhotoSlotPurchase::TYPE_EXTRA_PHOTO
+                ? UserEventName::EXTRA_PHOTO_PURCHASED
+                : UserEventName::EXTRA_ENTRY_PURCHASED,
+            $purchase->user,
+            properties: ['amount' => $purchase->amount],
+            competitionId: $purchase->competition_id,
+        );
     }
 }

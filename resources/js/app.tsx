@@ -31,6 +31,7 @@ import SettingsLayout from "@/layouts/settings/layout"
 import AdminLayout from "@/layouts/admin/layout"
 import { AppProvider } from "@/contexts/AppContext"
 import { discoverPageRoutes } from "@/router/page-routes"
+import { track } from "@/lib/analytics"
 import NotFound from "@/components/not-found"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -161,6 +162,18 @@ const tanstackRoutes = discoveredRoutes.map((discoveredRoute) => {
 const routeTree = rootRoute.addChildren(tanstackRoutes)
 
 const router = createRouter({ routeTree, defaultNotFoundComponent: NotFound })
+
+// A page view for every page opened, including the first. The route is the
+// page's pattern (e.g. /users/$id), so views group by page, not by URL.
+router.subscribe("onResolved", ({ pathChanged }) => {
+	if (!pathChanged) {
+		return
+	}
+
+	track("page.viewed", {
+		properties: { route: router.state.matches.at(-1)?.routeId ?? null },
+	})
+})
 
 declare module "@tanstack/react-router" {
 	interface Register {

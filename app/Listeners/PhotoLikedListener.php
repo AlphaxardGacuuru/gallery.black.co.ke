@@ -2,8 +2,10 @@
 
 namespace App\Listeners;
 
+use App\Enums\UserEventName;
 use App\Events\PhotoLikedEvent;
 use App\Notifications\PhotoLikedNotification;
+use App\Services\EventRecorder;
 
 /**
  * Every side effect of a photo being liked (or, from the admin "manage
@@ -12,7 +14,7 @@ use App\Notifications\PhotoLikedNotification;
  */
 class PhotoLikedListener
 {
-    public function __construct()
+    public function __construct(protected EventRecorder $eventRecorder)
     {
         //
     }
@@ -20,6 +22,7 @@ class PhotoLikedListener
     public function handle(PhotoLikedEvent $event): void
     {
         $this->notifyOwner($event);
+        $this->recordEvent($event);
     }
 
     /**
@@ -40,5 +43,23 @@ class PhotoLikedListener
         }
 
         $owner->notify(new PhotoLikedNotification($event->photo, $event->likedBy));
+    }
+
+    /**
+     * Only likes the user gave themselves. An admin's "manage likes" toggle
+     * and seed likes aren't the user's own action.
+     */
+    protected function recordEvent(PhotoLikedEvent $event): void
+    {
+        if (! $event->liked || in_array($event->source, [PhotoLikedEvent::SOURCE_ADMIN, PhotoLikedEvent::SOURCE_SEED], true)) {
+            return;
+        }
+
+        $this->eventRecorder->record(
+            UserEventName::PHOTO_LIKED,
+            $event->likedBy,
+            photo: $event->photo,
+            source: $event->source,
+        );
     }
 }

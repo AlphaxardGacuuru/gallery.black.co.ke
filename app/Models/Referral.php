@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\UserEventName;
 use App\Http\Services\ReferralService;
+use App\Services\EventRecorder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,6 +14,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Referral extends Model
 {
     use HasFactory, HasUuids;
+
+    /** user.referred source for a sign-up through a referral link. */
+    public const SOURCE_LINK = 'link';
+
+    /** user.referred source for an admin crediting a referrer by hand. */
+    public const SOURCE_ADMIN = 'admin';
 
     protected $fillable = [
         'referrer_id',
@@ -172,10 +180,19 @@ class Referral extends Model
             return;
         }
 
-        static::query()->firstOrCreate(
+        $referral = static::query()->firstOrCreate(
             ['referred_id' => $referred->id],
             ['referrer_id' => $referrerId]
         );
+
+        if ($referral->wasRecentlyCreated) {
+            app(EventRecorder::class)->record(
+                UserEventName::REFERRED,
+                $referred,
+                source: self::SOURCE_LINK,
+                properties: ['referrer_id' => $referrerId],
+            );
+        }
     }
 
     /**

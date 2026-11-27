@@ -3,6 +3,7 @@
 use App\Jobs\DeleteStaleTemporaryUploadsJob;
 use App\Jobs\ExpireStalePurchasesJob;
 use App\Models\PhotoCompetition;
+use App\Models\UserEvent;
 use App\Models\UserLogin;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -64,9 +65,16 @@ Schedule::command('app:reconcile-kopokopo-transfers')
     ->everyFiveMinutes()
     ->withoutOverlapping();
 
-// Sign-in records older than UserLogin::RETENTION_DAYS.
-Schedule::command('model:prune', ['--model' => [UserLogin::class]])
+// Sign-in records older than UserLogin::RETENTION_DAYS, and raw page
+// views older than UserEvent::PAGE_VIEW_RETENTION_DAYS (their daily totals
+// are kept).
+Schedule::command('model:prune', ['--model' => [UserLogin::class, UserEvent::class]])
     ->daily();
+
+// Daily usage totals for the analytics agent, counted once the day is over.
+Schedule::command('app:summarize-user-events')
+    ->dailyAt('00:30')
+    ->withoutOverlapping();
 
 // Purchases whose M-Pesa prompt was ignored and never got a webhook.
 Schedule::job(new ExpireStalePurchasesJob)

@@ -23,7 +23,7 @@ class PhotoLikedListenerTest extends TestCase
         $liker = User::factory()->create();
         $photo = Photo::factory()->create(['user_id' => $owner->id]);
 
-        (new PhotoLikedListener)->handle(new PhotoLikedEvent($photo, $liker, true));
+        app(PhotoLikedListener::class)->handle(new PhotoLikedEvent($photo, $liker, true));
 
         Notification::assertSentTo($owner, PhotoLikedNotification::class);
     }
@@ -35,7 +35,7 @@ class PhotoLikedListenerTest extends TestCase
         $owner = User::factory()->create();
         $photo = Photo::factory()->create(['user_id' => $owner->id]);
 
-        (new PhotoLikedListener)->handle(new PhotoLikedEvent($photo, $owner, true));
+        app(PhotoLikedListener::class)->handle(new PhotoLikedEvent($photo, $owner, true));
 
         Notification::assertNothingSentTo($owner);
     }
@@ -48,7 +48,7 @@ class PhotoLikedListenerTest extends TestCase
         $liker = User::factory()->create();
         $photo = Photo::factory()->create(['user_id' => $owner->id]);
 
-        (new PhotoLikedListener)->handle(new PhotoLikedEvent($photo, $liker, false));
+        app(PhotoLikedListener::class)->handle(new PhotoLikedEvent($photo, $liker, false));
 
         Notification::assertNothingSentTo($owner);
     }

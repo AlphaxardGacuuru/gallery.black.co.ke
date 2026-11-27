@@ -30,6 +30,11 @@ class AiUsage extends Model
     public const FEATURE_SIGNUP_SCREENING = 'signup_screening';
 
     /**
+     * The analytics agent answering an admin's question about app usage.
+     */
+    public const FEATURE_ANALYTICS = 'analytics';
+
+    /**
      * Setting that switches every AI agent on or off, see agentsEnabled().
      */
     public const SETTING_AGENTS_ENABLED = 'ai_agents_enabled';

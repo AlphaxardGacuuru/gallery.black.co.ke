@@ -2,8 +2,11 @@
 
 namespace App\Listeners;
 
+use App\Enums\UserEventName;
 use App\Events\ReferralAttachedEvent;
+use App\Models\Referral;
 use App\Notifications\ReferralSignupNotification;
+use App\Services\EventRecorder;
 
 /**
  * Every side effect of an admin crediting a user to a referrer lives here,
@@ -12,7 +15,7 @@ use App\Notifications\ReferralSignupNotification;
  */
 class ReferralAttachedListener
 {
-    public function __construct()
+    public function __construct(protected EventRecorder $eventRecorder)
     {
         //
     }
@@ -20,6 +23,7 @@ class ReferralAttachedListener
     public function handle(ReferralAttachedEvent $event): void
     {
         $this->notifyReferrer($event);
+        $this->recordEvent($event);
     }
 
     /**
@@ -36,5 +40,19 @@ class ReferralAttachedListener
                 ->referrer
                 ?->notify(new ReferralSignupNotification($referred));
         }
+    }
+
+    protected function recordEvent(ReferralAttachedEvent $event): void
+    {
+        if (! $event->referral->referred) {
+            return;
+        }
+
+        $this->eventRecorder->record(
+            UserEventName::REFERRED,
+            $event->referral->referred,
+            source: Referral::SOURCE_ADMIN,
+            properties: ['referrer_id' => $event->referral->referrer_id],
+        );
     }
 }

@@ -110,4 +110,10 @@ return [
         // How many look-alike accounts the agent is shown at most.
         'max_candidates' => (int) env('SIGNUP_SCREENING_MAX_CANDIDATES', 10),
     ],
+
+    // The admin's analytics chat (AnalyticsAgent).
+    'analytics_assistant' => [
+        'provider' => env('ANALYTICS_AI_PROVIDER', 'gemini'),
+        'model' => env('ANALYTICS_AI_MODEL', 'gemini-3.1-flash-lite'),
+    ],
 ];

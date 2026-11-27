@@ -35,7 +35,7 @@ class PushActionController extends Controller
         ['photo' => $photo, 'liked' => $liked] = $this->photoService->like($user, $photo->id);
 
         if ($liked) {
-            broadcast(new PhotoLikedEvent($photo, $user));
+            broadcast(new PhotoLikedEvent($photo, $user, source: PhotoLikedEvent::SOURCE_PUSH_ACTION));
         }
 
         return response()->json([
