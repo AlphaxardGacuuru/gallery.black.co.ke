@@ -465,13 +465,48 @@ function settledStatus(status: PurchaseStatus | "expired"): {
 	return { status: status === "expired" ? "failed" : status }
 }
 
+/** Matches PhotoSlotPurchase::failureReasonForBuyer(). */
+export type PaymentFailureReason =
+	| "cancelled"
+	| "unreachable"
+	| "insufficient_funds"
+	| "wrong_pin"
+	| "timed_out"
+	| "unknown"
+
+/** What to tell the buyer when an M-Pesa prompt didn't turn into a payment. */
+export function paymentFailureMessage(
+	reason: PaymentFailureReason | null | undefined
+): string {
+	switch (reason) {
+		case "cancelled":
+			return "You cancelled the M-Pesa prompt. You can try again."
+		case "unreachable":
+			return "We couldn't reach your phone. Check it's on and has network, then try again."
+		case "insufficient_funds":
+			return "Your M-Pesa balance was too low. Top up and try again."
+		case "wrong_pin":
+			return "The M-Pesa PIN was wrong. You can try again."
+		case "timed_out":
+			return "The M-Pesa prompt timed out before it was approved. You can try again."
+		default:
+			return "The payment didn't go through. You can try again."
+	}
+}
+
 export function usePollSlotPurchase(purchaseId: string | null) {
 	return useQuery({
 		queryKey: ["photo-slot-purchases", purchaseId],
 		queryFn: () =>
-			Axios.get<{ data: { status: PurchaseStatus | "expired" } }>(
-				PhotoSlotPurchaseController.show.url(purchaseId!)
-			).then((res) => settledStatus(res.data.data.status)),
+			Axios.get<{
+				data: {
+					status: PurchaseStatus | "expired"
+					failureReason: PaymentFailureReason | null
+				}
+			}>(PhotoSlotPurchaseController.show.url(purchaseId!)).then((res) => ({
+				...settledStatus(res.data.data.status),
+				failureReason: res.data.data.failureReason,
+			})),
 		enabled: !!purchaseId,
 		refetchInterval: (query) =>
 			query.state.data?.status === "pending" ? 3000 : false,

@@ -8,6 +8,7 @@ use App\Models\Integration;
 use App\Models\MPESATransaction;
 use App\Models\User;
 use Exception;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Kopokopo\SDK\K2;
 use Illuminate\Http\Request;
@@ -66,9 +67,13 @@ class MPESATransactionService extends Service
         // A cancelled, timed-out or otherwise failed STK push arrives with
         // status "Failed" and no resource, since no money moved.
         if (! $resource) {
-            Log::info("Kopokopo Payment Failed. Id: {$data['id']}", $event['errors'] ?? []);
+            // Kopokopo's docs show "errors" as a plain string in some
+            // payloads, which would break both calls below if passed as is.
+            $errors = Arr::wrap($event['errors'] ?? []);
 
-            MpesaPaymentFailedEvent::dispatch($data['id'], $event['errors'] ?? []);
+            Log::info("Kopokopo Payment Failed. Id: {$data['id']}", $errors);
+
+            MpesaPaymentFailedEvent::dispatch($data['id'], $errors);
 
             return [false, "Payment Not Completed", null, null];
         }

@@ -53,7 +53,12 @@ Black Gallery is a Kenyan photo challenge app. People post photos into a weekly 
 ## Paying with M-Pesa
 
 - Every payment uses an M-Pesa prompt (STK push) sent to the phone number on your profile. Approve it on your phone with your M-Pesa PIN. The app waits for confirmation and shows "Check your phone".
-- If you cancel the prompt, it times out, or the payment fails, the app shows "The payment didn't go through. You can try again." No money is taken for a failed prompt.
+- If you cancel the prompt, it times out, or the payment fails, the app says the payment didn't go through and you can try again. No money is taken for a failed prompt. For photo slots and extra entries it also says why when M-Pesa tells us:
+  - "You cancelled the M-Pesa prompt."
+  - "We couldn't reach your phone.": the phone was off, had no network, or the SIM menu didn't respond. Check the phone is on with signal, then try again.
+  - "Your M-Pesa balance was too low.": top up and try again.
+  - "The M-Pesa PIN was wrong."
+  - "The M-Pesa prompt timed out before it was approved.": the prompt wasn't answered in time.
 - If the prompt never arrives: check that the phone number in Settings > Profile is correct and the phone is on, then wait about {{payment_retry_minutes}} minutes and try again.
 - Paying the till directly through "Buy Goods" in M-Pesa, instead of approving the prompt from the app, can't be matched to your purchase, so nothing unlocks. Always pay through the prompt.
 - When a payment is confirmed you get a "payment received" notification.

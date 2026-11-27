@@ -14,6 +14,7 @@ import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 import {
 	type ExtraPhotoState,
+	paymentFailureMessage,
 	useBuyExtraPhotoSlot,
 	usePollSlotPurchase,
 } from "@/queries/photos"
@@ -219,14 +220,14 @@ export function BuyExtraPhotoSlotRow({
 	}
 
 	// Without this a cancelled, declined or timed-out prompt just put the
-	// button back with no word on what happened.
+	// button back with no word on what happened, and most buyers gave up.
 	const failed = Boolean(purchaseId) && purchase?.status === "failed"
 
 	return (
 		<div className="space-y-2">
 			{failed && (
 				<p className="text-sm text-destructive">
-					The payment didn&apos;t go through. You can try again.
+					{paymentFailureMessage(purchase?.failureReason)}
 				</p>
 			)}
 			<Button

@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner"
 import toast from "@/lib/toast"
 import {
 	type ExtraSlotState,
+	paymentFailureMessage,
 	useBuyExtraSlot,
 	usePollSlotPurchase,
 } from "@/queries/photos"
@@ -44,6 +45,25 @@ function BuyExtraSlotButton({ extraSlot }: { extraSlot: ExtraSlotState }) {
 		})
 		queryClient.invalidateQueries({ queryKey: ["photos", "current"] })
 	}, [purchase?.status, queryClient])
+
+	// A floating button has no room for an inline message, so a failed
+	// prompt is reported once per purchase as a toast instead of the
+	// button silently going back to idle.
+	const notifiedFailedIdRef = useRef<string | null>(null)
+
+	useEffect(() => {
+		if (
+			purchase?.status !== "failed" ||
+			notifiedFailedIdRef.current === purchaseId
+		) {
+			return
+		}
+
+		notifiedFailedIdRef.current = purchaseId
+		toast.error("Payment not completed", {
+			description: paymentFailureMessage(purchase.failureReason),
+		})
+	}, [purchase?.status, purchase?.failureReason, purchaseId])
 
 	function handleBuy() {
 		buyExtraSlot.mutate(undefined, {

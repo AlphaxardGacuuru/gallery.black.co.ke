@@ -39,6 +39,11 @@ class PhotoSlotPurchaseController extends Controller
     {
         abort_unless($purchase->user_id === $request->user()->id, 403);
 
-        return response()->json(['data' => ['status' => $purchase->statusForBuyer()]]);
+        return response()->json([
+            'data' => [
+                'status' => $purchase->statusForBuyer(),
+                'failureReason' => $purchase->failureReasonForBuyer(),
+            ],
+        ]);
     }
 }
