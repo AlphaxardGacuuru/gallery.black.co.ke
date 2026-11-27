@@ -1,22 +1,29 @@
 import { Link } from "@/components/ui/link"
-import { findActiveNavHref, mainNavItems } from "@/components/app-sidebar"
+import {
+	findActiveNavHref,
+	mainNavItems,
+	visibleNavItems,
+} from "@/components/app-sidebar"
+import { useApp } from "@/contexts/AppContext"
 import { useCurrentUrl } from "@/hooks/use-current-url"
 import { isFullScreenRoute } from "@/lib/bottom-nav"
 import { cn } from "@/lib/utils"
 
 export function AppBottomNav() {
 	const { currentUrl } = useCurrentUrl()
+	const { auth } = useApp()
 
 	if (isFullScreenRoute()) {
 		return null
 	}
 
-	const activeHref = findActiveNavHref(currentUrl, mainNavItems)
+	const navItems = visibleNavItems(mainNavItems, Boolean(auth))
+	const activeHref = findActiveNavHref(currentUrl, navItems)
 
 	return (
 		<div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-3 md:hidden">
 			<nav className="bg-sidebar text-sidebar-foreground border-sidebar-border pointer-events-auto mx-auto flex max-w-md items-center justify-around rounded-2xl border shadow-sm backdrop-blur supports-backdrop-filter:bg-sidebar/95">
-				{mainNavItems.map((item) => {
+				{navItems.map((item) => {
 					const href = typeof item.href === "string" ? item.href : item.href.url
 					const isActive = href === activeHref
 					const Icon = item.icon

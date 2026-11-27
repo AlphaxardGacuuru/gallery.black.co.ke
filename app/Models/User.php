@@ -374,6 +374,14 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     }
 
     /**
+     * Photos this user saved, listed under Saved on their profile.
+     */
+    public function photoBookmarks(): HasMany
+    {
+        return $this->hasMany(PhotoBookmark::class);
+    }
+
+    /**
      * Other users this user referred, who signed up via their referral link.
      */
     public function referralsMade(): HasMany

@@ -1,9 +1,15 @@
 import { Link } from "@/components/ui/link"
-import { Compass, Download, Image as ImageIcon, Trophy } from "lucide-react"
+import {
+	Compass,
+	Download,
+	Image as ImageIcon,
+	Trophy,
+	UserRound,
+} from "lucide-react"
 import { AdminNav } from "@/components/admin/AdminNav"
 import AppLogo from "@/components/app-logo"
 import { NavFooter } from "@/components/nav-footer"
-import { NavUser } from "@/components/nav-user"
+import { AVATAR_ALIGNED_ITEM, NavUser } from "@/components/nav-user"
 import { useApp } from "@/contexts/AppContext"
 import { useCurrentUrl } from "@/hooks/use-current-url"
 import { usePwaInstall } from "@/hooks/use-pwa-install"
@@ -37,8 +43,23 @@ export const mainNavItems: NavItem[] = [
 		title: "Leaderboard",
 		href: "/leaderboard",
 		icon: Trophy,
+		requiresAuth: true,
+	},
+	{
+		title: "Profile",
+		href: "/profile",
+		icon: UserRound,
+		requiresAuth: true,
 	},
 ]
+
+/** The main nav items the viewer can open, leaving out account-only pages for guests. */
+export function visibleNavItems(
+	items: NavItem[],
+	signedIn: boolean
+): NavItem[] {
+	return items.filter((item) => signedIn || !item.requiresAuth)
+}
 
 // Sibling routes can share a path prefix (e.g. a future /discover/[id]),
 // so a plain prefix match would leave both nav items active. Picking the
@@ -77,7 +98,8 @@ export function AppSidebar() {
 	const { auth } = useApp()
 	const { currentUrl } = useCurrentUrl()
 	const isAdmin = Boolean(auth?.isAdmin)
-	const activeMainNavHref = findActiveNavHref(currentUrl, mainNavItems)
+	const navItems = visibleNavItems(mainNavItems, Boolean(auth))
+	const activeMainNavHref = findActiveNavHref(currentUrl, navItems)
 
 	return (
 		<Sidebar
@@ -110,13 +132,16 @@ export function AppSidebar() {
 			<SidebarContent>
 				<SidebarGroup className="hidden px-2 py-0 md:block">
 					<SidebarMenu>
-						{mainNavItems.map((item) => (
+						{navItems.map((item) => (
 							<SidebarMenuItem key={item.title}>
 								<SidebarMenuButton
 									asChild
 									isActive={toUrl(item.href) === activeMainNavHref}
-									tooltip={item.title}>
-									<Link href={toUrl(item.href)}>
+									tooltip={item.title}
+									className={AVATAR_ALIGNED_ITEM}>
+									<Link
+										variant="unstyled"
+										href={toUrl(item.href)}>
 										{item.icon && <item.icon />}
 										<span>{item.title}</span>
 									</Link>
@@ -132,7 +157,7 @@ export function AppSidebar() {
 				{!isInstalled && (
 					<NavFooter
 						items={footerNavItems}
-						className="mt-auto"
+						className="mt-auto p-0"
 					/>
 				)}
 				<NavUser />

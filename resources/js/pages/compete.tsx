@@ -93,7 +93,11 @@ export default function Compete() {
 					<div className="flex flex-col items-center gap-2 rounded-xl border py-16 text-center text-muted-foreground">
 						<Trophy className="size-8" />
 						<p className="font-medium">No entries yet</p>
-						<p className="text-sm">Be the first to submit a photo this week.</p>
+						<p className="text-sm">
+							{auth
+								? "Be the first to submit a photo this week."
+								: "Log in to be the first to submit a photo this week."}
+						</p>
 					</div>
 				) : (
 					<div className="grid grid-cols-1 items-start gap-1 sm:grid-cols-3 lg:grid-cols-4">
@@ -122,10 +126,12 @@ export default function Compete() {
 				)}
 			</div>
 
-			<SubmitPhotoButton
-				disabled={hasReachedSlotLimit}
-				extraSlot={activeCompetition ? data?.extraSlot : undefined}
-			/>
+			{auth && (
+				<SubmitPhotoButton
+					disabled={hasReachedSlotLimit}
+					extraSlot={activeCompetition ? data?.extraSlot : undefined}
+				/>
+			)}
 		</>
 	)
 }

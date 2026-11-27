@@ -59,6 +59,11 @@ class Photo extends Model
         return $this->hasMany(PhotoLike::class);
     }
 
+    public function bookmarks(): HasMany
+    {
+        return $this->hasMany(PhotoBookmark::class);
+    }
+
     /**
      * Reset likes_count to the likes from users who aren't flagged, after
      * a flag changes or an admin adds/removes likes by hand.
@@ -169,6 +174,29 @@ class Photo extends Model
 
         return $query->addSelect([
             'is_liked_by_viewer' => PhotoLike::query()
+                ->selectRaw('1')
+                ->whereColumn('photo_id', 'photos.id')
+                ->where('user_id', $user->id)
+                ->limit(1),
+        ]);
+    }
+
+    /**
+     * Annotate each photo with whether the given user saved it, the same
+     * correlated-subquery approach as withLikedByViewer().
+     */
+    public function scopeWithBookmarkedByViewer(Builder $query, ?User $user): Builder
+    {
+        if (is_null($query->getQuery()->columns)) {
+            $query->select('photos.*');
+        }
+
+        if (! $user) {
+            return $query->selectRaw('false as is_bookmarked_by_viewer');
+        }
+
+        return $query->addSelect([
+            'is_bookmarked_by_viewer' => PhotoBookmark::query()
                 ->selectRaw('1')
                 ->whereColumn('photo_id', 'photos.id')
                 ->where('user_id', $user->id)

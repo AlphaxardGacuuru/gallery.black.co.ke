@@ -1,5 +1,6 @@
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Link } from "@/components/ui/link"
 import { useSidebar } from "@/components/ui/sidebar"
 import { VerifiedAvatar } from "@/components/verified-badge"
 import { useApp } from "@/contexts/AppContext"
@@ -34,27 +35,40 @@ export function AppSidebarHeader({
 			</div>
 
 			<PhotoConnectionStatus />
-			<NotificationsBell />
 
-			<button
-				type="button"
-				onClick={toggleSidebar}
-				aria-label="Toggle sidebar"
-				className="relative -mr-1 flex size-7 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80 ms-2">
-				<VerifiedAvatar
-					verified={auth?.verified}
-					badgeClassName="size-3">
-					<Avatar className="size-10">
-						<AvatarImage
-							src={auth?.avatar}
-							alt={auth?.name}
-						/>
-						<AvatarFallback className="text-xs">
-							{getInitials(auth?.name ?? "")}
-						</AvatarFallback>
-					</Avatar>
-				</VerifiedAvatar>
-			</button>
+			{auth ? (
+				<>
+					<NotificationsBell />
+
+					<button
+						type="button"
+						onClick={toggleSidebar}
+						aria-label="Toggle sidebar"
+						className="relative -mr-1 flex size-7 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80 ms-2">
+						<VerifiedAvatar
+							verified={auth.verified}
+							badgeClassName="size-3">
+							<Avatar className="size-10">
+								<AvatarImage
+									src={auth.avatar}
+									alt={auth.name}
+								/>
+								<AvatarFallback className="text-xs">
+									{getInitials(auth.name)}
+								</AvatarFallback>
+							</Avatar>
+						</VerifiedAvatar>
+					</button>
+				</>
+			) : (
+				<Link
+					href="/login"
+					variant="solid"
+					size="sm"
+					className="ms-2">
+					Log in
+				</Link>
+			)}
 		</header>
 	)
 }

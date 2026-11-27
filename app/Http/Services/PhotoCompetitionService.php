@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\Photo;
@@ -39,6 +40,7 @@ class PhotoCompetitionService extends Service
 			->with(['photos' => function ($query) use ($request) {
 				$query->with(['user', 'images'])
 					->withLikedByViewer($request->user())
+					->withBookmarkedByViewer($request->user())
 					->orderByDesc('likes_count')
 					->orderBy('created_at');
 			}])
@@ -87,6 +89,7 @@ class PhotoCompetitionService extends Service
 			->whereIn('id', $winnerPhotoIds)
 			->with(['user', 'images'])
 			->withLikedByViewer($request->user())
+			->withBookmarkedByViewer($request->user())
 			->withIsWinner()
 			->get()
 			->sortBy(fn(Photo $photo) => $winnerPhotoIds->search($photo->id))
@@ -99,7 +102,8 @@ class PhotoCompetitionService extends Service
 
 	/**
 	 * The extra-slot feature's global on/off + price, plus (only once a
-	 * competition is active) this viewer's own purchase state for it.
+	 * competition is active and someone is signed in) this viewer's own
+	 * purchase state for it.
 	 */
 	protected function extraSlotState(?PhotoCompetition $activeCompetition, Request $request): array
 	{
@@ -112,7 +116,7 @@ class PhotoCompetitionService extends Service
 			'pendingPurchaseId' => null,
 		];
 
-		if (! $activeCompetition) {
+		if (! $activeCompetition || ! $request->user()) {
 			return $state;
 		}
 
@@ -135,7 +139,7 @@ class PhotoCompetitionService extends Service
 
 	/**
 	 * The extra-photo feature's global on/off + price, plus (only once a
-	 * competition is active) how many slots this viewer has already paid
+	 * competition is active and someone is signed in) how many slots this viewer has already paid
 	 * for and the resulting cap on how many photos they can attach.
 	 */
 	protected function extraPhotoState(?PhotoCompetition $activeCompetition, Request $request): array
@@ -151,7 +155,7 @@ class PhotoCompetitionService extends Service
 			'maxPhotosCap' => Photo::MAX_IMAGES_PER_ENTRY,
 		];
 
-		if (! $activeCompetition) {
+		if (! $activeCompetition || ! $request->user()) {
 			return $state;
 		}
 
@@ -182,6 +186,7 @@ class PhotoCompetitionService extends Service
 			->with(['user', 'images', 'competition'])
 			->withLikedByViewer($request->user())
 			->withPurchasedByViewer($request->user())
+			->withBookmarkedByViewer($request->user())
 			->withIsWinner()
 			->latest('created_at')
 			->paginate(30);
@@ -200,6 +205,27 @@ class PhotoCompetitionService extends Service
 	 * Anyone still tied falls back to how many photos they've posted.
 	 */
 	public function leaderboard(): LengthAwarePaginator
+	{
+		return $this->leaderboardQuery()
+			->paginate(50);
+	}
+
+	/**
+	 * $user's rank on the leaderboard (1-based), or null when they haven't
+	 * posted and so aren't on it. Ranks every poster to find it, which is
+	 * fine while there are only a few thousand.
+	 */
+	public function leaderboardPosition(User $user): ?int
+	{
+		$index = $this->leaderboardQuery()
+			->toBase()
+			->pluck('id')
+			->search($user->id);
+
+		return $index === false ? null : $index + 1;
+	}
+
+	protected function leaderboardQuery(): Builder
 	{
 		$positions = range(1, self::LEADERBOARD_POSITIONS);
 
@@ -228,7 +254,6 @@ class PhotoCompetitionService extends Service
 		}
 
 		return $users->orderByDesc('photos_count')
-			->orderBy('users.id')
-			->paginate(50);
+			->orderBy('users.id');
 	}
 }

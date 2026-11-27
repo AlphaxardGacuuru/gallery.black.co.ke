@@ -11,4 +11,6 @@ export type NavItem = {
 	href: RouteHref
 	icon?: LucideIcon | null
 	isActive?: boolean
+	/** Hidden from guests, for pages that need an account. */
+	requiresAuth?: boolean
 }

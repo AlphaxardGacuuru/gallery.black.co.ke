@@ -18,6 +18,7 @@ use App\Http\Controllers\MPESATransactionController;
 use App\Http\Controllers\NoticeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\PhotoBookmarkController;
 use App\Http\Controllers\PhotoCompetitionController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\ExtraPhotoPurchaseController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -52,19 +54,27 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::get('photos/features', [PhotoCompetitionController::class, 'features'])
     ->name('photos.features');
 
+// Public so guests can browse the compete and discover pages. A signed-in
+// viewer still resolves through auth.optional, so their own likes and
+// purchases come back. Ahead of the auth group for the same reason as
+// photos/features.
+Route::middleware('auth.optional')->group(function () {
+    Route::get('photos/current', [PhotoCompetitionController::class, 'current']);
+    Route::get('photos/discover', [PhotoCompetitionController::class, 'discover']);
+});
+
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('auth', [UserController::class, 'auth']);
 
-    // Both routes require the auth:sanctum guard to run so $request->user()
-    // resolves (the guard switches the request's default auth guard to
-    // "sanctum" as a side effect) — without it, isLikedByViewer always came
-    // back false regardless of the viewer's real like state. Every page
-    // that calls these already requires login client-side (see PUBLIC/
-    // GUEST_ONLY in app.tsx), so this doesn't newly restrict anything.
-    Route::get('photos/current', [PhotoCompetitionController::class, 'current']);
-    Route::get('photos/discover', [PhotoCompetitionController::class, 'discover']);
     Route::get('leaderboard', [PhotoCompetitionController::class, 'leaderboard']);
+
+    Route::get('users/{user}/profile', [UserProfileController::class, 'show'])->name('users.profile');
+    Route::get('users/{user}/photos', [UserProfileController::class, 'photos'])->name('users.photos');
+
+    Route::get('bookmarks', [PhotoBookmarkController::class, 'index'])->name('bookmarks.index');
+    Route::post('photos/{photo}/bookmark', [PhotoBookmarkController::class, 'store'])->name('photos.bookmark.store');
+    Route::delete('photos/{photo}/bookmark', [PhotoBookmarkController::class, 'destroy'])->name('photos.bookmark.destroy');
 
     Route::apiResources([
         "notifications" => NotificationController::class,

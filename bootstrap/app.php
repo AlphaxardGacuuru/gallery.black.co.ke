@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AuthenticateOptionally;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\TrackUserActivity;
@@ -34,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
+            'auth.optional' => AuthenticateOptionally::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

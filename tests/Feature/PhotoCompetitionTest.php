@@ -73,6 +73,30 @@ class PhotoCompetitionTest extends TestCase
             ->assertJsonPath('data.photos.0.id', $photo->id);
     }
 
+    public function test_current_endpoint_still_shows_a_signed_in_viewers_own_likes(): void
+    {
+        $this->artisan('app:start-photo-competition');
+
+        $competition = PhotoCompetition::first();
+        $viewer = User::factory()->create();
+        $photo = $competition->photos()->create([
+            'user_id' => User::factory()->create()->id,
+            'disk' => 'public',
+            'path' => 'photos/test.jpg',
+        ]);
+        $photo->likes()->create(['user_id' => $viewer->id]);
+
+        $this->getJson('/api/photos/current')
+            ->assertOk()
+            ->assertJsonPath('data.photos.0.isLikedByViewer', false)
+            ->assertJsonPath('extraSlot.hasPaidExtraSlot', false);
+
+        $this->actingAs($viewer, 'sanctum')
+            ->getJson('/api/photos/current')
+            ->assertOk()
+            ->assertJsonPath('data.photos.0.isLikedByViewer', true);
+    }
+
     public function test_current_endpoint_exposes_prize_tiers_from_settings(): void
     {
         Setting::query()->updateOrCreate(

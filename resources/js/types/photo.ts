@@ -29,6 +29,8 @@ export type Photo = {
 	 *  sellable, the UI just doesn't offer to sell them back to them. */
 	isSellable: boolean
 	isPurchasedByViewer: boolean
+	/** Whether the viewer saved this photo to their profile's Saved tab. */
+	isBookmarkedByViewer: boolean
 	createdAt: string
 }
 

@@ -15,6 +15,7 @@ import {
 import { QueryClientProvider } from "@tanstack/react-query"
 import { queryClient } from "@/lib/query-client"
 import {
+	getAuth,
 	requireAdmin,
 	requireAuth,
 	requireGuest,
@@ -55,7 +56,14 @@ const GUEST_ONLY = new Set([
 	"auth/admin-login",
 ])
 
-const PUBLIC = new Set(["welcome", "auth/socialite-callback"])
+// Guests can open these too. The challenge pages show guests the photos
+// but hide whatever needs an account (see useApp().auth checks).
+const PUBLIC = new Set([
+	"welcome",
+	"auth/socialite-callback",
+	"compete",
+	"discover",
+])
 
 const pages = import.meta.glob<{
 	default: ComponentType<Record<string, unknown>>
@@ -135,7 +143,11 @@ const tanstackRoutes = discoveredRoutes.map((discoveredRoute) => {
 		beforeLoad: GUEST_ONLY.has(discoveredRoute.componentName)
 			? requireGuest
 			: PUBLIC.has(discoveredRoute.componentName)
-				? undefined
+				? // Loads a signed-in viewer before the first render, so the page
+					// doesn't flash its guest version at them.
+					async () => {
+						await getAuth()
+					}
 				: async (ctx) => {
 						await requireAuth()
 						await requireSuperAdmin(ctx)

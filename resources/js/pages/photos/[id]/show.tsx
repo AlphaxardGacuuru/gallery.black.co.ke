@@ -9,7 +9,12 @@ import {
 	Trophy,
 	Users,
 } from "lucide-react"
-import { useCanGoBack, useNavigate, useRouter } from "@tanstack/react-router"
+import {
+	Link,
+	useCanGoBack,
+	useNavigate,
+	useRouter,
+} from "@tanstack/react-router"
 import { useState } from "react"
 import { Head } from "@/lib/spa"
 import { BuyPhotoDialog, canBuyPhoto } from "@/components/photos/BuyPhotoDialog"
@@ -120,10 +125,14 @@ export default function PhotoShow({ id }: Props) {
 					className="shrink-0 text-white hover:bg-white/10 hover:text-white">
 					<ArrowLeft className="size-5" />
 				</Button>
-				<p className="truncate text-sm font-medium">{photo.userName}</p>
-				{photo.userVerified && (
-					<VerifiedBadge className="-ml-1 size-3.5 shrink-0" />
-				)}
+				<Link
+					to={`/users/${photo.userId}` as never}
+					className="flex min-w-0 items-center gap-1">
+					<p className="truncate text-sm font-medium">{photo.userName}</p>
+					{photo.userVerified && (
+						<VerifiedBadge className="size-3.5 shrink-0" />
+					)}
+				</Link>
 				{photo.isWinner ? (
 					<span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-400 px-2 py-1 text-xs font-semibold text-amber-950">
 						<Trophy className="size-3.5" />

@@ -1,17 +1,20 @@
 import {
 	AlignRight,
+	Bookmark,
 	Heart,
 	type LucideIcon,
 	Pencil,
+	Share2,
 	Trash2,
 	Trophy,
 	Users,
 } from "lucide-react"
-import { Link } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
 import type { Photo } from "@/types/photo"
 import { AvatarPreviewDialog } from "@/components/avatar-preview-dialog"
-import VerifiedBadge from "@/components/verified-badge"
+import VerifiedBadge, { VerifiedAvatar } from "@/components/verified-badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { EditPhotoDialog } from "@/components/photos/EditPhotoDialog"
 import { FlaggedAccountDialog } from "@/components/photos/FlaggedAccountDialog"
 import { ManageLikesDialog } from "@/components/photos/ManageLikesDialog"
@@ -40,11 +43,16 @@ import {
 	SheetTrigger,
 } from "@/components/ui/sheet"
 import { useApp } from "@/contexts/AppContext"
+import { useClipboard } from "@/hooks/use-clipboard"
 import { useInitials } from "@/hooks/use-initials"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import toast from "@/lib/toast"
-import { useDeletePhoto, useLikePhoto } from "@/queries/photos"
+import {
+	useDeletePhoto,
+	useLikePhoto,
+	useToggleBookmark,
+} from "@/queries/photos"
 
 type Props = {
 	photo: Photo
@@ -76,14 +84,18 @@ export function PhotoCard({
 	const { auth } = useApp()
 	const isAdmin = Boolean(auth?.isAdmin)
 	const likePhoto = useLikePhoto()
+	const toggleBookmark = useToggleBookmark()
 	const deletePhoto = useDeletePhoto()
 	const getInitials = useInitials()
+	const [, copy] = useClipboard()
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [manageLikesOpen, setManageLikesOpen] = useState(false)
 	const [flaggedOpen, setFlaggedOpen] = useState(false)
 	const [editOpen, setEditOpen] = useState(false)
 	const [optionsOpen, setOptionsOpen] = useState(false)
+	const [captionExpanded, setCaptionExpanded] = useState(false)
 	const isMobile = useIsMobile()
+	const navigate = useNavigate()
 
 	// Rendered as a bottom sheet on small screens and a dropdown otherwise.
 	const options: {
@@ -129,9 +141,16 @@ export function PhotoCard({
 		</Button>
 	)
 
-	// A flagged account can't like, so explain why instead.
+	// A guest has to sign in to like, and a flagged account can't like, so
+	// explain why instead.
 	function like() {
 		if (!canLike) {
+			return
+		}
+
+		if (!auth) {
+			navigate({ to: "/login" })
+
 			return
 		}
 
@@ -144,6 +163,48 @@ export function PhotoCard({
 		likePhoto.mutate(photo.id)
 	}
 
+	// Saved photos are listed under Saved on the viewer's profile. Guests
+	// sign in first.
+	function bookmark() {
+		if (!auth) {
+			navigate({ to: "/login" })
+
+			return
+		}
+
+		toggleBookmark.mutate({
+			photoId: photo.id,
+			bookmarked: !photo.isBookmarkedByViewer,
+		})
+	}
+
+	// The phone's share sheet where there is one, otherwise copy the link.
+	async function share() {
+		const url = `${window.location.origin}/photos/${photo.id}/show`
+
+		if (navigator.share) {
+			try {
+				await navigator.share({
+					title: "Black Gallery",
+					text: photo.userName
+						? `Check out ${photo.userName}'s photo on Black Gallery`
+						: "Check out this photo on Black Gallery",
+					url,
+				})
+			} catch {
+				// The user cancelled the share sheet, nothing to do.
+			}
+
+			return
+		}
+
+		if (await copy(url)) {
+			toast.success("Link copied")
+		} else {
+			toast.error("Couldn't copy the link")
+		}
+	}
+
 	function handleDelete() {
 		deletePhoto.mutate(photo.id, {
 			onSuccess: () => toast.success("Photo Deleted Successfully"),
@@ -151,25 +212,85 @@ export function PhotoCard({
 		})
 	}
 
+	const image = (
+		<>
+			{photo.images.length > 0 ? (
+				<PhotoCarousel
+					fitWidth
+					slides={[photo, ...photo.images].map((image) => ({
+						url: image.thumbnailUrl,
+						alt: photo.caption ?? "Competition entry",
+					}))}
+				/>
+			) : (
+				<img
+					src={photo.thumbnailUrl}
+					alt={photo.caption ?? "Competition entry"}
+					loading="lazy"
+					className="h-auto w-full"
+				/>
+			)}
+			{photo.isWinner ? (
+				<div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-amber-400 px-2 py-1 text-xs font-semibold text-amber-950 shadow">
+					<Trophy className="size-3.5" />
+					Winner
+				</div>
+			) : photo.position ? (
+				<div className="absolute left-2 top-2 rounded-full bg-neutral-900/80 px-1.5 py-0.5 text-[11px] font-semibold text-white shadow dark:bg-neutral-100/90 dark:text-neutral-900">
+					#{photo.position}
+				</div>
+			) : (
+				livePosition &&
+				livePrizeAmount !== undefined && (
+					<div className="absolute left-2 top-2 rounded-full bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground shadow">
+						#{livePosition} · KES {livePrizeAmount}
+					</div>
+				)
+			)}
+		</>
+	)
+
+	const author = (
+		<div className="flex min-w-0 items-center gap-1">
+			<p className="truncate text-sm font-medium">{photo.userName}</p>
+			{photo.userVerified && <VerifiedBadge className="size-3.5 shrink-0" />}
+		</div>
+	)
+
 	return (
 		<figure className="overflow-hidden rounded-xl border bg-card shadow-sm">
 			<figcaption className="flex items-center justify-between gap-2 p-2">
-				<div className="flex min-w-0 items-center gap-2">
-					<AvatarPreviewDialog
-						src={photo.userAvatar}
-						alt={photo.userName ?? "Competitor"}
-						fallback={photo.userName ? getInitials(photo.userName) : "?"}
-						className="size-8 shrink-0"
-						fallbackClassName="bg-neutral-200 text-xs text-black dark:bg-neutral-700 dark:text-white"
-						verified={photo.userVerified}
-					/>
-					<div className="flex min-w-0 items-center gap-1">
-						<p className="truncate text-sm font-medium">{photo.userName}</p>
-						{photo.userVerified && (
-							<VerifiedBadge className="size-3.5 shrink-0" />
-						)}
+				{/* Profiles need an account, so guests get the avatar preview instead. */}
+				{auth ? (
+					<Link
+						to={`/users/${photo.userId}` as never}
+						className="flex min-w-0 items-center gap-2">
+						<VerifiedAvatar verified={photo.userVerified}>
+							<Avatar className="size-8">
+								<AvatarImage
+									src={photo.userAvatar ?? undefined}
+									alt={photo.userName ?? "Competitor"}
+								/>
+								<AvatarFallback className="bg-neutral-200 text-xs text-black dark:bg-neutral-700 dark:text-white">
+									{photo.userName ? getInitials(photo.userName) : "?"}
+								</AvatarFallback>
+							</Avatar>
+						</VerifiedAvatar>
+						{author}
+					</Link>
+				) : (
+					<div className="flex min-w-0 items-center gap-2">
+						<AvatarPreviewDialog
+							src={photo.userAvatar}
+							alt={photo.userName ?? "Competitor"}
+							fallback={photo.userName ? getInitials(photo.userName) : "?"}
+							className="size-8 shrink-0"
+							fallbackClassName="bg-neutral-200 text-xs text-black dark:bg-neutral-700 dark:text-white"
+							verified={photo.userVerified}
+						/>
+						{author}
 					</div>
-				</div>
+				)}
 				<div className="flex justify-between items-center gap-1">
 					{/* Options Menu Start */}
 					{(canDelete || isAdmin) && (
@@ -280,44 +401,17 @@ export function PhotoCard({
 					{/* Options Menu End */}
 				</div>
 			</figcaption>
-			<Link
-				to={`/photos/${photo.id}/show` as never}
-				aria-label="View full photo"
-				className="relative block w-full">
-				{photo.images.length > 0 ? (
-					<PhotoCarousel
-						fitWidth
-						slides={[photo, ...photo.images].map((image) => ({
-							url: image.thumbnailUrl,
-							alt: photo.caption ?? "Competition entry",
-						}))}
-					/>
-				) : (
-					<img
-						src={photo.thumbnailUrl}
-						alt={photo.caption ?? "Competition entry"}
-						loading="lazy"
-						className="h-auto w-full"
-					/>
-				)}
-				{photo.isWinner ? (
-					<div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-amber-400 px-2 py-1 text-xs font-semibold text-amber-950 shadow">
-						<Trophy className="size-3.5" />
-						Winner
-					</div>
-				) : photo.position ? (
-					<div className="absolute left-2 top-2 rounded-full bg-neutral-900/80 px-1.5 py-0.5 text-[11px] font-semibold text-white shadow dark:bg-neutral-100/90 dark:text-neutral-900">
-						#{photo.position}
-					</div>
-				) : (
-					livePosition &&
-					livePrizeAmount !== undefined && (
-						<div className="absolute left-2 top-2 rounded-full bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground shadow">
-							#{livePosition} · KES {livePrizeAmount}
-						</div>
-					)
-				)}
-			</Link>
+			{/* The photo's own page needs an account, so guests just see the image. */}
+			{auth ? (
+				<Link
+					to={`/photos/${photo.id}/show` as never}
+					aria-label="View full photo"
+					className="relative block w-full">
+					{image}
+				</Link>
+			) : (
+				<div className="relative block w-full">{image}</div>
+			)}
 			<figcaption className="flex flex-col gap-1">
 				<div className="flex items-center">
 					<button
@@ -340,11 +434,42 @@ export function PhotoCard({
 							{photo.likesCount}
 						</span>
 					</button>
+					<button
+						type="button"
+						aria-label="Share photo"
+						onClick={share}
+						className="flex shrink-0 cursor-pointer items-center p-2 text-muted-foreground hover:text-foreground">
+						<Share2 className="size-4 shrink-0" />
+					</button>
+					<button
+						type="button"
+						aria-label={
+							photo.isBookmarkedByViewer ? "Remove from saved" : "Save photo"
+						}
+						aria-pressed={photo.isBookmarkedByViewer}
+						onClick={bookmark}
+						className="ms-auto flex shrink-0 cursor-pointer items-center p-2 text-muted-foreground hover:text-foreground">
+						<Bookmark
+							className={cn(
+								"size-4 shrink-0",
+								photo.isBookmarkedByViewer && "fill-current text-foreground"
+							)}
+						/>
+					</button>
 				</div>
 				{photo.caption && (
-					<p className="truncate text-xs text-muted-foreground px-2">
+					<button
+						type="button"
+						aria-expanded={captionExpanded}
+						onClick={() => setCaptionExpanded((expanded) => !expanded)}
+						className={cn(
+							"cursor-pointer px-2 text-left text-xs text-muted-foreground",
+							captionExpanded
+								? "whitespace-pre-line wrap-break-word"
+								: "truncate"
+						)}>
 						{photo.caption}
-					</p>
+					</button>
 				)}
 				<PostedAt
 					date={photo.createdAt}

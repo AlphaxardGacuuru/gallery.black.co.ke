@@ -179,10 +179,120 @@ function updateCachedShowPhoto(
 	)
 }
 
-type DiscoverPage = {
+/** A page of a photo grid: Discover, a profile's posts or saved photos. */
+export type PhotoGridPage = {
 	data: Photo[]
 	sale: PhotoSale
 	meta: { current_page: number; last_page: number }
+}
+
+type DiscoverPage = PhotoGridPage
+
+function usePhotoGrid(queryKey: string[], url: string, enabled = true) {
+	return useInfiniteQuery({
+		queryKey,
+		enabled,
+		queryFn: ({ pageParam }) =>
+			Axios.get<PhotoGridPage>(url, {
+				params: { page: pageParam },
+			}).then((res) => res.data),
+		initialPageParam: 1,
+		getNextPageParam: (lastPage) =>
+			lastPage.meta.current_page < lastPage.meta.last_page
+				? lastPage.meta.current_page + 1
+				: undefined,
+	})
+}
+
+export type UserProfile = {
+	id: string
+	name: string
+	avatar: string | null
+	verified: boolean
+	joinedAt: string
+	stats: {
+		posts: number
+		/** Likes their photos received. */
+		likes: number
+		/** KES across every prize they placed for. */
+		cashWon: number
+		/** Null until they post, since only posters are ranked. */
+		leaderboardPosition: number | null
+	}
+}
+
+export function useUserProfile(userId: string) {
+	return useQuery({
+		queryKey: ["users", userId, "profile"],
+		queryFn: () =>
+			Axios.get<{ data: UserProfile }>(`api/users/${userId}/profile`).then(
+				(res) => res.data.data
+			),
+	})
+}
+
+/** A user's posts, newest first, for the grid on their profile. */
+export function useUserPhotos(userId: string) {
+	return usePhotoGrid(["photos", "user", userId], `api/users/${userId}/photos`)
+}
+
+/** The viewer's saved photos, for the Saved tab on their own profile. */
+export function useBookmarkedPhotos(enabled = true) {
+	return usePhotoGrid(["photos", "bookmarks"], "api/bookmarks", enabled)
+}
+
+/**
+ * Save or unsave a photo. The bookmark icon flips straight away in every
+ * cached list the photo might be in, and the Saved tab refetches after.
+ */
+export function useToggleBookmark() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: ({
+			photoId,
+			bookmarked,
+		}: {
+			photoId: string
+			bookmarked: boolean
+		}) =>
+			bookmarked
+				? Axios.post(`api/photos/${photoId}/bookmark`)
+				: Axios.delete(`api/photos/${photoId}/bookmark`),
+		onMutate: ({ photoId, bookmarked }) => {
+			const applyBookmark = (photos: Photo[]) =>
+				photos.map((photo) =>
+					photo.id === photoId
+						? { ...photo, isBookmarkedByViewer: bookmarked }
+						: photo
+				)
+
+			updateCachedPhotos(queryClient, applyBookmark)
+			updateCachedShowPhoto(queryClient, photoId, applyBookmark)
+			queryClient.setQueriesData<InfiniteData<PhotoGridPage>>(
+				{ queryKey: ["photos"], predicate: isPhotoGridQuery },
+				(current) =>
+					current
+						? {
+								...current,
+								pages: current.pages.map((page) => ({
+									...page,
+									data: applyBookmark(page.data),
+								})),
+							}
+						: current
+			)
+		},
+		// Refetching puts back whatever the failed request changed.
+		onError: () => queryClient.invalidateQueries({ queryKey: ["photos"] }),
+		onSettled: () =>
+			queryClient.invalidateQueries({ queryKey: ["photos", "bookmarks"] }),
+	})
+}
+
+// The infinite photo grids: Discover, profile posts and saved photos.
+function isPhotoGridQuery(query: { queryKey: readonly unknown[] }): boolean {
+	return ["discover", "user", "bookmarks"].includes(String(query.queryKey[1]))
 }
 
 export function useDiscoverPhotos() {

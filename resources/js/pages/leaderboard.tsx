@@ -1,8 +1,9 @@
 import { Trophy } from "lucide-react"
 import { Head } from "@/lib/spa"
-import { AvatarPreviewDialog } from "@/components/avatar-preview-dialog"
+import { Link } from "@tanstack/react-router"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Heading from "@/components/heading"
-import VerifiedBadge from "@/components/verified-badge"
+import VerifiedBadge, { VerifiedAvatar } from "@/components/verified-badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInitials } from "@/hooks/use-initials"
@@ -92,21 +93,31 @@ function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
 				)}>
 				{entry.rank}
 			</span>
-			<AvatarPreviewDialog
-				src={entry.userAvatar}
-				alt={entry.userName}
-				fallback={getInitials(entry.userName)}
-				className="size-9 shrink-0"
-				fallbackClassName="bg-neutral-200 text-xs text-black dark:bg-neutral-700 dark:text-white"
-				verified={entry.userVerified}
-			/>
+			<Link
+				to={`/users/${entry.userId}` as never}
+				aria-label={`${entry.userName}'s profile`}
+				className="shrink-0">
+				<VerifiedAvatar verified={entry.userVerified}>
+					<Avatar className="size-9">
+						<AvatarImage
+							src={entry.userAvatar ?? undefined}
+							alt={entry.userName}
+						/>
+						<AvatarFallback className="bg-neutral-200 text-xs text-black dark:bg-neutral-700 dark:text-white">
+							{getInitials(entry.userName)}
+						</AvatarFallback>
+					</Avatar>
+				</VerifiedAvatar>
+			</Link>
 			<div className="min-w-0 flex-1 space-y-1">
-				<div className="flex min-w-0 items-center gap-1">
+				<Link
+					to={`/users/${entry.userId}` as never}
+					className="flex min-w-0 items-center gap-1">
 					<p className="truncate text-sm font-medium">{entry.userName}</p>
 					{entry.userVerified && (
 						<VerifiedBadge className="size-3.5 shrink-0" />
 					)}
-				</div>
+				</Link>
 				{placed.length > 0 ? (
 					<div className="flex flex-wrap gap-1">
 						{placed.map(({ position, count }) => (

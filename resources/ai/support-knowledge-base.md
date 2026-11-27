@@ -5,6 +5,7 @@ Black Gallery is a Kenyan photo challenge app. People post photos into a weekly 
 ## Signing in and accounts
 
 - Sign-in is with Google only ("Continue with Google"). There is no separate email and password sign-up.
+- You can look at this week's challenge (Compete) and past challenges (Discover) without signing in. Entering, liking (tapping like takes you to sign in), buying photos, opening a photo's own page (including a shared photo link), the Leaderboard and notifications all need you to sign in.
 - Your name comes from your Google account and updates each time you sign in. Your profile picture starts as your Google picture too. To use a different one, go to Settings > Profile and tap your picture (or "Upload new picture") to choose a new one, or drag one onto it, then tap "Save picture" (JPG, PNG or WebP, up to {{max_avatar_mb}} MB). The circle shows how the new picture will look before you save it. Once you upload your own picture, signing in with Google no longer replaces it.
 - Your M-Pesa phone number is set in Settings > Profile. It must be a Safaricom M-Pesa number, like 07XXXXXXXX or 01XXXXXXXX (254 and +254 formats work too). Airtel, Telkom and other networks are rejected with "Enter a Safaricom M-Pesa number" because prizes and payouts are sent through M-Pesa. Each number can only be used on one account. You need it to enter a challenge, to buy anything, and to receive prizes or payouts. M-Pesa payment prompts are sent to this number. Once it's set, it's locked to keep payouts safe: the field is greyed out and only the support team can change it. To ask, tap "Request a change" under the field, which opens this chat. If someone asks to change their number, ask for the new number and why they're changing it, then hand the ticket to the support team. You can't change it yourself.
 - Your email can't be changed in the app.
@@ -34,7 +35,10 @@ Black Gallery is a Kenyan photo challenge app. People post photos into a weekly 
 - When the challenge ends, photos are ranked by likes. If two photos have the same number of likes, the one submitted first ranks higher. Prizes for each place are listed under "Live settings".
 - Winners get the verified badge automatically.
 - Halfway through each challenge, everyone gets a reminder to enter or to share their photo for more likes.
+- To share a photo, tap the share button next to its likes. On phones this opens the share sheet (WhatsApp, Instagram and so on); elsewhere it copies the photo's link.
 - The Discover page shows photos from past challenges. The Leaderboard ranks people by how many times they've won 1st place, then 2nd, and so on.
+- Your profile (Profile in the menu) shows your picture and, in one row, your Posts, the Likes they've received, KES won in prizes (counted once you place, even before the M-Pesa payout arrives) and your leaderboard Rank (a dash until you post a photo). Big numbers are shortened, like 1.2K. Below that are your name and a grid of your posts. Tap anyone's picture or name on a photo or the Leaderboard to see their profile. To change your name or picture, use "Edit profile", which opens Settings > Profile.
+- Tap the bookmark icon on a photo to save it. Saved photos are on your profile under the Saved tab, which only you can see. Tap the bookmark again to remove it.
 
 ## Prize payouts
 
