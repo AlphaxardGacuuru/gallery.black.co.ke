@@ -91,6 +91,7 @@ export function UserProfile({ userId }: { userId: string }) {
 								<p className="text-xs text-muted-foreground">
 									Joined{" "}
 									{new Date(profile.joinedAt).toLocaleDateString(undefined, {
+										day: "numeric",
 										month: "long",
 										year: "numeric",
 									})}
